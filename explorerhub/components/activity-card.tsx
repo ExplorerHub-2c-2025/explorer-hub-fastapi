@@ -1,17 +1,19 @@
 import Link from "next/link"
 import { Star, MapPin, DollarSign } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { ImageGallery } from "@/components/image-gallery"
 import styles from "./activity-card.module.css"
 
 interface ActivityCardProps {
-  id: string
+  id: string | number
   name: string
   category: string
   location: string
   rating: number
   reviewCount: number
   priceLevel: number
-  image: string
+  image?: string
+  images?: string[]
   description: string
   tags?: string[]
 }
@@ -25,14 +27,18 @@ export function ActivityCard({
   reviewCount,
   priceLevel,
   image,
+  images = [],
   description,
   tags = [],
 }: ActivityCardProps) {
+  // Use images array if available, otherwise fallback to single image
+  const imageArray = images && images.length > 0 ? images : (image ? [image] : [])
+  
   return (
   <Link href={`/activity/${id}`} className={`${styles.root} group`}>
       <div className={styles.card}>
         <div className={styles.imageWrapper}>
-          <img src={image || "/placeholder.svg"} alt={name} className={`${styles.image} group-hover:scale-105`} />
+          <ImageGallery images={imageArray} alt={name} />
           <Badge className={styles.badge}>{category}</Badge>
         </div>
 

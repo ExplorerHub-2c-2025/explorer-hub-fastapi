@@ -9,7 +9,7 @@ class Database:
     async def connect_db(cls):
         """Connect to MongoDB"""
         cls.client = AsyncIOMotorClient(settings.mongodb_url)
-        print("Connected to MongoDB")
+        print(f"Connected to MongoDB: {settings.mongodb_url}")
     
     @classmethod
     async def close_db(cls):

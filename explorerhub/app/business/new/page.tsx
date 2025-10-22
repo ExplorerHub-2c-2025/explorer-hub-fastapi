@@ -17,12 +17,12 @@ export default function NewBusinessPage() {
   useEffect(() => {
     const userData = localStorage.getItem("user")
     if (!userData) {
-      router.push("/sign-in/business")
+      router.push("/sign-in")
       return
     }
     const parsedUser = JSON.parse(userData)
-    if (!parsedUser.is_business) {
-      router.push("/profile/traveler")
+    if (parsedUser.role !== "business") {
+      router.push("/explore")
       return
     }
     setIsAuthorized(true)
@@ -32,6 +32,9 @@ export default function NewBusinessPage() {
     setIsLoading(true)
     try {
       const token = localStorage.getItem("token")
+      console.log("Token:", token ? "exists" : "missing")
+      console.log("Data to send:", data)
+      
       const res = await fetch("/api/businesses", {
         method: "POST",
         headers: {
@@ -41,11 +44,18 @@ export default function NewBusinessPage() {
         body: JSON.stringify(data),
       })
 
-      if (!res.ok) throw new Error("Failed to create business")
-      const created = await res.json()
-      router.push(`/business/${created.id}/edit`)
+      console.log("Response status:", res.status)
+      const responseData = await res.json()
+      console.log("Response data:", responseData)
+
+      if (!res.ok) {
+        throw new Error(responseData.detail || "Failed to create business")
+      }
+      
+      router.push(`/business/${responseData.id}/edit`)
     } catch (error) {
       console.error("Error creating business:", error)
+      alert(`Error: ${error instanceof Error ? error.message : "Unknown error"}`)
     } finally {
       setIsLoading(false)
     }

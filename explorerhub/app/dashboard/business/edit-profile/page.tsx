@@ -32,16 +32,16 @@ export default function EditBusinessProfile() {
   useEffect(() => {
     const userData = localStorage.getItem("user")
     if (!userData) {
-      router.push("/sign-in/business")
+      router.push("/sign-in")
       return
     }
     const user = JSON.parse(userData)
-    if (!user.is_business) {
-      router.push("/dashboard/traveler")
+    if (user.role !== "business") {
+      router.push("/explore")
       return
     }
     setFormData({
-      businessName: user.name || "",
+      businessName: user.full_name || "",
       businessType: user.business_type || "",
       phone: user.phone || "",
       address: user.address || "",

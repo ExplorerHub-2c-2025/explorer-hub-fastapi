@@ -9,11 +9,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, Users, CheckCircle2 } from "lucide-react"
+import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Loader2, Users, CheckCircle2 } from "lucide-react"
 
-export default function ClientSignUpPage() {
+export default function SignUpPage() {
   const router = useRouter()
   const [formData, setFormData] = useState({
     name: "",
@@ -31,9 +32,9 @@ export default function ClientSignUpPage() {
     relax: false,
     nature: false,
   })
+  const [isBusiness, setIsBusiness] = useState(false)
   const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [error, setError] = useState("")
-  const [success, setSuccess] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -82,21 +83,23 @@ export default function ClientSignUpPage() {
     setIsLoading(true)
 
     try {
+      const payload: any = {
+        full_name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        role: isBusiness ? "business" : "client",
+        birth_date: formData.birthDate,
+        country: formData.country,
+        language: formData.language,
+        preferences: Object.keys(preferences).filter((key) => preferences[key as keyof typeof preferences]),
+      }
+
       const response = await fetch("/api/auth/signup", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          password: formData.password,
-          is_business: false,
-          birth_date: formData.birthDate,
-          country: formData.country,
-          language: formData.language,
-          preferences: Object.keys(preferences).filter((key) => preferences[key as keyof typeof preferences]),
-        }),
+        body: JSON.stringify(payload),
       })
 
       const data = await response.json()
@@ -105,7 +108,21 @@ export default function ClientSignUpPage() {
         throw new Error(data.detail || "Error al crear la cuenta")
       }
 
-      setSuccess(true)
+      // Guardar token y usuario
+      if (data?.access_token) {
+        localStorage.setItem("token", data.access_token)
+      }
+      if (data?.user) {
+        localStorage.setItem("user", JSON.stringify(data.user))
+      }
+
+      // Redirigir según el rol
+      if (isBusiness) {
+        router.push("/dashboard/business")
+      } else {
+        router.push("/explore")
+      }
+      router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ocurrió un error")
     } finally {
@@ -113,42 +130,26 @@ export default function ClientSignUpPage() {
     }
   }
 
-  if (success) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10 px-4 py-12">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="flex items-center justify-center mb-4">
-              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-                <CheckCircle2 className="h-10 w-10 text-primary" />
-              </div>
-            </div>
-            <CardTitle className="text-2xl">¡Cuenta creada exitosamente!</CardTitle>
-            <CardDescription>Tu cuenta de viajero ha sido creada. Ya puedes iniciar sesión.</CardDescription>
-          </CardHeader>
-          <CardFooter>
-            <Button asChild className="w-full" size="lg">
-              <Link href="/sign-in/client">Iniciar sesión</Link>
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
-    )
-  }
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10 px-4 py-12">
-      <Card className="w-full max-w-2xl">
-        <CardHeader className="space-y-1">
+    <div 
+      className="min-h-screen flex items-center justify-center px-4 py-12"
+      style={{
+        backgroundImage: 'url(/images/background-login.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
+      <div className="absolute inset-0 bg-black/40" />
+      <Card className="w-full max-w-2xl relative z-10 backdrop-blur-sm bg-background/95">
+          <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
             <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
               <Users className="h-6 w-6 text-primary" />
             </div>
           </div>
-          <CardTitle className="text-2xl text-center">Registro de Viajero</CardTitle>
-          <CardDescription className="text-center">
-            Únete a ExplorerHub para descubrir experiencias increíbles
-          </CardDescription>
+          <CardTitle className="text-2xl text-center">Registro</CardTitle>
+          <CardDescription className="text-center">Únete a ExplorerHub para descubrir experiencias increíbles o registrar tu negocio</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
@@ -185,6 +186,13 @@ export default function ClientSignUpPage() {
                   disabled={isLoading}
                 />
               </div>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox id="isBusiness" checked={isBusiness} onCheckedChange={(c) => setIsBusiness(c as boolean)} disabled={isLoading} />
+              <label htmlFor="isBusiness" className="text-sm font-medium">
+                Registrarme como administrador de negocio
+              </label>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -320,13 +328,15 @@ export default function ClientSignUpPage() {
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Creando cuenta...
                 </>
+              ) : isBusiness ? (
+                "Crear cuenta de negocio"
               ) : (
                 "Crear cuenta"
               )}
             </Button>
             <p className="text-sm text-center text-muted-foreground">
               ¿Ya tienes cuenta?{" "}
-              <Link href="/sign-in/client" className="text-primary font-medium hover:underline">
+              <Link href="/sign-in" className="text-primary font-medium hover:underline">
                 Iniciar sesión
               </Link>
             </p>

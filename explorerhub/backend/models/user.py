@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 from bson import ObjectId
 
@@ -23,11 +23,15 @@ class PyObjectId(ObjectId):
 class UserBase(BaseModel):
     email: EmailStr
     full_name: str
-    is_business: bool = False
+    role: str = "client"  # "client" or "business"
 
 
 class UserCreate(UserBase):
     password: str
+    birth_date: Optional[str] = None
+    country: Optional[str] = None
+    language: Optional[str] = "es"
+    preferences: Optional[List[str]] = []
 
 
 class UserLogin(BaseModel):
@@ -36,20 +40,23 @@ class UserLogin(BaseModel):
 
 
 class UserInDB(UserBase):
-    id: Optional[PyObjectId] = Field(alias="_id", default=None)
+    id: Optional[int] = Field(default=None)
     hashed_password: str
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    birth_date: Optional[str] = None
+    country: Optional[str] = None
+    language: Optional[str] = "es"
+    preferences: Optional[List[str]] = []
     
     class Config:
         populate_by_name = True
         arbitrary_types_allowed = True
         json_encoders = {ObjectId: str}
+        # Allow extra fields from MongoDB
+        extra = "allow"
 
 
 class User(UserBase):
-    id: str
-    created_at: datetime
+    id: int
     
     class Config:
         from_attributes = True

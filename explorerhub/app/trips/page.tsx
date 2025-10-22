@@ -1,5 +1,7 @@
 "use client"
 
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -8,6 +10,30 @@ import { Calendar, MapPin, Plus } from "lucide-react"
 import Link from "next/link"
 
 export default function TripsPage() {
+  const router = useRouter()
+  const [isAuthorized, setIsAuthorized] = useState(false)
+
+  useEffect(() => {
+    const userData = localStorage.getItem("user")
+    if (!userData) {
+      router.push("/sign-in")
+      return
+    }
+    const parsedUser = JSON.parse(userData)
+    if (parsedUser.role === "business") {
+      router.push("/dashboard/business")
+      return
+    }
+    setIsAuthorized(true)
+  }, [router])
+
+  if (!isAuthorized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
   // Mock data - will be replaced with API calls
   const trips = [
     {
@@ -37,13 +63,13 @@ export default function TripsPage() {
       <main className="flex-1 container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold mb-2">My Trips</h1>
-            <p className="text-muted-foreground">Plan and organize your travel adventures</p>
+            <h1 className="text-3xl font-bold mb-2">Mis Viajes</h1>
+            <p className="text-muted-foreground">Planifica y organiza tus aventuras de viaje</p>
           </div>
           <Link href="/trips/new">
             <Button>
               <Plus className="h-4 w-4 mr-2" />
-              Create Trip
+              Crear Viaje
             </Button>
           </Link>
         </div>
@@ -53,14 +79,14 @@ export default function TripsPage() {
             <CardContent>
               <div className="max-w-md mx-auto">
                 <MapPin className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-xl font-semibold mb-2">No trips yet</h3>
+                <h3 className="text-xl font-semibold mb-2">Aún no tienes viajes</h3>
                 <p className="text-muted-foreground mb-6">
-                  Start planning your next adventure by creating your first trip
+                  Comienza a planificar tu próxima aventura creando tu primer viaje
                 </p>
                 <Link href="/trips/new">
                   <Button>
                     <Plus className="h-4 w-4 mr-2" />
-                    Create Your First Trip
+                    Crear Tu Primer Viaje
                   </Button>
                 </Link>
               </div>
@@ -95,7 +121,7 @@ export default function TripsPage() {
                         </span>
                       </div>
                       <div className="pt-2">
-                        <span className="text-sm font-medium">{trip.activities} activities planned</span>
+                        <span className="text-sm font-medium">{trip.activities} actividades planeadas</span>
                       </div>
                     </div>
                   </CardContent>

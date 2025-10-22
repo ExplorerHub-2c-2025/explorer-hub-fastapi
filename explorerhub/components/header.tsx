@@ -36,24 +36,40 @@ export function Header() {
       <div className={styles.container}>
         <div className={styles.left}>
           <Link href="/" className={styles.brandLink}>
-            <div className={styles.brandIcon}>
-              <span className="text-lg font-bold text-primary-foreground">T</span>
-            </div>
+            <img 
+              src="/images/logo_transparent.png" 
+              alt="ExplorerHub Logo" 
+              className={styles.brandIcon}
+              style={{ height: '2.5rem', width: 'auto' }}
+            />
             <span className={styles.brandText}>ExplorerHub</span>
           </Link>
 
           <nav className={styles.nav}>
-            <Link href="/explore" className="text-sm font-medium hover:text-primary transition-colors">
-              Explore
-            </Link>
-            {user && (
+            {user && user.role === "business" ? (
               <>
-                <Link href="/trips" className="text-sm font-medium hover:text-primary transition-colors">
-                  My Trips
+                <Link href="/dashboard/business" className="text-sm font-medium hover:text-primary transition-colors">
+                  Dashboard
                 </Link>
-                <Link href="/reviews" className="text-sm font-medium hover:text-primary transition-colors">
-                  Reviews
+                <Link href="/dashboard/business/analytics" className="text-sm font-medium hover:text-primary transition-colors">
+                  Analytics
                 </Link>
+              </>
+            ) : (
+              <>
+                <Link href="/explore" className="text-sm font-medium hover:text-primary transition-colors">
+                  Explorar
+                </Link>
+                {user && (
+                  <>
+                    <Link href="/trips" className="text-sm font-medium hover:text-primary transition-colors">
+                      Mis Viajes
+                    </Link>
+                    <Link href="/reviews" className="text-sm font-medium hover:text-primary transition-colors">
+                      Reseñas
+                    </Link>
+                  </>
+                )}
               </>
             )}
           </nav>
@@ -69,35 +85,57 @@ export function Header() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem asChild>
-                  <Link href="/trips" className="cursor-pointer">
-                    Trips
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/reviews" className="cursor-pointer">
-                    Reviews
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/profile/traveler" className="cursor-pointer">
-                    Profile
-                  </Link>
-                </DropdownMenuItem>
+                {user.role === "business" ? (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link href="/dashboard/business" className="cursor-pointer">
+                        Dashboard
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/dashboard/business/analytics" className="cursor-pointer">
+                        Analytics
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/dashboard/business/edit-profile" className="cursor-pointer">
+                        Perfil
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                ) : (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link href="/trips" className="cursor-pointer">
+                        Mis Viajes
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/reviews" className="cursor-pointer">
+                        Reseñas
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/profile/traveler" className="cursor-pointer">
+                        Perfil
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive">
                   <LogOut className="h-4 w-4 mr-2" />
-                  Logout
+                  Cerrar Sesión
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
             <div className="hidden lg:flex items-center gap-2">
               <Button variant="ghost" size="sm" asChild>
-                <Link href="/sign-in">Sign In</Link>
+                <Link href="/sign-in">Iniciar Sesión</Link>
               </Button>
               <Button size="sm" asChild>
-                <Link href="/signup">Sign Up</Link>
+                <Link href="/signup">Registrarse</Link>
               </Button>
             </div>
           )}

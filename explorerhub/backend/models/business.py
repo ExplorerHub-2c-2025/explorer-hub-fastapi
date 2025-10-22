@@ -26,7 +26,7 @@ class BusinessBase(BaseModel):
 
 
 class BusinessCreate(BusinessBase):
-    owner_id: str
+    pass
 
 
 class BusinessInDB(BusinessBase):
@@ -45,7 +45,7 @@ class BusinessInDB(BusinessBase):
 
 
 class Business(BusinessBase):
-    id: str
+    id: int
     owner_id: str
     rating: float
     views: int

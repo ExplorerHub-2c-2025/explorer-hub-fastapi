@@ -32,12 +32,10 @@
 
 .brandIcon {
   display: flex;
-  height: 2rem;
-  width: 2rem;
+  height: 2.5rem;
+  width: auto;
   align-items: center;
   justify-content: center;
-  border-radius: 0.5rem;
-  background: var(--primary);
 }
 
 .brandText {

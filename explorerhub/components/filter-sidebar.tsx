@@ -18,14 +18,14 @@ export function FilterSidebar({ onFilterChange }: FilterSidebarProps) {
   const [minRating, setMinRating] = useState(0)
 
   const categories = [
-    "Restaurants",
-    "Activities",
-    "Attractions",
-    "Nature",
+    "Restaurantes",
+    "Actividades",
+    "Atracciones",
+    "Naturaleza",
     "Cultural",
-    "Entertainment",
-    "Shopping",
-    "Nightlife",
+    "Entretenimiento",
+    "Compras",
+    "Vida Nocturna",
   ]
 
   useEffect(() => {
@@ -53,7 +53,7 @@ export function FilterSidebar({ onFilterChange }: FilterSidebarProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h3 className={styles.heading}>Categories</h3>
+        <h3 className={styles.heading}>Categorías</h3>
         <div className={styles.spaceY3}>
           {categories.map((category) => (
             <div key={category} className={styles.row}>
@@ -71,7 +71,7 @@ export function FilterSidebar({ onFilterChange }: FilterSidebarProps) {
       </div>
 
       <div className={styles.sectionDivider}>
-        <h3 className={styles.heading}>Price Range</h3>
+        <h3 className={styles.heading}>Rango de Precio</h3>
         <Slider value={priceRange} onValueChange={setPriceRange} min={1} max={4} step={1} className="mb-2" />
         <div className={styles.priceRow}>
           <span>$</span>
@@ -80,7 +80,7 @@ export function FilterSidebar({ onFilterChange }: FilterSidebarProps) {
       </div>
 
       <div className={styles.sectionDivider}>
-        <h3 className={styles.heading}>Minimum Rating</h3>
+        <h3 className={styles.heading}>Calificación Mínima</h3>
         <div className="space-y-2">
           {[4, 3, 2, 1].map((rating) => (
             <button
@@ -95,7 +95,7 @@ export function FilterSidebar({ onFilterChange }: FilterSidebarProps) {
                   <Star key={i} className="h-4 w-4 fill-current" />
                 ))}
               </div>
-              <span className="text-sm">& up</span>
+              <span className="text-sm">y más</span>
             </button>
           ))}
         </div>
@@ -103,7 +103,7 @@ export function FilterSidebar({ onFilterChange }: FilterSidebarProps) {
 
       <div className={styles.sectionDivider}>
         <Button variant="outline" className={styles.clearBtn} onClick={handleClearFilters}>
-          Clear Filters
+          Limpiar Filtros
         </Button>
       </div>
     </div>
