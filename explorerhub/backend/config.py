@@ -4,11 +4,11 @@ from typing import Optional
 
 class Settings(BaseSettings):
     # MongoDB
-    mongodb_url: str = "mongodb+srv://fcalderan:zkd5ULnDJJe9ednn@explorerhub.kxtiut7.mongodb.net/"
+    mongodb_url: str
     database_name: str = "ExplorerHub"
     
     # JWT
-    jwt_secret_key: str = "your-secret-key-change-in-production"
+    jwt_secret_key: str
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     
