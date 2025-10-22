@@ -53,6 +53,11 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db = Depends(get
     user = await db.users.find_one({"email": token_data.email})
     if user is None:
         raise credentials_exception
+    
+    # Serialize the document to handle ObjectId
+    from utils import serialize_doc
+    user = serialize_doc(user)
+    
     return UserInDB(**user)
 
 

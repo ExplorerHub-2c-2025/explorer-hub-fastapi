@@ -1,30 +1,29 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { mockUsers } from "@/lib/mock-db"
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { email, password } = body
 
-    const user = mockUsers.find((u) => u.email === email && u.password === password)
+    // Forward the request to FastAPI backend
+    const response = await fetch(`${BACKEND_URL}/api/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    })
 
-    if (!user) {
-      return NextResponse.json({ detail: "Credenciales inválidas" }, { status: 401 })
+    const data = await response.json()
+
+    if (!response.ok) {
+      return NextResponse.json(data, { status: response.status })
     }
 
-    // Generate a mock JWT token
-    const mockToken = `mock_jwt_${user.id}_${Date.now()}`
-
-    // Return user data without password
-    const { password: _, ...userWithoutPassword } = user
-
-    return NextResponse.json({
-      access_token: mockToken,
-      token_type: "bearer",
-      user: userWithoutPassword,
-    })
+    return NextResponse.json(data)
   } catch (error) {
     console.error("Login error:", error)
-    return NextResponse.json({ detail: "Error interno del servidor" }, { status: 500 })
+    return NextResponse.json({ detail: "Error al conectar con el servidor" }, { status: 500 })
   }
 }

@@ -20,7 +20,7 @@ class TripBase(BaseModel):
 
 
 class TripCreate(TripBase):
-    user_id: str
+    pass
 
 
 class TripInDB(TripBase):

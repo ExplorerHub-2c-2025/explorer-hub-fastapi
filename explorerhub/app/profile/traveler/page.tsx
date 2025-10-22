@@ -14,11 +14,11 @@ export default function TravelerProfile() {
   useEffect(() => {
     const userData = localStorage.getItem("user")
     if (!userData) {
-      router.push("/sign-in/client")
+      router.push("/sign-in")
       return
     }
     const parsedUser = JSON.parse(userData)
-    if (parsedUser.is_business) {
+    if (parsedUser.role === "business") {
       router.push("/dashboard/business")
       return
     }
@@ -64,7 +64,7 @@ export default function TravelerProfile() {
               </CardHeader>
               <CardContent>
                 <Button asChild className="w-full">
-                  <Link href="/profile/traveler/edit">Editar perfil</Link>
+                  <Link href="/profile/edit">Editar perfil</Link>
                 </Button>
               </CardContent>
             </Card>

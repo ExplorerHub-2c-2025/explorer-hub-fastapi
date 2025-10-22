@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { use, useState } from "react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -10,10 +10,11 @@ import Link from "next/link"
 import { format } from "date-fns"
 import ItineraryBuilder from "@/components/itinerary-builder" // Import ItineraryBuilder component
 
-export default function TripDetailPage({ params }: { params: { id: string } }) {
+export default function TripDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = use(params)
   // Mock data - would be fetched from API
   const [trip, setTrip] = useState({
-    id: params.id,
+    id: resolvedParams.id,
     name: "Summer in Italy",
     destination: "Rome, Florence, Venice",
     startDate: new Date("2025-07-15"),

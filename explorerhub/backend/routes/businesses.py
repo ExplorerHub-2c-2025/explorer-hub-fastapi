@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from typing import List, Optional
-from bson import ObjectId
+from datetime import datetime
 from database import get_database
 from models.business import BusinessCreate, Business, BusinessInDB
+from models.counter import get_next_sequence_value
 from auth import get_current_active_user
 from models.user import UserInDB
+from utils import serialize_doc, serialize_docs
 
 router = APIRouter(prefix="/api/businesses", tags=["businesses"])
 
@@ -16,19 +18,39 @@ async def create_business(
     db = Depends(get_database)
 ):
     """Create a new business (requires authentication)"""
-    if not current_user.is_business:
+    if current_user.role != "business":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only business accounts can create businesses"
         )
     
     business_dict = business.model_dump()
-    business_dict["owner_id"] = str(current_user.id)
+    # Get user id from current_user
+    user_id = current_user.id if current_user.id is not None else None
+    if user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="User ID not found"
+        )
+    business_dict["owner_id"] = str(user_id)
     
-    result = await db.businesses.insert_one(business_dict)
-    created_business = await db.businesses.find_one({"_id": result.inserted_id})
+    # Get next sequential ID
+    next_id = await get_next_sequence_value("businesses", db)
+    business_dict["id"] = next_id
     
-    return Business(**{**created_business, "id": str(created_business["_id"])})
+    # Add default fields
+    business_dict["rating"] = 0.0
+    business_dict["review_count"] = 0
+    business_dict["views"] = 0
+    business_dict["created_at"] = datetime.utcnow()
+    business_dict["updated_at"] = datetime.utcnow()
+    business_dict["is_active"] = True
+    
+    await db.businesses.insert_one(business_dict)
+    created_business = await db.businesses.find_one({"id": next_id})
+    created_business = serialize_doc(created_business)
+    
+    return Business(**created_business)
 
 
 @router.get("/", response_model=List[Business])
@@ -66,35 +88,47 @@ async def get_businesses(
     
     cursor = db.businesses.find(query).skip(skip).limit(limit).sort("rating", -1)
     businesses = await cursor.to_list(length=limit)
+    businesses = serialize_docs(businesses)
     
-    return [Business(**{**b, "id": str(b["_id"])}) for b in businesses]
+    # Ensure all required fields have default values
+    for business in businesses:
+        business.setdefault("rating", 0.0)
+        business.setdefault("views", 0)
+        business.setdefault("review_count", 0)
+        business.setdefault("created_at", datetime.utcnow())
+        business.setdefault("is_active", True)
+    
+    return [Business(**b) for b in businesses]
 
 
 @router.get("/{business_id}", response_model=Business)
-async def get_business(business_id: str, db = Depends(get_database)):
+async def get_business(business_id: int, db = Depends(get_database)):
     """Get a specific business by ID"""
-    if not ObjectId.is_valid(business_id):
-        raise HTTPException(status_code=400, detail="Invalid business ID")
-    
-    business = await db.businesses.find_one({"_id": ObjectId(business_id)})
+    business = await db.businesses.find_one({"id": business_id})
     if not business:
         raise HTTPException(status_code=404, detail="Business not found")
     
-    return Business(**{**business, "id": str(business["_id"])})
+    business = serialize_doc(business)
+    
+    # Ensure all required fields have default values
+    business.setdefault("rating", 0.0)
+    business.setdefault("views", 0)
+    business.setdefault("review_count", 0)
+    business.setdefault("created_at", datetime.utcnow())
+    business.setdefault("is_active", True)
+    
+    return Business(**business)
 
 
 @router.put("/{business_id}", response_model=Business)
 async def update_business(
-    business_id: str,
+    business_id: int,
     business_update: BusinessCreate,
     current_user: UserInDB = Depends(get_current_active_user),
     db = Depends(get_database)
 ):
     """Update a business (only by owner)"""
-    if not ObjectId.is_valid(business_id):
-        raise HTTPException(status_code=400, detail="Invalid business ID")
-    
-    existing_business = await db.businesses.find_one({"_id": ObjectId(business_id)})
+    existing_business = await db.businesses.find_one({"id": business_id})
     if not existing_business:
         raise HTTPException(status_code=404, detail="Business not found")
     
@@ -103,25 +137,31 @@ async def update_business(
     
     update_data = business_update.model_dump()
     await db.businesses.update_one(
-        {"_id": ObjectId(business_id)},
+        {"id": business_id},
         {"$set": update_data}
     )
     
-    updated_business = await db.businesses.find_one({"_id": ObjectId(business_id)})
-    return Business(**{**updated_business, "id": str(updated_business["_id"])})
+    updated_business = await db.businesses.find_one({"id": business_id})
+    updated_business = serialize_doc(updated_business)
+    
+    # Ensure all required fields have default values
+    updated_business.setdefault("rating", 0.0)
+    updated_business.setdefault("views", 0)
+    updated_business.setdefault("review_count", 0)
+    updated_business.setdefault("created_at", datetime.utcnow())
+    updated_business.setdefault("is_active", True)
+    
+    return Business(**updated_business)
 
 
 @router.delete("/{business_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_business(
-    business_id: str,
+    business_id: int,
     current_user: UserInDB = Depends(get_current_active_user),
     db = Depends(get_database)
 ):
     """Delete a business (soft delete - only by owner)"""
-    if not ObjectId.is_valid(business_id):
-        raise HTTPException(status_code=400, detail="Invalid business ID")
-    
-    existing_business = await db.businesses.find_one({"_id": ObjectId(business_id)})
+    existing_business = await db.businesses.find_one({"id": business_id})
     if not existing_business:
         raise HTTPException(status_code=404, detail="Business not found")
     
@@ -129,7 +169,7 @@ async def delete_business(
         raise HTTPException(status_code=403, detail="Not authorized to delete this business")
     
     await db.businesses.update_one(
-        {"_id": ObjectId(business_id)},
+        {"id": business_id},
         {"$set": {"is_active": False}}
     )
     
@@ -142,26 +182,44 @@ async def get_my_businesses(
     db = Depends(get_database)
 ):
     """Get all businesses owned by current user"""
-    cursor = db.businesses.find({"owner_id": str(current_user.id)})
+    user_id = current_user.id if current_user.id is not None else None
+    if user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="User ID not found"
+        )
+    cursor = db.businesses.find({"owner_id": str(user_id)})
     businesses = await cursor.to_list(length=100)
+    businesses = serialize_docs(businesses)
     
-    return [Business(**{**b, "id": str(b["_id"])}) for b in businesses]
+    # Ensure all required fields have default values
+    for business in businesses:
+        business.setdefault("rating", 0.0)
+        business.setdefault("views", 0)
+        business.setdefault("review_count", 0)
+        business.setdefault("created_at", datetime.utcnow())
+        business.setdefault("is_active", True)
+    
+    return [Business(**b) for b in businesses]
 
 
 @router.post("/{business_id}/view", status_code=status.HTTP_204_NO_CONTENT)
-async def increment_business_view(business_id: str, db = Depends(get_database)):
+async def increment_business_view(business_id: int, db = Depends(get_database)):
     """Increment the view count for a business (public endpoint)"""
-    if not ObjectId.is_valid(business_id):
-        raise HTTPException(status_code=400, detail="Invalid business ID")
-
-    await db.businesses.update_one({"_id": ObjectId(business_id)}, {"$inc": {"views": 1}})
+    await db.businesses.update_one({"id": business_id}, {"$inc": {"views": 1}})
     return None
 
 
 @router.get("/owner/analytics")
 async def owner_analytics(current_user: UserInDB = Depends(get_current_active_user), db = Depends(get_database)):
     """Return simple analytics for an owner's businesses: total, avg rating, total reviews, total views."""
-    cursor = db.businesses.find({"owner_id": str(current_user.id)})
+    user_id = current_user.id if current_user.id is not None else None
+    if user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="User ID not found"
+        )
+    cursor = db.businesses.find({"owner_id": str(user_id)})
     businesses = await cursor.to_list(length=1000)
 
     total = len(businesses)

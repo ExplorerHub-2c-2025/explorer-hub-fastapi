@@ -19,12 +19,12 @@ export default function BusinessDashboardPage() {
   useEffect(() => {
     const userData = localStorage.getItem("user")
     if (!userData) {
-      router.push("/sign-in/business")
+      router.push("/sign-in")
       return
     }
     const parsedUser = JSON.parse(userData)
-    if (!parsedUser.is_business) {
-      router.push("/profile/traveler")
+    if (parsedUser.role !== "business") {
+      router.push("/explore")
       return
     }
     setIsAuthorized(true)
@@ -43,17 +43,31 @@ export default function BusinessDashboardPage() {
 
     const fetchData = async () => {
       try {
+        console.log("[BusinessDashboard] Fetching analytics...")
         const resStats = await fetch("/api/businesses/owner/analytics", {
           headers: { Authorization: `Bearer ${token}` },
         })
-        if (resStats.ok) setStats(await resStats.json())
+        if (resStats.ok) {
+          const statsData = await resStats.json()
+          console.log("[BusinessDashboard] Analytics data:", statsData)
+          setStats(statsData)
+        } else {
+          console.error("[BusinessDashboard] Analytics failed:", resStats.status)
+        }
 
+        console.log("[BusinessDashboard] Fetching my businesses...")
         const res = await fetch("/api/businesses/owner/my-businesses", {
           headers: { Authorization: `Bearer ${token}` },
         })
-        if (res.ok) setBusinesses(await res.json())
+        if (res.ok) {
+          const businessesData = await res.json()
+          console.log("[BusinessDashboard] Businesses data:", businessesData)
+          setBusinesses(businessesData)
+        } else {
+          console.error("[BusinessDashboard] Businesses fetch failed:", res.status)
+        }
       } catch (err) {
-        console.error(err)
+        console.error("[BusinessDashboard] Error:", err)
       }
     }
 
@@ -144,7 +158,7 @@ export default function BusinessDashboardPage() {
                         <div className="flex items-center gap-3 mb-2">
                           <h3 className="text-xl font-semibold">{business.name}</h3>
                           <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">
-                            {business.status}
+                            {business.is_active ? 'Activo' : 'Inactivo'}
                           </span>
                         </div>
                         <p className="text-sm text-muted-foreground mb-4">{business.category}</p>
@@ -152,12 +166,12 @@ export default function BusinessDashboardPage() {
                         <div className="flex items-center gap-6 text-sm">
                           <div className="flex items-center gap-1">
                             <Star className="h-4 w-4 fill-accent text-accent" />
-                            <span className="font-medium">{business.rating}</span>
-                            <span className="text-muted-foreground">({business.reviews} reseñas)</span>
+                            <span className="font-medium">{business.rating || 0}</span>
+                            <span className="text-muted-foreground">({business.review_count || 0} reseñas)</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <Eye className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-muted-foreground">{business.views} vistas</span>
+                            <span className="text-muted-foreground">{business.views || 0} vistas</span>
                           </div>
                         </div>
                       </div>
@@ -186,7 +200,7 @@ export default function BusinessDashboardPage() {
               ))
             ) : (
               <Card>
-                <CardContent>
+                <CardContent className="pt-6">
                   <p>No tienes negocios aún. Crea uno desde el botón "Agregar Negocio".</p>
                 </CardContent>
               </Card>

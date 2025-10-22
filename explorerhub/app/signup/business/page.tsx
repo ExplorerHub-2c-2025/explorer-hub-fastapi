@@ -332,7 +332,7 @@ export default function BusinessSignUpPage() {
             </Button>
             <p className="text-sm text-center text-muted-foreground">
               ¿Ya tienes cuenta?{" "}
-              <Link href="/sign-in/business" className="text-primary font-medium hover:underline">
+              <Link href="/sign-in" className="text-primary font-medium hover:underline">
                 Iniciar sesión
               </Link>
             </p>

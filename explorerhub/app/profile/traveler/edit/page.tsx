@@ -11,23 +11,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { ArrowLeft, Loader2 } from "lucide-react"
+import { ArrowLeft, Loader2, User } from "lucide-react"
 import Link from "next/link"
 
 const travelPreferences = [
-  { id: "aventura", label: "Aventura" },
-  { id: "cultura", label: "Cultura" },
-  { id: "gastronomia", label: "Gastronomía" },
+  { id: "adventure", label: "Aventura" },
+  { id: "culture", label: "Cultura" },
+  { id: "gastronomy", label: "Gastronomía" },
   { id: "relax", label: "Relax" },
-  { id: "naturaleza", label: "Naturaleza" },
+  { id: "nature", label: "Naturaleza" },
 ]
 
 const languages = [
-  { value: "español", label: "Español" },
-  { value: "ingles", label: "Inglés" },
-  { value: "portugues", label: "Portugués" },
-  { value: "frances", label: "Francés" },
-  { value: "aleman", label: "Alemán" },
+  { value: "es", label: "Español" },
+  { value: "en", label: "Inglés" },
+  { value: "pt", label: "Portugués" },
+  { value: "fr", label: "Francés" },
+  { value: "de", label: "Alemán" },
 ]
 
 export default function EditTravelerProfile() {
@@ -47,20 +47,22 @@ export default function EditTravelerProfile() {
   useEffect(() => {
     const userData = localStorage.getItem("user")
     if (!userData) {
-      router.push("/sign-in/client")
+      router.push("/sign-in")
       return
     }
     const parsedUser = JSON.parse(userData)
-    if (parsedUser.is_business) {
+    if (parsedUser.role === "business") {
       router.push("/dashboard/business")
       return
     }
+    
+    // Autocompletar todos los campos disponibles
     setFormData({
-      name: parsedUser.name || "",
+      name: parsedUser.full_name || parsedUser.name || "",
       country: parsedUser.country || "",
-      date_of_birth: parsedUser.date_of_birth || "",
-      language: parsedUser.language || "",
-      travel_preferences: parsedUser.travel_preferences || [],
+      date_of_birth: parsedUser.birth_date || parsedUser.date_of_birth || "",
+      language: parsedUser.language || "es",
+      travel_preferences: parsedUser.preferences || parsedUser.travel_preferences || [],
     })
   }, [router])
 
@@ -87,7 +89,17 @@ export default function EditTravelerProfile() {
       const userData = localStorage.getItem("user")
       if (userData) {
         const parsedUser = JSON.parse(userData)
-        const updatedUser = { ...parsedUser, ...formData }
+        const updatedUser = { 
+          ...parsedUser, 
+          full_name: formData.name,
+          name: formData.name,
+          country: formData.country,
+          birth_date: formData.date_of_birth,
+          date_of_birth: formData.date_of_birth,
+          language: formData.language,
+          preferences: formData.travel_preferences,
+          travel_preferences: formData.travel_preferences,
+        }
         localStorage.setItem("user", JSON.stringify(updatedUser))
       }
 
@@ -103,19 +115,33 @@ export default function EditTravelerProfile() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-primary/10 py-12 px-4">
-      <div className="container mx-auto max-w-2xl">
-        <Button variant="ghost" asChild className="mb-6">
+    <div 
+      className="min-h-screen flex items-center justify-center px-4 py-12"
+      style={{
+        backgroundImage: 'url(/images/background-login.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
+      <div className="absolute inset-0 bg-black/40" />
+      <div className="w-full max-w-2xl relative z-10">
+        <Button variant="ghost" asChild className="mb-6 bg-white/90 hover:bg-white">
           <Link href="/profile/traveler">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Volver al perfil
           </Link>
         </Button>
 
-        <Card>
+        <Card className="backdrop-blur-sm bg-background/95">
           <CardHeader>
-            <CardTitle className="text-2xl">Editar Perfil de Viajero</CardTitle>
-            <CardDescription>Actualiza tu información personal y preferencias de viaje</CardDescription>
+            <div className="flex items-center justify-center mb-4">
+              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <User className="h-6 w-6 text-primary" />
+              </div>
+            </div>
+            <CardTitle className="text-2xl text-center">Editar Perfil de Viajero</CardTitle>
+            <CardDescription className="text-center">Actualiza tu información personal y preferencias de viaje</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">

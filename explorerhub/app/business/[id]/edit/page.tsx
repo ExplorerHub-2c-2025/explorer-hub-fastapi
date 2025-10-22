@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { use, useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
@@ -9,7 +9,8 @@ import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 
-export default function EditBusinessPage({ params }: { params: { id: string } }) {
+export default function EditBusinessPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = use(params)
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [isAuthorized, setIsAuthorized] = useState(false)
@@ -17,12 +18,12 @@ export default function EditBusinessPage({ params }: { params: { id: string } })
   useEffect(() => {
     const userData = localStorage.getItem("user")
     if (!userData) {
-      router.push("/sign-in/business")
+      router.push("/sign-in")
       return
     }
     const parsedUser = JSON.parse(userData)
-    if (!parsedUser.is_business) {
-      router.push("/profile/traveler")
+    if (parsedUser.role !== "business") {
+      router.push("/explore")
       return
     }
     setIsAuthorized(true)
@@ -37,7 +38,7 @@ export default function EditBusinessPage({ params }: { params: { id: string } })
 
     const fetchBusiness = async () => {
       try {
-        const res = await fetch(`/api/businesses/${params.id}`)
+        const res = await fetch(`/api/businesses/${resolvedParams.id}`)
         if (res.ok) {
           const data = await res.json()
           setInitialData(data)
@@ -48,13 +49,13 @@ export default function EditBusinessPage({ params }: { params: { id: string } })
     }
 
     fetchBusiness()
-  }, [params.id])
+  }, [resolvedParams.id])
 
   const handleSubmit = async (data: any) => {
     setIsLoading(true)
     try {
       const token = localStorage.getItem("token")
-      const res = await fetch(`/api/businesses/${params.id}`, {
+      const res = await fetch(`/api/businesses/${resolvedParams.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

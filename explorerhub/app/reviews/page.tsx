@@ -1,3 +1,7 @@
+"use client"
+
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -5,6 +9,30 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Star, ThumbsUp } from "lucide-react"
 
 export default function ReviewsPage() {
+  const router = useRouter()
+  const [isAuthorized, setIsAuthorized] = useState(false)
+
+  useEffect(() => {
+    const userData = localStorage.getItem("user")
+    if (!userData) {
+      router.push("/sign-in")
+      return
+    }
+    const parsedUser = JSON.parse(userData)
+    if (parsedUser.role === "business") {
+      router.push("/dashboard/business")
+      return
+    }
+    setIsAuthorized(true)
+  }, [router])
+
+  if (!isAuthorized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
   // Mock data
   const reviews = [
     {
@@ -31,8 +59,8 @@ export default function ReviewsPage() {
 
       <main className="flex-1 container mx-auto px-4 py-8">
         <div className="max-w-3xl mx-auto">
-          <h1 className="text-3xl font-bold mb-2">My Reviews</h1>
-          <p className="text-muted-foreground mb-8">Share your experiences and help other travelers</p>
+          <h1 className="text-3xl font-bold mb-2">Mis Reseñas</h1>
+          <p className="text-muted-foreground mb-8">Comparte tus experiencias y ayuda a otros viajeros</p>
 
           <div className="space-y-6">
             {reviews.map((review) => (
@@ -64,7 +92,7 @@ export default function ReviewsPage() {
                   <div className="flex items-center gap-4">
                     <Button variant="ghost" size="sm">
                       <ThumbsUp className="h-4 w-4 mr-2" />
-                      Helpful ({review.helpful})
+                      Útil ({review.helpful})
                     </Button>
                   </div>
                 </CardContent>

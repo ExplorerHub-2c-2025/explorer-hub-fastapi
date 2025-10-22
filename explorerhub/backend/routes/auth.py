@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from database import get_database
 from models.user import UserCreate, User, Token, UserLogin
+from models.counter import get_next_sequence_value
 from auth import (
     get_password_hash,
     verify_password,
@@ -10,6 +11,7 @@ from auth import (
     get_current_active_user,
 )
 from config import settings
+from utils import serialize_doc
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
@@ -25,12 +27,26 @@ async def signup(user: UserCreate, db = Depends(get_database)):
             detail="Email already registered"
         )
     
+    # Validate role
+    if user.role not in ["client", "business"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Role must be either 'client' or 'business'"
+        )
+    
     # Create new user
     user_dict = user.model_dump()
     user_dict["hashed_password"] = get_password_hash(user_dict.pop("password"))
     
-    result = await db.users.insert_one(user_dict)
-    created_user = await db.users.find_one({"_id": result.inserted_id})
+    # Get next sequential ID
+    next_id = await get_next_sequence_value("users", db)
+    user_dict["id"] = next_id
+    
+    await db.users.insert_one(user_dict)
+    created_user = await db.users.find_one({"id": next_id})
+    
+    # Remove _id field
+    created_user = serialize_doc(created_user)
     
     access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
     access_token = create_access_token(
@@ -39,13 +55,11 @@ async def signup(user: UserCreate, db = Depends(get_database)):
     
     return {
         "access_token": access_token,
-        "token_type": "bearer",
         "user": {
-            "id": str(created_user["_id"]),
+            "id": created_user["id"],
             "email": created_user["email"],
             "full_name": created_user["full_name"],
-            "is_business": created_user.get("is_business", False),
-            "created_at": created_user["created_at"].isoformat() if "created_at" in created_user else None
+            "role": created_user.get("role", "client")
         }
     }
 
@@ -62,31 +76,31 @@ async def login(user_credentials: UserLogin, db = Depends(get_database)):
             headers={"WWW-Authenticate": "Bearer"},
         )
     
+    # Ensure user has id field
+    user = serialize_doc(user)
+    
     access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
     access_token = create_access_token(
         data={"sub": user["email"]}, expires_delta=access_token_expires
     )
     
     return {
-        "access_token": access_token, 
-        "token_type": "bearer",
+        "access_token": access_token,
         "user": {
-            "id": str(user["_id"]),
+            "id": user["id"],
             "email": user["email"],
             "full_name": user["full_name"],
-            "is_business": user.get("is_business", False),
-            "created_at": user["created_at"].isoformat() if "created_at" in user else None
+            "role": user.get("role", "client")
         }
     }
 
 
-@router.get("/me", response_model=User)
+@router.get("/me")
 async def get_me(current_user = Depends(get_current_active_user)):
     """Get current user information"""
-    return User(
-        id=str(current_user.id),
-        email=current_user.email,
-        full_name=current_user.full_name,
-        is_business=current_user.is_business,
-        created_at=current_user.created_at
-    )
+    return {
+        "id": current_user.id,
+        "email": current_user.email,
+        "full_name": current_user.full_name,
+        "role": current_user.role
+    }

@@ -4,15 +4,22 @@ Python FastAPI backend for the ExplorerHub travel and tourism platform.
 
 ## Setup
 
+1. Start up the environment:
+```bash
+cd explorerhub/backend/
+python3 -m venv .venv
+source .venv/bin/activate
+```
 1. Install dependencies:
-\`\`\`bash
+```bash
+
 pip install -r requirements.txt
-\`\`\`
+```
 
 2. Run the development server:
-\`\`\`bash
+```bash
 uvicorn main:app --reload --port 8000
-\`\`\`
+```
 
 ## API Documentation
 
@@ -23,6 +30,7 @@ Once running, visit:
 ## Environment Variables
 
 Create a `.env` file with:
-\`\`\`
+```
 MONGODB_URL=your_mongodb_connection_string
 JWT_SECRET_KEY=your_secret_key
+```

@@ -10,64 +10,64 @@ export function Footer() {
           <div>
             <h3 className={styles.title}>ExplorerHub</h3>
             <p className={styles.textMuted}>
-              Your digital travel guide for discovering authentic local experiences.
+              Tu guía de viaje digital para descubrir experiencias locales auténticas.
             </p>
           </div>
 
           <div>
-            <h4 className={styles.title}>Explore</h4>
+            <h4 className={styles.title}>Explorar</h4>
             <ul className="space-y-2 text-sm">
               <li>
                 <Link href="/restaurants" className={styles.linkMuted}>
-                  Restaurants
+                  Restaurantes
                 </Link>
               </li>
               <li>
                 <Link href="/activities" className={styles.linkMuted}>
-                  Activities
+                  Actividades
                 </Link>
               </li>
               <li>
                 <Link href="/attractions" className={styles.linkMuted}>
-                  Attractions
+                  Atracciones
                 </Link>
               </li>
               <li>
                 <Link href="/experiences" className={styles.linkMuted}>
-                  Experiences
+                  Experiencias
                 </Link>
               </li>
             </ul>
           </div>
 
           <div>
-            <h4 className={styles.title}>Company</h4>
+            <h4 className={styles.title}>Compañía</h4>
             <ul className="space-y-2 text-sm">
               <li>
                 <Link href="/about" className={styles.linkMuted}>
-                  About Us
+                  Sobre Nosotros
                 </Link>
               </li>
               <li>
                 <Link href="/business" className={styles.linkMuted}>
-                  For Business
+                  Para Negocios
                 </Link>
               </li>
               <li>
                 <Link href="/careers" className={styles.linkMuted}>
-                  Careers
+                  Carreras
                 </Link>
               </li>
               <li>
                 <Link href="/contact" className={styles.linkMuted}>
-                  Contact
+                  Contacto
                 </Link>
               </li>
             </ul>
           </div>
 
           <div>
-            <h4 className={styles.title}>Follow Us</h4>
+            <h4 className={styles.title}>Síguenos</h4>
             <div className={styles.icons}>
               <Link href="#" className={styles.linkMuted}>
                 <Facebook className="h-5 w-5" />
@@ -86,7 +86,7 @@ export function Footer() {
         </div>
 
         <div className={styles.bottom}>
-          <p>&copy; 2025 ExplorerHub. All rights reserved.</p>
+          <p>&copy; 2025 ExplorerHub. Todos los derechos reservados.</p>
         </div>
       </div>
     </footer>

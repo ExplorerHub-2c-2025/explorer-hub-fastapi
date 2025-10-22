@@ -13,7 +13,7 @@ class ReviewBase(BaseModel):
 
 
 class ReviewCreate(ReviewBase):
-    user_id: str
+    pass
 
 
 class ReviewInDB(ReviewBase):

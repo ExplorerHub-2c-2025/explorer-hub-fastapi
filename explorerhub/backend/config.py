@@ -4,7 +4,7 @@ from typing import Optional
 
 class Settings(BaseSettings):
     # MongoDB
-    mongodb_url: str = "mongodb://localhost:27017"
+    mongodb_url: str = "mongodb+srv://fcalderan:zkd5ULnDJJe9ednn@explorerhub.kxtiut7.mongodb.net/"
     database_name: str = "ExplorerHub"
     
     # JWT
