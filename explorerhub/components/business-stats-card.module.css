@@ -1,0 +1,6 @@
+.headerRow { display: flex; flex-direction: row; align-items: center; justify-content: space-between; padding-bottom: 0.5rem; }
+.titleSmall { font-size: 0.875rem; font-weight: 500; color: var(--muted-foreground); }
+.valueLarge { font-size: 1.5rem; font-weight: 700; }
+.descSmall { font-size: 0.75rem; color: var(--muted-foreground); margin-top: 0.25rem; }
+.trendPositive { color: #16a34a; }
+.trendNegative { color: #dc2626; }

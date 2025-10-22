@@ -1,0 +1,9 @@
+.spaceY4 { display: block; }
+
+.spaceY2 { display: block; margin-bottom: 0.5rem; }
+
+.starRow { display: flex; gap: 0.25rem; }
+
+.starBtn { transition: transform 0.15s ease-in-out; }
+
+.actions { display: flex; gap: 0.5rem; justify-content: flex-end; }

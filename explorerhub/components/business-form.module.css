@@ -1,0 +1,25 @@
+.contentSpace {
+  display: block;
+}
+
+.gridTwo {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .gridTwo { grid-template-columns: repeat(2, 1fr); }
+}
+
+.spaceY2 {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding-top: 1rem;
+}
