@@ -1,0 +1,13 @@
+.root { display: block; }
+
+.headerRow { display: flex; align-items: center; justify-content: space-between; }
+
+.title { font-size: 1.125rem; font-weight: 600; }
+
+.spaceY3 { display: block; row-gap: 0.75rem; }
+
+.centerContent { padding-top: 3rem; text-align: center; }
+
+.badgeRow { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+
+.mutedText { font-size: 0.875rem; color: var(--muted-foreground); }
