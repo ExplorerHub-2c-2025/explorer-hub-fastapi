@@ -248,14 +248,8 @@ async def create_nested_reply(
                     return True
         return False
     
-    # Get next reply ID
-    counter_result = await db.counters.find_one_and_update(
-        {"_id": "reply_id"},
-        {"$inc": {"seq": 1}},
-        return_document=True
-    )
-    
-    next_id = counter_result["seq"] if counter_result else 1
+    # Get next reply ID - usar el mismo contador que las respuestas directas
+    next_id = await get_next_sequence_value("replies", db)
     
     # Create new nested reply
     new_reply = {
