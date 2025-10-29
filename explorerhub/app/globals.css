@@ -125,3 +125,9 @@
     color: var(--foreground);
   }
 }
+
+/* Ensure dialogs and modals are always on top */
+[data-radix-dialog-overlay],
+[data-radix-dialog-content] {
+  z-index: 9999 !important;
+}

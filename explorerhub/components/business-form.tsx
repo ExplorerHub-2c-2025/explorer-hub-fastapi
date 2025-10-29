@@ -74,7 +74,7 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
         <CardHeader>
           <CardTitle>{initialData ? "Editar Negocio" : "Agregar Nuevo Negocio"}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className={styles.contentSpace}>
           <div className={styles.gridTwo}>
             <div className={styles.spaceY2}>
               <Label htmlFor="name">Nombre del Negocio *</Label>
@@ -217,8 +217,8 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
           {/* Image Upload Section */}
           <div className={styles.spaceY2}>
             <Label>Imágenes del Negocio</Label>
-            <div className="space-y-3">
-              <div className="flex gap-2">
+            <div className={styles.spaceY3}>
+              <div className={styles.imageInputRow}>
                 <Input
                   value={newImageUrl}
                   onChange={(e) => setNewImageUrl(e.target.value)}
@@ -237,14 +237,14 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
               </div>
 
               {imageUrls.length > 0 && (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                <div className={styles.imageGrid}>
                   {imageUrls.map((url, index) => (
-                    <div key={index} className="relative group">
-                      <div className="aspect-video rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
+                    <div key={index} className={styles.imageWrapper}>
+                      <div className={styles.imageContainer}>
                         <img
                           src={url}
                           alt={`Imagen ${index + 1}`}
-                          className="w-full h-full object-cover"
+                          className={styles.imagePreview}
                           onError={(e) => {
                             const target = e.target as HTMLImageElement
                             target.src = "/placeholder.svg"
@@ -254,11 +254,11 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
                       <button
                         type="button"
                         onClick={() => handleRemoveImage(index)}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className={styles.removeButton}
                       >
                         <X className="h-4 w-4" />
                       </button>
-                      <div className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                      <div className={styles.imageIndex}>
                         {index + 1}
                       </div>
                     </div>
@@ -267,10 +267,10 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
               )}
 
               {imageUrls.length === 0 && (
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                  <ImageIcon className="h-12 w-12 mx-auto text-gray-400 mb-2" />
-                  <p className="text-sm text-gray-500">No hay imágenes agregadas</p>
-                  <p className="text-xs text-gray-400 mt-1">Agrega URLs de imágenes para tu negocio</p>
+                <div className={styles.emptyState}>
+                  <ImageIcon className={styles.emptyIcon} />
+                  <p className={styles.emptyText}>No hay imágenes agregadas</p>
+                  <p className={styles.emptySubtext}>Agrega URLs de imágenes para tu negocio</p>
                 </div>
               )}
             </div>

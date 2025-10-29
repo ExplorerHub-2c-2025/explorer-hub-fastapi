@@ -8,9 +8,10 @@ import { ActivityCard } from "@/components/activity-card"
 import { FilterSidebar } from "@/components/filter-sidebar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, SlidersHorizontal, Loader2 } from "lucide-react"
+import { Search, SlidersHorizontal, Loader2, X } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import styles from "./page.module.css"
 
 interface Business {
   id: number
@@ -128,28 +129,38 @@ export default function ExplorePage() {
   }, [activities, searchQuery, filters, sortBy])
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className={styles.pageContainer}>
       <Header />
 
-      <main className="flex-1">
+      <main className={styles.mainContent}>
         {/* Search Header */}
-        <div className="border-b border-gray-200 bg-muted/30">
-          <div className="container mx-auto px-4 py-6">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1 flex items-center gap-2 px-4 py-2 bg-background rounded-lg border border-gray-200">
-                <Search className="h-5 w-5 text-muted-foreground" />
+        <div className={styles.searchHeader}>
+          <div className={styles.searchHeaderContainer}>
+            <div className={styles.searchHeaderGrid}>
+              <div className={styles.searchBarWrapper}>
+                <Search className={styles.searchIcon} />
                 <Input
                   type="text"
                   placeholder="Buscar experiencias..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
+                  className={styles.searchInput}
                 />
+                {searchQuery && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSearchQuery("")}
+                    className={styles.clearButton}
+                  >
+                    <X className={styles.clearIcon} />
+                  </Button>
+                )}
               </div>
 
-              <div className="flex gap-2">
+              <div className={styles.controlsRow}>
                 <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="w-[180px]">
+                  <SelectTrigger className={styles.sortSelect}>
                     <SelectValue placeholder="Ordenar por" />
                   </SelectTrigger>
                   <SelectContent>
@@ -163,8 +174,8 @@ export default function ExplorePage() {
 
                 <Sheet>
                   <SheetTrigger asChild>
-                    <Button variant="outline" className="md:hidden bg-transparent">
-                      <SlidersHorizontal className="h-4 w-4 mr-2" />
+                    <Button variant="outline" className={styles.filterButton}>
+                      <SlidersHorizontal className={styles.filterIcon} />
                       Filtros
                     </Button>
                   </SheetTrigger>
@@ -172,7 +183,7 @@ export default function ExplorePage() {
                     <SheetHeader>
                       <SheetTitle>Filtros</SheetTitle>
                     </SheetHeader>
-                    <div className="mt-6">
+                    <div className={styles.sheetContent}>
                       <FilterSidebar onFilterChange={setFilters} />
                     </div>
                   </SheetContent>
@@ -183,37 +194,52 @@ export default function ExplorePage() {
         </div>
 
         {/* Main Content */}
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex gap-8">
+        <div className={styles.contentContainer}>
+          <div className={styles.contentGrid}>
             {/* Desktop Sidebar */}
-            <aside className="hidden md:block w-64 flex-shrink-0">
-              <div className="sticky top-20">
+            <aside className={styles.sidebar}>
+              <div className={styles.sidebarSticky}>
                 <FilterSidebar onFilterChange={setFilters} />
               </div>
             </aside>
 
             {/* Results */}
-            <div className="flex-1">
-              <div className="mb-6">
-                <h1 className="text-2xl font-bold mb-2">Explorar Experiencias</h1>
-                <p className="text-muted-foreground">{filteredActivities.length} experiencias encontradas</p>
+            <div className={styles.resultsSection}>
+              <div className={styles.resultsHeader}>
+                <h1 className={styles.resultsTitle}>Explorar Experiencias</h1>
+                <div className={styles.resultsInfo}>
+                  <p className={styles.resultsCount}>
+                    {filteredActivities.length} experiencia{filteredActivities.length !== 1 ? 's' : ''} encontrada{filteredActivities.length !== 1 ? 's' : ''}
+                  </p>
+                  {sortBy !== "recommended" && (
+                    <p className={styles.sortInfo}>
+                      Ordenado por: {
+                        sortBy === "rating" ? "Mejor Valorados" :
+                        sortBy === "reviews" ? "Más Reseñas" :
+                        sortBy === "price-low" ? "Precio: Menor a Mayor" :
+                        sortBy === "price-high" ? "Precio: Mayor a Menor" :
+                        "Recomendados"
+                      }
+                    </p>
+                  )}
+                </div>
               </div>
 
               {isLoading ? (
-                <div className="flex justify-center items-center py-20">
-                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                <div className={styles.loadingContainer}>
+                  <Loader2 className={styles.loadingSpinner} />
                 </div>
               ) : error ? (
-                <div className="text-center py-12">
-                  <p className="text-red-500 mb-2">Error al cargar experiencias</p>
-                  <p className="text-sm text-muted-foreground">{error}</p>
-                  <Button onClick={fetchBusinesses} className="mt-4">
+                <div className={styles.errorContainer}>
+                  <p className={styles.errorTitle}>Error al cargar experiencias</p>
+                  <p className={styles.errorText}>{error}</p>
+                  <Button onClick={fetchBusinesses} className={styles.retryButton}>
                     Reintentar
                   </Button>
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className={styles.activitiesGrid}>
                     {filteredActivities.map((activity) => (
                       <ActivityCard 
                         key={activity.id} 
@@ -232,15 +258,23 @@ export default function ExplorePage() {
                   </div>
 
                   {filteredActivities.length === 0 && !isLoading && (
-                    <div className="text-center py-12">
-                      <p className="text-muted-foreground">No se encontraron experiencias que coincidan con tus criterios.</p>
-                      <p className="text-sm text-muted-foreground mt-2">Intenta ajustar tus filtros o búsqueda.</p>
+                    <div className={styles.emptyState}>
+                      <div className={styles.emptyIconContainer}>
+                        <Search className={styles.emptyIcon} />
+                        <p className={styles.emptyTitle}>No se encontraron experiencias</p>
+                        <p className={styles.emptyMessage}>
+                          No hay resultados que coincidan con tus criterios de búsqueda.
+                        </p>
+                        <p className={styles.emptyHint}>
+                          Intenta ajustar tus filtros o búsqueda para ver más resultados.
+                        </p>
+                      </div>
                     </div>
                   )}
 
                   {/* Load More */}
                   {filteredActivities.length > 0 && (
-                    <div className="mt-8 text-center">
+                    <div className={styles.loadMoreSection}>
                       <Button variant="outline" size="lg">
                         Cargar Más
                       </Button>

@@ -17,6 +17,23 @@ export function FilterSidebar({ onFilterChange }: FilterSidebarProps) {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [minRating, setMinRating] = useState(0)
 
+  // Mapeo de categorías español -> inglés para el backend
+  const categoryMap: Record<string, string> = {
+    "Restaurantes": "Restaurant",
+    "Actividades": "Activity",
+    "Atracciones": "Attraction",
+    "Naturaleza": "Nature",
+    "Cultural": "Cultural",
+    "Entretenimiento": "Entertainment",
+    "Compras": "Shopping",
+    "Vida Nocturna": "Nightlife",
+  }
+
+  // Mapeo inverso inglés -> español para mostrar
+  const categoryMapReverse: Record<string, string> = Object.fromEntries(
+    Object.entries(categoryMap).map(([key, value]) => [value, key])
+  )
+
   const categories = [
     "Restaurantes",
     "Actividades",
@@ -30,9 +47,11 @@ export function FilterSidebar({ onFilterChange }: FilterSidebarProps) {
 
   useEffect(() => {
     if (onFilterChange) {
+      // Convertir categorías seleccionadas (español) a inglés para el filtro
+      const categoriesInEnglish = selectedCategories.map(cat => categoryMap[cat] || cat)
       onFilterChange({
         priceRange,
-        categories: selectedCategories,
+        categories: categoriesInEnglish,
         minRating,
       })
     }
@@ -51,8 +70,8 @@ export function FilterSidebar({ onFilterChange }: FilterSidebarProps) {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
+    <div className={styles.rootContainer}>
+      <div className={styles.categorySection}>
         <h3 className={styles.heading}>Categorías</h3>
         <div className={styles.spaceY3}>
           {categories.map((category) => (
@@ -62,7 +81,7 @@ export function FilterSidebar({ onFilterChange }: FilterSidebarProps) {
                 checked={selectedCategories.includes(category)}
                 onCheckedChange={() => handleCategoryToggle(category)}
               />
-              <Label htmlFor={category} className="cursor-pointer">
+              <Label htmlFor={category} className={styles.label}>
                 {category}
               </Label>
             </div>
@@ -72,37 +91,51 @@ export function FilterSidebar({ onFilterChange }: FilterSidebarProps) {
 
       <div className={styles.sectionDivider}>
         <h3 className={styles.heading}>Rango de Precio</h3>
-        <Slider value={priceRange} onValueChange={setPriceRange} min={1} max={4} step={1} className="mb-2" />
+        <Slider value={priceRange} onValueChange={setPriceRange} min={1} max={4} step={1} className={styles.slider} />
         <div className={styles.priceRow}>
-          <span>$</span>
-          <span>$$$$</span>
+          <span className={styles.priceText}>
+            {"$".repeat(priceRange[0])} - {"$".repeat(priceRange[1])}
+          </span>
         </div>
       </div>
 
       <div className={styles.sectionDivider}>
         <h3 className={styles.heading}>Calificación Mínima</h3>
-        <div className="space-y-2">
-          {[4, 3, 2, 1].map((rating) => (
+        <div className={styles.ratingList}>
+          {[4, 3, 2, 1, 0].map((rating) => (
             <button
               key={rating}
               onClick={() => setMinRating(rating)}
-              className={`${styles.ratingButton} ${
-                minRating === rating ? "bg-primary text-primary-foreground" : "hover:bg-muted"
-              }`}
+              className={styles.ratingButton}
+              style={{
+                backgroundColor: minRating === rating ? 'hsl(var(--primary))' : 'transparent',
+                color: minRating === rating ? 'hsl(var(--primary-foreground))' : 'inherit',
+                borderColor: minRating === rating ? 'hsl(var(--primary))' : 'transparent',
+              }}
             >
               <div className={styles.ratingStars}>
-                {Array.from({ length: rating }).map((_, i) => (
-                  <Star key={i} className="h-4 w-4 fill-current" />
-                ))}
+                {rating > 0 ? (
+                  <>
+                    {Array.from({ length: rating }).map((_, i) => (
+                      <Star key={i} className={styles.ratingIcon} />
+                    ))}
+                    <span className={styles.ratingText}>y más</span>
+                  </>
+                ) : (
+                  <span className={styles.ratingText}>Todas las calificaciones</span>
+                )}
               </div>
-              <span className="text-sm">y más</span>
             </button>
           ))}
         </div>
       </div>
 
       <div className={styles.sectionDivider}>
-        <Button variant="outline" className={styles.clearBtn} onClick={handleClearFilters}>
+        <Button 
+          variant="outline" 
+          className={styles.clearBtn} 
+          onClick={handleClearFilters}
+        >
           Limpiar Filtros
         </Button>
       </div>

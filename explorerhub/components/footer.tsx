@@ -16,7 +16,7 @@ export function Footer() {
 
           <div>
             <h4 className={styles.title}>Explorar</h4>
-            <ul className="space-y-2 text-sm">
+            <ul className={styles.list}>
               <li>
                 <Link href="/restaurants" className={styles.linkMuted}>
                   Restaurantes
@@ -42,7 +42,7 @@ export function Footer() {
 
           <div>
             <h4 className={styles.title}>Compañía</h4>
-            <ul className="space-y-2 text-sm">
+            <ul className={styles.list}>
               <li>
                 <Link href="/about" className={styles.linkMuted}>
                   Sobre Nosotros

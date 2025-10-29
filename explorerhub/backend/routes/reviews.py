@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Body, Depends, HTTPException, status
 from typing import List
 from datetime import datetime
 from database import get_database
-from models.review import ReviewCreate, Review, ReviewInDB
+from models.review import ReviewCreate, Review, ReviewInDB, ReplyCreate, Reply
 from models.counter import get_next_sequence_value
 from auth import get_current_active_user
 from models.user import UserInDB
@@ -39,6 +39,7 @@ async def create_review(
     review_dict["user_id"] = str(current_user.id)
     review_dict["user_name"] = current_user.full_name
     review_dict["helpful_count"] = 0
+    review_dict["replies"] = []
     review_dict["created_at"] = datetime.utcnow()
     review_dict["updated_at"] = datetime.utcnow()
     
@@ -52,7 +53,15 @@ async def create_review(
     await update_business_rating(review.business_id, db)
     
     created_review = await db.reviews.find_one({"id": next_id})
+    if not created_review:
+        raise HTTPException(status_code=500, detail="Failed to create review")
+    
     created_review = serialize_doc(created_review)
+    
+    # Ensure id is int
+    if isinstance(created_review.get("id"), str):
+        created_review["id"] = int(created_review["id"])
+    
     return Review(**created_review)
 
 
@@ -68,6 +77,11 @@ async def get_business_reviews(
     reviews = await cursor.to_list(length=limit)
     reviews = serialize_docs(reviews)
     
+    # Ensure all reviews have replies field
+    for review in reviews:
+        if "replies" not in review:
+            review["replies"] = []
+    
     return [Review(**r) for r in reviews]
 
 
@@ -81,6 +95,11 @@ async def get_my_reviews(
     cursor = db.reviews.find({"user_id": user_id}).sort("created_at", -1)
     reviews = await cursor.to_list(length=100)
     reviews = serialize_docs(reviews)
+    
+    # Ensure all reviews have replies field
+    for review in reviews:
+        if "replies" not in review:
+            review["replies"] = []
     
     return [Review(**r) for r in reviews]
 
@@ -155,6 +174,181 @@ async def mark_review_helpful(
         raise HTTPException(status_code=404, detail="Review not found")
     
     return {"message": "Review marked as helpful"}
+
+
+@router.post("/{review_id}/replies", response_model=Review, status_code=status.HTTP_201_CREATED)
+async def create_reply(
+    review_id: int,
+    reply: ReplyCreate,
+    current_user: UserInDB = Depends(get_current_active_user),
+    db = Depends(get_database)
+):
+    """Create a reply to a review"""
+    # Verify review exists
+    review = await db.reviews.find_one({"id": review_id})
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+    
+    # Get next reply ID (use review_id + reply count for uniqueness)
+    next_reply_id = await get_next_sequence_value("replies", db)
+    
+    # Create reply
+    new_reply = {
+        "id": next_reply_id,
+        "user_id": str(current_user.id),
+        "user_name": current_user.full_name,
+        "text": reply.text,
+        "created_at": datetime.utcnow()
+    }
+    
+    # Add reply to review
+    await db.reviews.update_one(
+        {"id": review_id},
+        {
+            "$push": {"replies": new_reply},
+            "$set": {"updated_at": datetime.utcnow()}
+        }
+    )
+    
+    # Get updated review
+    updated_review = await db.reviews.find_one({"id": review_id})
+    updated_review = serialize_doc(updated_review)
+    
+    # Ensure id is int
+    if isinstance(updated_review.get("id"), str):
+        updated_review["id"] = int(updated_review["id"])
+    
+    return Review(**updated_review)
+
+
+@router.post("/{review_id}/replies/{reply_id}/replies", response_model=Reply)
+async def create_nested_reply(
+    review_id: int,
+    reply_id: int,
+    reply_text: str = Body(..., embed=True),
+    current_user: UserInDB = Depends(get_current_active_user),
+    db = Depends(get_database)
+):
+    """Create a reply to a reply (nested reply)"""
+    review = await db.reviews.find_one({"id": review_id})
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+    
+    # Helper function to find and add nested reply recursively
+    def add_nested_reply_recursive(replies_list, target_id, new_reply):
+        for reply in replies_list:
+            if reply["id"] == target_id:
+                if "replies" not in reply:
+                    reply["replies"] = []
+                reply["replies"].append(new_reply)
+                return True
+            # Check nested replies
+            if "replies" in reply and reply["replies"]:
+                if add_nested_reply_recursive(reply["replies"], target_id, new_reply):
+                    return True
+        return False
+    
+    # Get next reply ID
+    counter_result = await db.counters.find_one_and_update(
+        {"_id": "reply_id"},
+        {"$inc": {"seq": 1}},
+        return_document=True
+    )
+    
+    next_id = counter_result["seq"] if counter_result else 1
+    
+    # Create new nested reply
+    new_reply = {
+        "id": next_id,
+        "user_id": str(current_user.id),
+        "user_name": current_user.full_name,
+        "text": reply_text,
+        "created_at": datetime.utcnow(),
+        "replies": []
+    }
+    
+    # Find parent reply and add nested reply
+    replies_list = review.get("replies", [])
+    if not add_nested_reply_recursive(replies_list, reply_id, new_reply):
+        raise HTTPException(status_code=404, detail="Parent reply not found")
+    
+    # Update review with modified replies
+    await db.reviews.update_one(
+        {"id": review_id},
+        {
+            "$set": {
+                "replies": replies_list,
+                "updated_at": datetime.utcnow()
+            }
+        }
+    )
+    
+    return Reply(**new_reply)
+
+
+@router.delete("/{review_id}/replies/{reply_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_reply(
+    review_id: int,
+    reply_id: int,
+    current_user: UserInDB = Depends(get_current_active_user),
+    db = Depends(get_database)
+):
+    """Delete a reply (only by author) - works recursively for nested replies"""
+    review = await db.reviews.find_one({"id": review_id})
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+    
+    # Helper function to find reply recursively
+    def find_reply_recursive(replies_list, target_id):
+        for reply in replies_list:
+            if reply["id"] == target_id:
+                return reply
+            # Check nested replies
+            if "replies" in reply and reply["replies"]:
+                found = find_reply_recursive(reply["replies"], target_id)
+                if found:
+                    return found
+        return None
+    
+    # Helper function to remove reply recursively
+    def remove_reply_recursive(replies_list, target_id):
+        for i, reply in enumerate(replies_list):
+            if reply["id"] == target_id:
+                replies_list.pop(i)
+                return True
+            # Check nested replies
+            if "replies" in reply and reply["replies"]:
+                if remove_reply_recursive(reply["replies"], target_id):
+                    return True
+        return False
+    
+    # Find the reply to verify ownership
+    replies_list = review.get("replies", [])
+    reply_to_delete = find_reply_recursive(replies_list, reply_id)
+    
+    if not reply_to_delete:
+        raise HTTPException(status_code=404, detail="Reply not found")
+    
+    # Check if user is the author
+    if reply_to_delete["user_id"] != str(current_user.id):
+        raise HTTPException(status_code=403, detail="Not authorized to delete this reply")
+    
+    # Remove reply recursively
+    if remove_reply_recursive(replies_list, reply_id):
+        # Update review with modified replies
+        await db.reviews.update_one(
+            {"id": review_id},
+            {
+                "$set": {
+                    "replies": replies_list,
+                    "updated_at": datetime.utcnow()
+                }
+            }
+        )
+    else:
+        raise HTTPException(status_code=404, detail="Reply not found")
+    
+    return None
 
 
 async def update_business_rating(business_id: int, db):

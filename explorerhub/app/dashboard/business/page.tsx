@@ -139,7 +139,7 @@ export default function BusinessDashboard() {
                   {businesses.map((business) => (
                     <div key={business.id} className="relative">
                       {!business.is_active && (
-                        <div className="absolute top-2 right-2 z-10 px-3 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full font-medium">
+                        <div className="absolute top-2 right-2 px-3 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full font-medium">
                           Inactivo
                         </div>
                       )}

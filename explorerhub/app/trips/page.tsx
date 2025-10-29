@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Calendar, MapPin, Plus } from "lucide-react"
 import Link from "next/link"
+import styles from "./page.module.css"
 
 export default function TripsPage() {
   const router = useRouter()
@@ -29,8 +30,8 @@ export default function TripsPage() {
 
   if (!isAuthorized) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className={styles.loadingContainer}>
+        <div className={styles.loadingSpinner}></div>
       </div>
     )
   }
@@ -57,35 +58,35 @@ export default function TripsPage() {
   ]
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className={styles.pageContainer}>
       <Header />
 
-      <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Mis Viajes</h1>
-            <p className="text-muted-foreground">Planifica y organiza tus aventuras de viaje</p>
+      <main className={styles.mainContent}>
+        <div className={styles.headerSection}>
+          <div className={styles.headerText}>
+            <h1>Mis Viajes</h1>
+            <p>Planifica y organiza tus aventuras de viaje</p>
           </div>
           <Link href="/trips/new">
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
+            <Button className={styles.createButton}>
+              <Plus className={styles.buttonIcon} />
               Crear Viaje
             </Button>
           </Link>
         </div>
 
         {trips.length === 0 ? (
-          <Card className="text-center py-12">
+          <Card className={styles.emptyState}>
             <CardContent>
-              <div className="max-w-md mx-auto">
-                <MapPin className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-xl font-semibold mb-2">Aún no tienes viajes</h3>
-                <p className="text-muted-foreground mb-6">
+              <div className={styles.emptyStateContent}>
+                <MapPin className={styles.emptyIcon} />
+                <h3 className={styles.emptyTitle}>Aún no tienes viajes</h3>
+                <p className={styles.emptyText}>
                   Comienza a planificar tu próxima aventura creando tu primer viaje
                 </p>
                 <Link href="/trips/new">
                   <Button>
-                    <Plus className="h-4 w-4 mr-2" />
+                    <Plus className={styles.buttonIcon} />
                     Crear Tu Primer Viaje
                   </Button>
                 </Link>
@@ -93,35 +94,34 @@ export default function TripsPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className={styles.tripsGrid}>
             {trips.map((trip) => (
               <Link key={trip.id} href={`/trips/${trip.id}`}>
-                <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
-                  <div className="aspect-video relative">
+                <Card className={styles.tripCard}>
+                  <div className={styles.tripImage}>
                     <img
                       src={trip.image || "/placeholder.svg"}
                       alt={trip.name}
-                      className="object-cover w-full h-full"
                     />
                   </div>
                   <CardHeader>
                     <CardTitle>{trip.name}</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <MapPin className="h-4 w-4" />
+                    <div className={styles.tripContent}>
+                      <div className={styles.tripInfo}>
+                        <MapPin className={styles.infoIcon} />
                         <span>{trip.destination}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Calendar className="h-4 w-4" />
+                      <div className={styles.tripInfo}>
+                        <Calendar className={styles.infoIcon} />
                         <span>
                           {new Date(trip.startDate).toLocaleDateString()} -{" "}
                           {new Date(trip.endDate).toLocaleDateString()}
                         </span>
                       </div>
-                      <div className="pt-2">
-                        <span className="text-sm font-medium">{trip.activities} actividades planeadas</span>
+                      <div className={styles.tripActivities}>
+                        <span className={styles.activitiesText}>{trip.activities} actividades planeadas</span>
                       </div>
                     </div>
                   </CardContent>

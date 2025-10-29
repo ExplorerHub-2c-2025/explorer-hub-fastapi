@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2, Users, CheckCircle2 } from "lucide-react"
+import styles from "./page.module.css"
 
 export default function SignUpPage() {
   const router = useRouter()
@@ -131,36 +132,28 @@ export default function SignUpPage() {
   }
 
   return (
-    <div 
-      className="min-h-screen flex items-center justify-center px-4 py-12"
-      style={{
-        backgroundImage: 'url(/images/background-login.png)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat'
-      }}
-    >
-      <div className="absolute inset-0 bg-black/40" />
-      <Card className="w-full max-w-2xl relative z-10 backdrop-blur-sm bg-background/95">
-          <CardHeader className="space-y-1">
-          <div className="flex items-center justify-center mb-4">
-            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-              <Users className="h-6 w-6 text-primary" />
+    <div className={styles.pageContainer}>
+      <div className={styles.backgroundOverlay} />
+      <Card className={styles.card}>
+          <CardHeader className={styles.header}>
+          <div className={styles.iconContainer}>
+            <div className={styles.iconCircle}>
+              <Users className={styles.icon} />
             </div>
           </div>
-          <CardTitle className="text-2xl text-center">Registro</CardTitle>
-          <CardDescription className="text-center">Únete a ExplorerHub para descubrir experiencias increíbles o registrar tu negocio</CardDescription>
+          <CardTitle className={styles.title}>Registro</CardTitle>
+          <CardDescription className={styles.description}>Únete a ExplorerHub para descubrir experiencias increíbles o registrar tu negocio</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
+          <CardContent className={styles.content}>
             {error && (
               <Alert variant="destructive">
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
+            <div className={styles.grid}>
+              <div className={styles.fieldContainer}>
                 <Label htmlFor="name">Nombre completo *</Label>
                 <Input
                   id="name"
@@ -173,7 +166,7 @@ export default function SignUpPage() {
                   disabled={isLoading}
                 />
               </div>
-              <div className="space-y-2">
+              <div className={styles.fieldContainer}>
                 <Label htmlFor="email">Correo electrónico *</Label>
                 <Input
                   id="email"
@@ -188,15 +181,15 @@ export default function SignUpPage() {
               </div>
             </div>
 
-            <div className="flex items-center space-x-2">
+            <div className={styles.checkboxRow}>
               <Checkbox id="isBusiness" checked={isBusiness} onCheckedChange={(c) => setIsBusiness(c as boolean)} disabled={isLoading} />
-              <label htmlFor="isBusiness" className="text-sm font-medium">
+              <label htmlFor="isBusiness" className={styles.checkboxLabel}>
                 Registrarme como administrador de negocio
               </label>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
+            <div className={styles.grid}>
+              <div className={styles.fieldContainer}>
                 <Label htmlFor="password">Contraseña *</Label>
                 <Input
                   id="password"
@@ -209,7 +202,7 @@ export default function SignUpPage() {
                   disabled={isLoading}
                 />
               </div>
-              <div className="space-y-2">
+              <div className={styles.fieldContainer}>
                 <Label htmlFor="confirmPassword">Confirmar contraseña *</Label>
                 <Input
                   id="confirmPassword"
@@ -224,8 +217,8 @@ export default function SignUpPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
+            <div className={styles.grid}>
+              <div className={styles.fieldContainer}>
                 <Label htmlFor="birthDate">Fecha de nacimiento *</Label>
                 <Input
                   id="birthDate"
@@ -237,7 +230,7 @@ export default function SignUpPage() {
                   disabled={isLoading}
                 />
               </div>
-              <div className="space-y-2">
+              <div className={styles.fieldContainer}>
                 <Label htmlFor="country">País de residencia *</Label>
                 <Input
                   id="country"
@@ -252,7 +245,7 @@ export default function SignUpPage() {
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className={styles.fieldContainer}>
               <Label htmlFor="language">Idioma preferido</Label>
               <Select
                 value={formData.language}
@@ -271,9 +264,9 @@ export default function SignUpPage() {
               </Select>
             </div>
 
-            <div className="space-y-3">
+            <div className={styles.preferencesContainer}>
               <Label>Preferencias de viaje</Label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div className={styles.preferencesGrid}>
                 {[
                   { id: "adventure", label: "Aventura" },
                   { id: "culture", label: "Cultura" },
@@ -281,17 +274,14 @@ export default function SignUpPage() {
                   { id: "relax", label: "Relax" },
                   { id: "nature", label: "Naturaleza" },
                 ].map((pref) => (
-                  <div key={pref.id} className="flex items-center space-x-2">
+                  <div key={pref.id} className={styles.preferenceItem}>
                     <Checkbox
                       id={pref.id}
                       checked={preferences[pref.id as keyof typeof preferences]}
                       onCheckedChange={(checked) => handlePreferenceChange(pref.id, checked as boolean)}
                       disabled={isLoading}
                     />
-                    <label
-                      htmlFor={pref.id}
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
+                    <label htmlFor={pref.id} className={styles.preferenceLabel}>
                       {pref.label}
                     </label>
                   </div>
@@ -299,33 +289,30 @@ export default function SignUpPage() {
               </div>
             </div>
 
-            <div className="flex items-start space-x-2">
+            <div className={styles.termsContainer}>
               <Checkbox
                 id="terms"
                 checked={agreedToTerms}
                 onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
                 disabled={isLoading}
               />
-              <label
-                htmlFor="terms"
-                className="text-sm text-muted-foreground leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
+              <label htmlFor="terms" className={styles.termsLabel}>
                 Acepto los{" "}
-                <Link href="/terms" className="text-primary hover:underline">
+                <Link href="/terms" className={styles.termsLink}>
                   Términos de Servicio
                 </Link>{" "}
                 y la{" "}
-                <Link href="/privacy" className="text-primary hover:underline">
+                <Link href="/privacy" className={styles.termsLink}>
                   Política de Privacidad
                 </Link>
               </label>
             </div>
           </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+          <CardFooter className={styles.footer}>
+            <Button type="submit" className={styles.submitButton} size="lg" disabled={isLoading}>
               {isLoading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className={styles.loadingIcon} />
                   Creando cuenta...
                 </>
               ) : isBusiness ? (
@@ -334,9 +321,9 @@ export default function SignUpPage() {
                 "Crear cuenta"
               )}
             </Button>
-            <p className="text-sm text-center text-muted-foreground">
+            <p className={styles.footerText}>
               ¿Ya tienes cuenta?{" "}
-              <Link href="/sign-in" className="text-primary font-medium hover:underline">
+              <Link href="/sign-in" className={styles.signinLink}>
                 Iniciar sesión
               </Link>
             </p>

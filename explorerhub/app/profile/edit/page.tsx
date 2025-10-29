@@ -141,7 +141,7 @@ export default function EditProfile() {
       }}
     >
       <div className="absolute inset-0 bg-black/40" />
-      <div className="w-full max-w-2xl relative z-10">
+      <div className="w-full max-w-2xl relative">
         <Button variant="ghost" asChild className="mb-6 bg-white/90 hover:bg-white">
           <Link href={getBackLink()}>
             <ArrowLeft className="mr-2 h-4 w-4" />
