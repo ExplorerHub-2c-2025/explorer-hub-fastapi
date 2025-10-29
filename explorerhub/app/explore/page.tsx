@@ -87,7 +87,8 @@ export default function ExplorePage() {
           activity.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
           activity.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
           activity.location.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          activity.location.state.toLowerCase().includes(searchQuery.toLowerCase()),
+          activity.location.state.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          activity.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())),
       )
     }
 

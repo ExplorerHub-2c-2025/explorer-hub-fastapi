@@ -62,9 +62,10 @@ const RenderReply = memo(({
   reply, 
   reviewId, 
   depth = 0,
+  parentKey = '',
   replyingToReply,
-  nestedReplyText,
-  setNestedReplyText,
+  nestedReplyTexts,
+  setNestedReplyTexts,
   setReplyingToReply,
   handleReplyToReply,
   handleSubmitNestedReply,
@@ -75,16 +76,21 @@ const RenderReply = memo(({
   reply: Reply
   reviewId: number
   depth?: number
-  replyingToReply: { reviewId: number, replyId: number } | null
-  nestedReplyText: string
-  setNestedReplyText: (text: string) => void
-  setReplyingToReply: (value: { reviewId: number, replyId: number } | null) => void
-  handleReplyToReply: (reviewId: number, replyId: number) => void
-  handleSubmitNestedReply: () => void
+  parentKey?: string
+  replyingToReply: string | null
+  nestedReplyTexts: Record<string, string>
+  setNestedReplyTexts: (value: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)) => void
+  setReplyingToReply: (value: string | null) => void
+  handleReplyToReply: (reviewId: number, replyId: number, uniqueKey: string) => void
+  handleSubmitNestedReply: (uniqueKey: string, reviewId: number, replyId: number) => void
   handleDeleteReply: (reviewId: number, replyId: number) => void
   isOwnReply: (reply: Reply) => boolean
   styles: any
 }) => {
+  const uniqueKey = parentKey ? `${parentKey}-${reply.id}` : `${reviewId}-${reply.id}`
+  // Usar uniqueKey en lugar de replyKey simple para evitar colisiones
+  const replyKey = uniqueKey
+  const currentText = nestedReplyTexts[replyKey] || ""
   return (
     <div className={styles.replyItem} style={{ marginLeft: `${depth * 20}px` }}>
       <div className={styles.replyHeader}>
@@ -103,7 +109,7 @@ const RenderReply = memo(({
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => handleReplyToReply(reviewId, reply.id)}
+          onClick={() => handleReplyToReply(reviewId, reply.id, uniqueKey)}
           className={styles.replyActionButton}
         >
           <Reply className="h-3 w-3 mr-1" />
@@ -123,12 +129,15 @@ const RenderReply = memo(({
       </div>
 
       {/* Nested Reply Form */}
-      {replyingToReply?.reviewId === reviewId && replyingToReply?.replyId === reply.id && (
+      {replyingToReply === uniqueKey && (
         <div className={styles.replyForm} style={{ marginTop: '10px' }}>
           <textarea
-            key={`nested-reply-${reviewId}-${reply.id}`}
-            value={nestedReplyText}
-            onChange={(e) => setNestedReplyText(e.target.value)}
+            key={uniqueKey}
+            value={currentText}
+            onChange={(e) => setNestedReplyTexts(prev => ({
+              ...prev,
+              [replyKey]: e.target.value
+            }))}
             placeholder="Escribe tu respuesta..."
             className={styles.replyTextarea}
             rows={3}
@@ -142,14 +151,18 @@ const RenderReply = memo(({
               size="sm"
               onClick={() => {
                 setReplyingToReply(null)
-                setNestedReplyText("")
+                setNestedReplyTexts(prev => {
+                  const newTexts = { ...prev }
+                  delete newTexts[replyKey]
+                  return newTexts
+                })
               }}
             >
               Cancelar
             </Button>
             <Button
               size="sm"
-              onClick={handleSubmitNestedReply}
+              onClick={() => handleSubmitNestedReply(uniqueKey, reviewId, reply.id)}
             >
               Enviar
             </Button>
@@ -160,15 +173,16 @@ const RenderReply = memo(({
       {/* Render nested replies recursively */}
       {reply.replies && reply.replies.length > 0 && (
         <div className={styles.nestedRepliesContainer}>
-          {reply.replies.map((nestedReply) => (
+          {reply.replies.map((nestedReply, index) => (
             <RenderReply 
-              key={nestedReply.id} 
+              key={`${uniqueKey}-${index}-${nestedReply.id}`}
               reply={nestedReply} 
               reviewId={reviewId}
               depth={depth + 1}
+              parentKey={`${uniqueKey}-${index}`}
               replyingToReply={replyingToReply}
-              nestedReplyText={nestedReplyText}
-              setNestedReplyText={setNestedReplyText}
+              nestedReplyTexts={nestedReplyTexts}
+              setNestedReplyTexts={setNestedReplyTexts}
               setReplyingToReply={setReplyingToReply}
               handleReplyToReply={handleReplyToReply}
               handleSubmitNestedReply={handleSubmitNestedReply}
@@ -196,11 +210,11 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
   const [showReviewForm, setShowReviewForm] = useState(false)
   const { showAuthDialog, setShowAuthDialog, requireAuth } = useAuthRequired()
   
-  // Reply states
   const [replyingTo, setReplyingTo] = useState<number | null>(null)
   const [replyText, setReplyText] = useState("")
-  const [replyingToReply, setReplyingToReply] = useState<{ reviewId: number, replyId: number } | null>(null)
-  const [nestedReplyText, setNestedReplyText] = useState("")
+  const [replyingToReply, setReplyingToReply] = useState<string | null>(null)
+  const [nestedReplyTexts, setNestedReplyTexts] = useState<Record<string, string>>({})
+  const [expandedReplies, setExpandedReplies] = useState<Set<number>>(new Set())
   
   // Alert/Confirm Dialog states
   const [alertDialog, setAlertDialog] = useState<{
@@ -504,17 +518,18 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
     })
   }, [requireAuth, showAlert, showConfirm, setShowAuthDialog])
 
-  const handleReplyToReply = useCallback((reviewId: number, replyId: number) => {
+  const handleReplyToReply = useCallback((reviewId: number, replyId: number, uniqueKey: string) => {
     requireAuth(() => {
-      setReplyingToReply({ reviewId, replyId })
-      setNestedReplyText("")
+      setReplyingToReply(uniqueKey)
     })
   }, [requireAuth])
 
-  const handleSubmitNestedReply = useCallback(async () => {
+  const handleSubmitNestedReply = useCallback(async (uniqueKey: string, reviewId: number, replyId: number) => {
     if (!replyingToReply) return
     
-    if (!nestedReplyText.trim()) {
+    const currentText = nestedReplyTexts[uniqueKey] || ""
+    
+    if (!currentText.trim()) {
       showAlert('error', 'Error', 'Por favor escribe una respuesta')
       return
     }
@@ -528,15 +543,13 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
         return
       }
       
-      const { reviewId, replyId } = replyingToReply
-      
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/reviews/${reviewId}/replies/${replyId}/replies`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ reply_text: nestedReplyText.trim() }),
+        body: JSON.stringify({ reply_text: currentText.trim() }),
       })
 
       if (response.status === 401) {
@@ -553,7 +566,12 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
       if (response.ok) {
         showAlert('success', '¡Éxito!', 'Respuesta agregada exitosamente')
         setReplyingToReply(null)
-        setNestedReplyText("")
+        // Limpiar solo el texto de esta respuesta específica
+        setNestedReplyTexts(prev => {
+          const newTexts = { ...prev }
+          delete newTexts[uniqueKey]
+          return newTexts
+        })
         setTimeout(() => window.location.reload(), 1500)
       } else {
         const errorData = await response.json().catch(() => ({ detail: "Error desconocido" }))
@@ -563,7 +581,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
       console.error("Error al enviar respuesta anidada:", error)
       showAlert('error', 'Error', 'Error al enviar la respuesta')
     }
-  }, [replyingToReply, nestedReplyText, showAlert, setShowAuthDialog])
+  }, [replyingToReply, nestedReplyTexts, showAlert, setShowAuthDialog])
 
   const isOwnReview = (review: Review): boolean => {
     const userData = localStorage.getItem("user")
@@ -589,6 +607,28 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
       return false
     }
   }, [])
+
+  const toggleRepliesExpanded = (reviewId: number) => {
+    setExpandedReplies(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(reviewId)) {
+        newSet.delete(reviewId)
+      } else {
+        newSet.add(reviewId)
+      }
+      return newSet
+    })
+  }
+
+  const getTotalReplyCount = (replies: Reply[]): number => {
+    let count = replies.length
+    replies.forEach(reply => {
+      if (reply.replies && reply.replies.length > 0) {
+        count += getTotalReplyCount(reply.replies)
+      }
+    })
+    return count
+  }
 
   console.log("Render - showAuthDialog:", showAuthDialog)
 
@@ -746,16 +786,34 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
                           <p className={styles.reviewText}>{review.text}</p>
                           
                           {/* Replies Section */}
-                          {review.replies && review.replies.length > 0 && (
+                          {review.replies && review.replies.length >= 2 && (
+                            <div className={styles.repliesToggleContainer}>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => toggleRepliesExpanded(review.id)}
+                                className={styles.repliesToggleButton}
+                              >
+                                <MessageSquare className="h-4 w-4 mr-2" />
+                                {expandedReplies.has(review.id) 
+                                  ? 'Ocultar respuestas' 
+                                  : `Ver ${getTotalReplyCount(review.replies)} respuestas`
+                                }
+                              </Button>
+                            </div>
+                          )}
+
+                          {review.replies && review.replies.length > 0 && (review.replies.length < 2 || expandedReplies.has(review.id)) && (
                             <div className={styles.repliesContainer}>
-                              {review.replies.map((reply) => (
+                              {review.replies.map((reply, index) => (
                                 <RenderReply 
-                                  key={reply.id} 
+                                  key={`review-${review.id}-reply-${index}-${reply.id}`}
                                   reply={reply} 
                                   reviewId={review.id}
+                                  parentKey={`review-${review.id}-${index}`}
                                   replyingToReply={replyingToReply}
-                                  nestedReplyText={nestedReplyText}
-                                  setNestedReplyText={setNestedReplyText}
+                                  nestedReplyTexts={nestedReplyTexts}
+                                  setNestedReplyTexts={setNestedReplyTexts}
                                   setReplyingToReply={setReplyingToReply}
                                   handleReplyToReply={handleReplyToReply}
                                   handleSubmitNestedReply={handleSubmitNestedReply}
