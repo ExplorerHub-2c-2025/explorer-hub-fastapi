@@ -1,13 +1,18 @@
 "use client"
 
-import { use, useEffect, useState } from "react"
+import { use, useEffect, useState, useCallback, memo } from "react"
+import { useRouter } from "next/navigation"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ImageGallery } from "@/components/image-gallery"
-import { Star, MapPin, Phone, Globe, DollarSign, Calendar, Heart, Loader2 } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { Star, MapPin, Phone, Globe, DollarSign, Calendar, Heart, Loader2, ArrowLeft, Plus, MessageSquare, Trash2, Reply, AlertCircle, CheckCircle2 } from "lucide-react"
+import { AuthRequiredDialog } from "@/components/auth-required-dialog"
+import { ReviewForm } from "@/components/review-form"
+import { useAuthRequired } from "@/lib/hooks/use-auth-required"
+import styles from "./page.module.css"
 
 interface Business {
   id: number
@@ -29,11 +34,213 @@ interface Business {
   website?: string
 }
 
+interface Reply {
+  id: number
+  user_id: string
+  user_name: string
+  text: string
+  created_at: string
+  replies: Reply[]
+}
+
+interface Review {
+  id: number
+  user_id: string
+  user_name: string
+  business_id: string
+  rating: number
+  title: string
+  text: string
+  images?: string[]
+  helpful_count: number
+  replies: Reply[]
+  created_at: string
+}
+
+// Componente recursivo para renderizar respuestas (fuera del componente principal)
+const RenderReply = memo(({ 
+  reply, 
+  reviewId, 
+  depth = 0,
+  parentKey = '',
+  replyingToReply,
+  nestedReplyTexts,
+  setNestedReplyTexts,
+  setReplyingToReply,
+  handleReplyToReply,
+  handleSubmitNestedReply,
+  handleDeleteReply,
+  isOwnReply,
+  styles
+}: { 
+  reply: Reply
+  reviewId: number
+  depth?: number
+  parentKey?: string
+  replyingToReply: string | null
+  nestedReplyTexts: Record<string, string>
+  setNestedReplyTexts: (value: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)) => void
+  setReplyingToReply: (value: string | null) => void
+  handleReplyToReply: (reviewId: number, replyId: number, uniqueKey: string) => void
+  handleSubmitNestedReply: (uniqueKey: string, reviewId: number, replyId: number) => void
+  handleDeleteReply: (reviewId: number, replyId: number) => void
+  isOwnReply: (reply: Reply) => boolean
+  styles: any
+}) => {
+  const uniqueKey = parentKey ? `${parentKey}-${reply.id}` : `${reviewId}-${reply.id}`
+  // Usar uniqueKey en lugar de replyKey simple para evitar colisiones
+  const replyKey = uniqueKey
+  const currentText = nestedReplyTexts[replyKey] || ""
+  return (
+    <div className={styles.replyItem} style={{ marginLeft: `${depth * 20}px` }}>
+      <div className={styles.replyHeader}>
+        <span className={styles.replyAuthor}>{reply.user_name}</span>
+        <span className={styles.replyDate}>
+          {new Date(reply.created_at).toLocaleDateString('es-ES', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+          })}
+        </span>
+      </div>
+      <p className={styles.replyText}>{reply.text}</p>
+      
+      <div className={styles.replyActions}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => handleReplyToReply(reviewId, reply.id, uniqueKey)}
+          className={styles.replyActionButton}
+        >
+          <Reply className="h-3 w-3 mr-1" />
+          Responder
+        </Button>
+        
+        {isOwnReply(reply) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleDeleteReply(reviewId, reply.id)}
+            className={styles.deleteReplyButton}
+          >
+            <Trash2 className="h-3 w-3" />
+          </Button>
+        )}
+      </div>
+
+      {/* Nested Reply Form */}
+      {replyingToReply === uniqueKey && (
+        <div className={styles.replyForm} style={{ marginTop: '10px' }}>
+          <textarea
+            key={uniqueKey}
+            value={currentText}
+            onChange={(e) => setNestedReplyTexts(prev => ({
+              ...prev,
+              [replyKey]: e.target.value
+            }))}
+            placeholder="Escribe tu respuesta..."
+            className={styles.replyTextarea}
+            rows={3}
+            autoFocus
+            dir="ltr"
+            style={{ direction: 'ltr', textAlign: 'left', unicodeBidi: 'normal' }}
+          />
+          <div className={styles.replyFormActions}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setReplyingToReply(null)
+                setNestedReplyTexts(prev => {
+                  const newTexts = { ...prev }
+                  delete newTexts[replyKey]
+                  return newTexts
+                })
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => handleSubmitNestedReply(uniqueKey, reviewId, reply.id)}
+            >
+              Enviar
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Render nested replies recursively */}
+      {reply.replies && reply.replies.length > 0 && (
+        <div className={styles.nestedRepliesContainer}>
+          {reply.replies.map((nestedReply, index) => (
+            <RenderReply 
+              key={`${uniqueKey}-${index}-${nestedReply.id}`}
+              reply={nestedReply} 
+              reviewId={reviewId}
+              depth={depth + 1}
+              parentKey={`${uniqueKey}-${index}`}
+              replyingToReply={replyingToReply}
+              nestedReplyTexts={nestedReplyTexts}
+              setNestedReplyTexts={setNestedReplyTexts}
+              setReplyingToReply={setReplyingToReply}
+              handleReplyToReply={handleReplyToReply}
+              handleSubmitNestedReply={handleSubmitNestedReply}
+              handleDeleteReply={handleDeleteReply}
+              isOwnReply={isOwnReply}
+              styles={styles}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+})
+
+RenderReply.displayName = 'RenderReply'
+
 export default function ActivityDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params)
+  const { id } = resolvedParams
+  const router = useRouter()
   const [activity, setActivity] = useState<Business | null>(null)
+  const [reviews, setReviews] = useState<Review[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showReviewForm, setShowReviewForm] = useState(false)
+  const { showAuthDialog, setShowAuthDialog, requireAuth } = useAuthRequired()
+  
+  const [replyingTo, setReplyingTo] = useState<number | null>(null)
+  const [replyText, setReplyText] = useState("")
+  const [replyingToReply, setReplyingToReply] = useState<string | null>(null)
+  const [nestedReplyTexts, setNestedReplyTexts] = useState<Record<string, string>>({})
+  const [expandedReplies, setExpandedReplies] = useState<Set<number>>(new Set())
+  
+  // Alert/Confirm Dialog states
+  const [alertDialog, setAlertDialog] = useState<{
+    open: boolean
+    type: 'success' | 'error' | 'confirm'
+    title: string
+    message: string
+    onConfirm?: () => void
+  }>({
+    open: false,
+    type: 'success',
+    title: '',
+    message: ''
+  })
+
+  const showAlert = (type: 'success' | 'error', title: string, message: string) => {
+    setAlertDialog({ open: true, type, title, message })
+  }
+
+  const showConfirm = (title: string, message: string, onConfirm: () => void) => {
+    setAlertDialog({ open: true, type: 'confirm', title, message, onConfirm })
+  }
+
+  const closeAlert = () => {
+    setAlertDialog({ ...alertDialog, open: false })
+  }
 
   useEffect(() => {
     const fetchBusiness = async () => {
@@ -47,6 +254,17 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
 
         const data = await response.json()
         setActivity(data)
+
+        // Fetch reviews - ruta correcta
+        const reviewsResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/reviews/business/${resolvedParams.id}`)
+        console.log("Fetching reviews from:", `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/reviews/business/${resolvedParams.id}`)
+        if (reviewsResponse.ok) {
+          const reviewsData = await reviewsResponse.json()
+          console.log("Reviews recibidas:", reviewsData)
+          setReviews(reviewsData)
+        } else {
+          console.error("Error al obtener reseñas:", reviewsResponse.status)
+        }
       } catch (err) {
         console.error("Error fetching business:", err)
         setError(err instanceof Error ? err.message : "Error desconocido")
@@ -58,12 +276,368 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
     fetchBusiness()
   }, [resolvedParams.id])
 
+  const handleReserve = () => {
+    console.log("handleReserve clicked")
+    requireAuth(() => {
+      // Implementar lógica de reserva
+      console.log("Reservar - Usuario autenticado")
+    })
+  }
+
+  const handleSaveToTrip = () => {
+    console.log("handleSaveToTrip clicked")
+    requireAuth(() => {
+      // Implementar lógica de guardar en viaje
+      console.log("Guardar en viaje - Usuario autenticado")
+    })
+  }
+
+  const handleAddReview = () => {
+    console.log("handleAddReview clicked")
+    requireAuth(() => {
+      console.log("Agregar reseña - Usuario autenticado")
+      setShowReviewForm(true)
+    })
+  }
+
+  const handleReviewSuccess = async (reviewData: any) => {
+    try {
+      const token = localStorage.getItem("token")
+      
+      if (!token) {
+        showAlert('error', 'Sesión requerida', 'Debes iniciar sesión para dejar una reseña')
+        setShowAuthDialog(true)
+        return
+      }
+      
+      // Asegurar que business_id sea número
+      const payload = {
+        ...reviewData,
+        business_id: parseInt(id)
+      }
+      
+      console.log("Enviando reseña:", payload)
+      console.log("Token:", token ? "presente" : "ausente")
+      console.log("URL:", `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/reviews`)
+      
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/reviews`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      })
+
+      console.log("Response status:", response.status)
+
+      if (response.status === 401) {
+        // Token inválido o expirado
+        localStorage.removeItem("token")
+        localStorage.removeItem("user")
+        showAlert('error', 'Sesión expirada', 'Tu sesión ha expirado. Por favor inicia sesión nuevamente.')
+        setTimeout(() => {
+          setShowAuthDialog(true)
+          setShowReviewForm(false)
+        }, 1500)
+        return
+      }
+
+      if (response.ok) {
+        console.log("Reseña creada exitosamente")
+        showAlert('success', '¡Éxito!', '¡Reseña agregada exitosamente!')
+        setShowReviewForm(false)
+        // Recargar las reseñas después de un momento
+        setTimeout(() => window.location.reload(), 1500)
+      } else {
+        const errorData = await response.json().catch(() => ({ detail: "Error desconocido" }))
+        console.error("Error del servidor:", errorData)
+        showAlert('error', 'Error', errorData.detail || 'No se pudo crear la reseña')
+      }
+    } catch (error) {
+      console.error("Error completo al enviar la reseña:", error)
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        showAlert('error', 'Error de conexión', 'No se puede conectar al servidor. Verifica que el backend esté corriendo.')
+      } else {
+        showAlert('error', 'Error', error instanceof Error ? error.message : 'Error desconocido al enviar la reseña')
+      }
+    }
+  }
+
+  const handleDeleteReview = (reviewId: number) => {
+    requireAuth(async () => {
+      showConfirm(
+        '¿Eliminar reseña?',
+        '¿Estás seguro de que deseas eliminar esta reseña? Esta acción no se puede deshacer.',
+        async () => {
+          try {
+            const token = localStorage.getItem("token")
+            
+            if (!token) {
+              showAlert('error', 'Sesión expirada', 'Por favor inicia sesión nuevamente')
+              setShowAuthDialog(true)
+              return
+            }
+            
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/reviews/${reviewId}`, {
+              method: "DELETE",
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            })
+
+            if (response.status === 401) {
+              // Token inválido o expirado
+              localStorage.removeItem("token")
+              localStorage.removeItem("user")
+              showAlert('error', 'Sesión expirada', 'Tu sesión ha expirado. Por favor inicia sesión nuevamente.')
+              setTimeout(() => setShowAuthDialog(true), 1500)
+              return
+            }
+
+            if (response.ok) {
+              showAlert('success', 'Reseña eliminada', 'La reseña ha sido eliminada exitosamente')
+              // Actualizar la lista de reseñas
+              setReviews(reviews.filter(review => review.id !== reviewId))
+              // Recargar para actualizar el rating
+              setTimeout(() => window.location.reload(), 1500)
+            } else {
+              showAlert('error', 'Error', 'No tienes permiso para eliminar esta reseña')
+            }
+          } catch (error) {
+            console.error("Error al eliminar la reseña:", error)
+            showAlert('error', 'Error', 'Error al eliminar la reseña')
+          }
+        }
+      )
+    })
+  }
+
+  const handleReplyReview = (reviewId: number) => {
+    requireAuth(() => {
+      setReplyingTo(reviewId)
+      setReplyText("")
+    })
+  }
+
+  const handleSubmitReply = async (reviewId: number) => {
+    if (!replyText.trim()) {
+      showAlert('error', 'Error', 'Por favor escribe una respuesta')
+      return
+    }
+
+    try {
+      const token = localStorage.getItem("token")
+      
+      if (!token) {
+        showAlert('error', 'Sesión expirada', 'Por favor inicia sesión nuevamente')
+        setShowAuthDialog(true)
+        return
+      }
+      
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/reviews/${reviewId}/replies`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ text: replyText.trim() }),
+      })
+
+      if (response.status === 401) {
+        // Token inválido o expirado
+        localStorage.removeItem("token")
+        localStorage.removeItem("user")
+        showAlert('error', 'Sesión expirada', 'Tu sesión ha expirado. Por favor inicia sesión nuevamente.')
+        setTimeout(() => {
+          setShowAuthDialog(true)
+          setReplyingTo(null)
+        }, 1500)
+        return
+      }
+
+      if (response.ok) {
+        showAlert('success', '¡Éxito!', 'Respuesta agregada exitosamente')
+        setReplyingTo(null)
+        setReplyText("")
+        // Recargar las reseñas
+        setTimeout(() => window.location.reload(), 1500)
+      } else {
+        const errorData = await response.json().catch(() => ({ detail: "Error desconocido" }))
+        showAlert('error', 'Error', errorData.detail || 'No se pudo agregar la respuesta')
+      }
+    } catch (error) {
+      console.error("Error al enviar respuesta:", error)
+      showAlert('error', 'Error', 'Error al enviar la respuesta')
+    }
+  }
+
+  const handleDeleteReply = useCallback((reviewId: number, replyId: number) => {
+    requireAuth(() => {
+      showConfirm(
+        '¿Eliminar respuesta?',
+        '¿Estás seguro de que deseas eliminar esta respuesta?',
+        async () => {
+          try {
+            const token = localStorage.getItem("token")
+            
+            if (!token) {
+              showAlert('error', 'Sesión expirada', 'Por favor inicia sesión nuevamente')
+              setShowAuthDialog(true)
+              return
+            }
+            
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/reviews/${reviewId}/replies/${replyId}`, {
+              method: "DELETE",
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            })
+
+            if (response.status === 401) {
+              // Token inválido o expirado
+              localStorage.removeItem("token")
+              localStorage.removeItem("user")
+              showAlert('error', 'Sesión expirada', 'Tu sesión ha expirado. Por favor inicia sesión nuevamente.')
+              setTimeout(() => setShowAuthDialog(true), 1500)
+              return
+            }
+
+            if (response.ok) {
+              showAlert('success', 'Respuesta eliminada', 'La respuesta ha sido eliminada exitosamente')
+              setTimeout(() => window.location.reload(), 1500)
+            } else {
+              showAlert('error', 'Error', 'No tienes permiso para eliminar esta respuesta')
+            }
+          } catch (error) {
+            console.error("Error al eliminar respuesta:", error)
+            showAlert('error', 'Error', 'Error al eliminar la respuesta')
+          }
+        }
+      )
+    })
+  }, [requireAuth, showAlert, showConfirm, setShowAuthDialog])
+
+  const handleReplyToReply = useCallback((reviewId: number, replyId: number, uniqueKey: string) => {
+    requireAuth(() => {
+      setReplyingToReply(uniqueKey)
+    })
+  }, [requireAuth])
+
+  const handleSubmitNestedReply = useCallback(async (uniqueKey: string, reviewId: number, replyId: number) => {
+    if (!replyingToReply) return
+    
+    const currentText = nestedReplyTexts[uniqueKey] || ""
+    
+    if (!currentText.trim()) {
+      showAlert('error', 'Error', 'Por favor escribe una respuesta')
+      return
+    }
+
+    try {
+      const token = localStorage.getItem("token")
+      
+      if (!token) {
+        showAlert('error', 'Sesión expirada', 'Por favor inicia sesión nuevamente')
+        setShowAuthDialog(true)
+        return
+      }
+      
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/reviews/${reviewId}/replies/${replyId}/replies`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ reply_text: currentText.trim() }),
+      })
+
+      if (response.status === 401) {
+        localStorage.removeItem("token")
+        localStorage.removeItem("user")
+        showAlert('error', 'Sesión expirada', 'Tu sesión ha expirado. Por favor inicia sesión nuevamente.')
+        setTimeout(() => {
+          setShowAuthDialog(true)
+          setReplyingToReply(null)
+        }, 1500)
+        return
+      }
+
+      if (response.ok) {
+        showAlert('success', '¡Éxito!', 'Respuesta agregada exitosamente')
+        setReplyingToReply(null)
+        // Limpiar solo el texto de esta respuesta específica
+        setNestedReplyTexts(prev => {
+          const newTexts = { ...prev }
+          delete newTexts[uniqueKey]
+          return newTexts
+        })
+        setTimeout(() => window.location.reload(), 1500)
+      } else {
+        const errorData = await response.json().catch(() => ({ detail: "Error desconocido" }))
+        showAlert('error', 'Error', errorData.detail || 'No se pudo agregar la respuesta')
+      }
+    } catch (error) {
+      console.error("Error al enviar respuesta anidada:", error)
+      showAlert('error', 'Error', 'Error al enviar la respuesta')
+    }
+  }, [replyingToReply, nestedReplyTexts, showAlert, setShowAuthDialog])
+
+  const isOwnReview = (review: Review): boolean => {
+    const userData = localStorage.getItem("user")
+    if (!userData) return false
+    
+    try {
+      const user = JSON.parse(userData)
+      // Comparar como strings ya que user_id puede venir como string del backend
+      return String(user.id) === String(review.user_id)
+    } catch {
+      return false
+    }
+  }
+
+  const isOwnReply = useCallback((reply: Reply): boolean => {
+    const userData = localStorage.getItem("user")
+    if (!userData) return false
+    
+    try {
+      const user = JSON.parse(userData)
+      return String(user.id) === String(reply.user_id)
+    } catch {
+      return false
+    }
+  }, [])
+
+  const toggleRepliesExpanded = (reviewId: number) => {
+    setExpandedReplies(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(reviewId)) {
+        newSet.delete(reviewId)
+      } else {
+        newSet.add(reviewId)
+      }
+      return newSet
+    })
+  }
+
+  const getTotalReplyCount = (replies: Reply[]): number => {
+    let count = replies.length
+    replies.forEach(reply => {
+      if (reply.replies && reply.replies.length > 0) {
+        count += getTotalReplyCount(reply.replies)
+      }
+    })
+    return count
+  }
+
+  console.log("Render - showAuthDialog:", showAuthDialog)
+
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col">
+      <div className={styles.pageContainer}>
         <Header />
-        <main className="flex-1 flex items-center justify-center">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <main className={styles.loadingContainer}>
+          <Loader2 className={styles.loadingSpinner} />
         </main>
         <Footer />
       </div>
@@ -72,12 +646,12 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
 
   if (error || !activity) {
     return (
-      <div className="min-h-screen flex flex-col">
+      <div className={styles.pageContainer}>
         <Header />
-        <main className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <p className="text-red-500 mb-2">Error al cargar el negocio</p>
-            <p className="text-sm text-muted-foreground">{error || "No encontrado"}</p>
+        <main className={styles.loadingContainer}>
+          <div className={styles.errorContainer}>
+            <p className={styles.errorTitle}>Error al cargar el negocio</p>
+            <p className={styles.errorText}>{error || "No encontrado"}</p>
           </div>
         </main>
         <Footer />
@@ -86,29 +660,50 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className={styles.pageContainer}>
       <Header />
 
-      <main className="flex-1">
-        {/* Hero Image Gallery */}
-        <div className="relative h-96 bg-gray-900">
-          <ImageGallery images={activity.images} alt={activity.name} showThumbnails={false} />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
-          <div className="absolute bottom-0 left-0 right-0 p-8 text-white pointer-events-none">
-            <div className="container mx-auto">
-              <Badge className="mb-2 pointer-events-auto">{activity.category}</Badge>
-              <h1 className="text-4xl font-bold mb-2">{activity.name}</h1>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-1">
-                  <Star className="h-5 w-5 fill-accent text-accent" />
-                  <span className="font-medium">{activity.rating.toFixed(1)}</span>
-                  <span className="opacity-90">({activity.review_count} reseñas)</span>
+      <main className={styles.mainContent}>
+        <div className={styles.heroSection}
+          style={{
+            backgroundImage: activity.images && activity.images.length > 0 
+              ? `url(${activity.images[0]})` 
+              : 'none',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center top',
+            backgroundRepeat: 'no-repeat'
+          }}
+        >
+          <div className={styles.heroOverlay} />
+
+          {/* Botón Volver */}
+          <div className={styles.backButtonContainer}>
+            <Button
+              variant="secondary"
+              onClick={() => router.back()}
+              className={styles.backButton}
+            >
+              <ArrowLeft className={styles.backIcon} />
+              Volver
+            </Button>
+          </div>
+
+          {/* Contenido inferior (nombre, categoría, etc.) */}
+          <div className={styles.heroContent}>
+            <div className={styles.heroInner}>
+              <Badge className={styles.categoryBadge}>{activity.category}</Badge>
+              <h1 className={styles.heroTitle}>{activity.name}</h1>
+              <div className={styles.heroInfo}>
+                <div className={styles.ratingGroup}>
+                  <Star className={styles.starIcon} />
+                  <span className={styles.ratingText}>{activity.rating.toFixed(1)}</span>
+                  <span className={styles.reviewCount}>({activity.review_count} reseñas)</span>
                 </div>
-                <div className="flex gap-1">
+                <div className={styles.priceGroup}>
                   {Array.from({ length: 4 }).map((_, i) => (
                     <DollarSign
                       key={i}
-                      className={`h-5 w-5 ${i < activity.price_level ? "text-white" : "text-white/30"}`}
+                      className={`${styles.dollarIcon} ${i < activity.price_level ? styles.dollarActive : styles.dollarInactive}`}
                     />
                   ))}
                 </div>
@@ -117,15 +712,15 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
           </div>
         </div>
 
-        <div className="container mx-auto px-4 py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className={styles.contentContainer}>
+          <div className={styles.contentGrid}>
             {/* Main Content */}
-            <div className="lg:col-span-2 space-y-8">
-              <div>
-                <h2 className="text-2xl font-bold mb-4">Acerca de</h2>
-                <p className="text-muted-foreground leading-relaxed">{activity.description}</p>
+            <div className={styles.mainColumn}>
+              <div className={styles.section}>
+                <h2 className={styles.sectionTitle}>Acerca de</h2>
+                <p className={styles.description}>{activity.description}</p>
                 {activity.tags && activity.tags.length > 0 && (
-                  <div className="flex gap-2 mt-4 flex-wrap">
+                  <div className={styles.tagsContainer}>
                     {activity.tags.map((tag) => (
                       <Badge key={tag} variant="secondary">
                         {tag}
@@ -135,48 +730,215 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
                 )}
               </div>
 
-              {/* Reviews Section - Could be implemented later */}
-              <div>
-                <h2 className="text-2xl font-bold mb-4">Reseñas</h2>
-                <p className="text-muted-foreground">Las reseñas estarán disponibles próximamente.</p>
+              {/* Photos Section */}
+              {activity.images && activity.images.length > 0 && (
+                <div className={styles.section}>
+                  <h2 className={styles.sectionTitle}>Fotos ({activity.images.length})</h2>
+                  <div className={styles.photosGrid}>
+                    {activity.images.map((image, index) => (
+                      <div
+                        key={index}
+                        className={styles.photoItem}
+                      >
+                        <img
+                          src={image}
+                          alt={`${activity.name} - Foto ${index + 1}`}
+                          className={styles.photoImage}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Reviews Section */}
+              <div className={styles.section}>
+                <div className={styles.reviewsHeader}>
+                  <h2 className={styles.sectionTitle}>Reseñas ({reviews.length})</h2>
+                  <Button onClick={handleAddReview} className={styles.addReviewButton}>
+                    <Plus className={styles.addReviewIcon} />
+                    Agregar Reseña
+                  </Button>
+                </div>
+                
+                {reviews.length > 0 ? (
+                  <div className={styles.reviewsList}>
+                    {reviews.map((review) => (
+                      <Card key={review.id}>
+                        <CardContent className={styles.reviewCard}>
+                          <div className={styles.reviewHeader}>
+                            <div>
+                              <h4 className={styles.reviewAuthor}>{review.user_name}</h4>
+                              <p className={styles.reviewDate}>
+                                {new Date(review.created_at).toLocaleDateString('es-ES', {
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric'
+                                })}
+                              </p>
+                            </div>
+                            <div className={styles.reviewRating}>
+                              <Star className={styles.reviewStarIcon} />
+                              <span className={styles.reviewRatingText}>{review.rating.toFixed(1)}</span>
+                            </div>
+                          </div>
+                          <h3 className={styles.reviewTitle}>{review.title}</h3>
+                          <p className={styles.reviewText}>{review.text}</p>
+                          
+                          {/* Replies Section */}
+                          {review.replies && review.replies.length >= 2 && (
+                            <div className={styles.repliesToggleContainer}>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => toggleRepliesExpanded(review.id)}
+                                className={styles.repliesToggleButton}
+                              >
+                                <MessageSquare className="h-4 w-4 mr-2" />
+                                {expandedReplies.has(review.id) 
+                                  ? 'Ocultar respuestas' 
+                                  : `Ver ${getTotalReplyCount(review.replies)} respuestas`
+                                }
+                              </Button>
+                            </div>
+                          )}
+
+                          {review.replies && review.replies.length > 0 && (review.replies.length < 2 || expandedReplies.has(review.id)) && (
+                            <div className={styles.repliesContainer}>
+                              {review.replies.map((reply, index) => (
+                                <RenderReply 
+                                  key={`review-${review.id}-reply-${index}-${reply.id}`}
+                                  reply={reply} 
+                                  reviewId={review.id}
+                                  parentKey={`review-${review.id}-${index}`}
+                                  replyingToReply={replyingToReply}
+                                  nestedReplyTexts={nestedReplyTexts}
+                                  setNestedReplyTexts={setNestedReplyTexts}
+                                  setReplyingToReply={setReplyingToReply}
+                                  handleReplyToReply={handleReplyToReply}
+                                  handleSubmitNestedReply={handleSubmitNestedReply}
+                                  handleDeleteReply={handleDeleteReply}
+                                  isOwnReply={isOwnReply}
+                                  styles={styles}
+                                />
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Reply Form */}
+                          {replyingTo === review.id && (
+                            <div className={styles.replyForm}>
+                              <textarea
+                                value={replyText}
+                                onChange={(e) => setReplyText(e.target.value)}
+                                placeholder="Escribe tu respuesta..."
+                                className={styles.replyTextarea}
+                                rows={3}
+                                dir="ltr"
+                                style={{ direction: 'ltr', textAlign: 'left' }}
+                              />
+                              <div className={styles.replyFormActions}>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setReplyingTo(null)
+                                    setReplyText("")
+                                  }}
+                                >
+                                  Cancelar
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleSubmitReply(review.id)}
+                                >
+                                  Enviar
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Review Actions */}
+                          <div className={styles.reviewActions}>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => handleReplyReview(review.id)}
+                              className={styles.reviewActionButton}
+                            >
+                              <Reply className={styles.actionIcon} />
+                              Responder
+                            </Button>
+                            
+                            {isOwnReview(review) && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => handleDeleteReview(review.id)}
+                                className={`${styles.reviewActionButton} ${styles.deleteButton}`}
+                              >
+                                <Trash2 className={styles.actionIcon} />
+                                Eliminar
+                              </Button>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <Card>
+                    <CardContent className={styles.emptyReviews}>
+                      <MessageSquare className={styles.emptyIcon} />
+                      <p className={styles.emptyText}>
+                        Aún no hay reseñas para este lugar.
+                      </p>
+                      <Button onClick={handleAddReview} variant="outline">
+                        Sé el primero en dejar una reseña
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             </div>
 
             {/* Sidebar */}
-            <div className="space-y-6">
+            <div className={styles.sidebar}>
               <Card>
-                <CardContent className="pt-6 space-y-4">
-                  <Button className="w-full" size="lg">
-                    <Calendar className="h-4 w-4 mr-2" />
-                    Reservar Ahora
-                  </Button>
-                  <Button variant="outline" className="w-full bg-transparent" size="lg">
-                    <Heart className="h-4 w-4 mr-2" />
-                    Guardar en Viaje
-                  </Button>
+                <CardContent className={styles.sidebarCard}>
+                  <div className={styles.sidebarButtons}>
+                    <Button onClick={handleReserve} className={styles.buttonFull} size="lg">
+                      <Calendar className={styles.buttonIcon} />
+                      Reservar Ahora
+                    </Button>
+                    <Button onClick={handleSaveToTrip} variant="outline" className={styles.buttonFull} size="lg">
+                      <Heart className={styles.buttonIcon} />
+                      Guardar en Viaje
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="pt-6 space-y-4">
-                  <h3 className="font-semibold">Información de Contacto</h3>
-                  <div className="space-y-3 text-sm">
-                    <div className="flex items-start gap-2">
-                      <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+                <CardContent className={styles.contactSection}>
+                  <h3 className={styles.contactTitle}>Información de Contacto</h3>
+                  <div className={styles.contactList}>
+                    <div className={styles.contactItem}>
+                      <MapPin className={styles.contactIcon} />
                       <span>
                         {activity.location.address}, {activity.location.city}, {activity.location.state}, {activity.location.country}
                       </span>
                     </div>
                     {activity.phone && (
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-muted-foreground" />
+                      <div className={styles.contactItem}>
+                        <Phone className={styles.contactIcon} />
                         <span>{activity.phone}</span>
                       </div>
                     )}
                     {activity.website && (
-                      <div className="flex items-center gap-2">
-                        <Globe className="h-4 w-4 text-muted-foreground" />
-                        <a href={activity.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                      <div className={styles.contactItem}>
+                        <Globe className={styles.contactIcon} />
+                        <a href={activity.website} target="_blank" rel="noopener noreferrer" className={styles.contactLink}>
                           Visitar Sitio Web
                         </a>
                       </div>
@@ -188,6 +950,66 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
           </div>
         </div>
       </main>
+
+      {/* Review Form Dialog */}
+      <Dialog open={showReviewForm} onOpenChange={setShowReviewForm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Agregar Reseña</DialogTitle>
+          </DialogHeader>
+          <ReviewForm
+            businessId={id}
+            businessName={activity?.name || ""}
+            onSubmit={handleReviewSuccess}
+            onCancel={() => setShowReviewForm(false)}
+            showCard={false}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Auth Dialog */}
+      <AuthRequiredDialog 
+        open={showAuthDialog} 
+        onOpenChange={setShowAuthDialog}
+      />
+
+      {/* Alert/Confirm Dialog */}
+      <Dialog open={alertDialog.open} onOpenChange={closeAlert}>
+        <DialogContent>
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              {alertDialog.type === 'success' && <CheckCircle2 className="h-5 w-5 text-green-600" />}
+              {alertDialog.type === 'error' && <AlertCircle className="h-5 w-5 text-red-600" />}
+              {alertDialog.type === 'confirm' && <AlertCircle className="h-5 w-5 text-amber-600" />}
+              <DialogTitle>{alertDialog.title}</DialogTitle>
+            </div>
+            <DialogDescription>
+              {alertDialog.message}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            {alertDialog.type === 'confirm' ? (
+              <>
+                <Button variant="outline" onClick={closeAlert}>
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={() => {
+                    alertDialog.onConfirm?.()
+                    closeAlert()
+                  }}
+                >
+                  Confirmar
+                </Button>
+              </>
+            ) : (
+              <Button onClick={closeAlert}>
+                Aceptar
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Footer />
     </div>

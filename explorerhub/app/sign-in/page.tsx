@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, LogIn } from "lucide-react"
+import styles from "./page.module.css"
 
 export default function SignInPage() {
   const router = useRouter()
@@ -57,34 +58,26 @@ export default function SignInPage() {
   }
 
   return (
-    <div 
-      className="min-h-screen flex items-center justify-center px-4 py-12"
-      style={{
-        backgroundImage: 'url(/images/background-login.png)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat'
-      }}
-    >
-      <div className="absolute inset-0 bg-black/40" />
-      <Card className="w-full max-w-md relative z-10 backdrop-blur-sm bg-background/95">
-        <CardHeader className="space-y-1">
-          <div className="flex items-center justify-center mb-4">
-            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-              <LogIn className="h-6 w-6 text-primary" />
+    <div className={styles.pageContainer}>
+      <div className={styles.backgroundOverlay} />
+      <Card className={styles.card}>
+        <CardHeader className={styles.header}>
+          <div className={styles.iconContainer}>
+            <div className={styles.iconCircle}>
+              <LogIn className={styles.icon} />
             </div>
           </div>
-          <CardTitle className="text-2xl text-center">Iniciar Sesión</CardTitle>
-          <CardDescription className="text-center">Ingresa a tu cuenta de ExplorerHub</CardDescription>
+          <CardTitle className={styles.title}>Iniciar Sesión</CardTitle>
+          <CardDescription className={styles.description}>Ingresa a tu cuenta de ExplorerHub</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
+          <CardContent className={styles.content}>
             {error && (
               <Alert variant="destructive">
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            <div className="space-y-2">
+            <div className={styles.fieldContainer}>
               <Label htmlFor="email">Correo electrónico</Label>
               <Input
                 id="email"
@@ -96,10 +89,10 @@ export default function SignInPage() {
                 disabled={isLoading}
               />
             </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
+            <div className={styles.fieldContainer}>
+              <div className={styles.labelRow}>
                 <Label htmlFor="password">Contraseña</Label>
-                <Link href="/forgot-password" className="text-sm text-primary hover:underline">
+                <Link href="/forgot-password" className={styles.forgotLink}>
                   ¿Olvidaste tu contraseña?
                 </Link>
               </div>
@@ -114,21 +107,21 @@ export default function SignInPage() {
               />
             </div>
           </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+          <CardFooter className={styles.footer}>
+            <Button type="submit" className={styles.submitButton} size="lg" disabled={isLoading}>
               {isLoading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className={styles.loadingIcon} />
                   Iniciando sesión...
                 </>
               ) : (
                 "Iniciar sesión"
               )}
             </Button>
-            <div className="text-sm text-center space-y-2">
-              <p className="text-muted-foreground">
+            <div className={styles.footerText}>
+              <p className={styles.muted}>
                 ¿No tienes cuenta?{" "}
-                <Link href="/signup" className="text-primary font-medium hover:underline">
+                <Link href="/signup" className={styles.signupLink}>
                   Regístrate aquí
                 </Link>
               </p>

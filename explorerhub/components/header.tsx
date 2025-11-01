@@ -48,24 +48,24 @@ export function Header() {
           <nav className={styles.nav}>
             {user && user.role === "business" ? (
               <>
-                <Link href="/dashboard/business" className="text-sm font-medium hover:text-primary transition-colors">
+                <Link href="/dashboard/business" className={styles.navLink}>
                   Dashboard
                 </Link>
-                <Link href="/dashboard/business/analytics" className="text-sm font-medium hover:text-primary transition-colors">
+                <Link href="/dashboard/business/analytics" className={styles.navLink}>
                   Analytics
                 </Link>
               </>
             ) : (
               <>
-                <Link href="/explore" className="text-sm font-medium hover:text-primary transition-colors">
+                <Link href="/explore" className={styles.navLink}>
                   Explorar
                 </Link>
                 {user && (
                   <>
-                    <Link href="/trips" className="text-sm font-medium hover:text-primary transition-colors">
+                    <Link href="/trips" className={styles.navLink}>
                       Mis Viajes
                     </Link>
-                    <Link href="/reviews" className="text-sm font-medium hover:text-primary transition-colors">
+                    <Link href="/reviews" className={styles.navLink}>
                       Reseñas
                     </Link>
                   </>
@@ -79,26 +79,26 @@ export function Header() {
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
+                <Button variant="ghost" className={styles.userButton}>
+                  <User className={styles.userIcon} />
                   <span className={styles.userHidden}>{user.name || user.email}</span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuContent align="end" className={styles.dropdownContent}>
                 {user.role === "business" ? (
                   <>
                     <DropdownMenuItem asChild>
-                      <Link href="/dashboard/business" className="cursor-pointer">
+                      <Link href="/dashboard/business" className={styles.menuItem}>
                         Dashboard
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/dashboard/business/analytics" className="cursor-pointer">
+                      <Link href="/dashboard/business/analytics" className={styles.menuItem}>
                         Analytics
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/dashboard/business/edit-profile" className="cursor-pointer">
+                      <Link href="/dashboard/business/edit-profile" className={styles.menuItem}>
                         Perfil
                       </Link>
                     </DropdownMenuItem>
@@ -106,31 +106,31 @@ export function Header() {
                 ) : (
                   <>
                     <DropdownMenuItem asChild>
-                      <Link href="/trips" className="cursor-pointer">
+                      <Link href="/trips" className={styles.menuItem}>
                         Mis Viajes
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/reviews" className="cursor-pointer">
+                      <Link href="/reviews" className={styles.menuItem}>
                         Reseñas
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/profile/traveler" className="cursor-pointer">
+                      <Link href="/profile/traveler" className={styles.menuItem}>
                         Perfil
                       </Link>
                     </DropdownMenuItem>
                   </>
                 )}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive">
-                  <LogOut className="h-4 w-4 mr-2" />
+                <DropdownMenuItem onClick={handleLogout} className={styles.menuItemDestructive}>
+                  <LogOut className={styles.menuIcon} />
                   Cerrar Sesión
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <div className="hidden lg:flex items-center gap-2">
+            <div className={styles.authButtons}>
               <Button variant="ghost" size="sm" asChild>
                 <Link href="/sign-in">Iniciar Sesión</Link>
               </Button>
@@ -140,8 +140,8 @@ export function Header() {
             </div>
           )}
 
-          <Button variant="ghost" size="icon" className="md:hidden">
-            <Menu className="h-5 w-5" />
+          <Button variant="ghost" size="icon" className={styles.mobileMenuButton}>
+            <Menu className={styles.userIcon} />
           </Button>
         </div>
       </div>

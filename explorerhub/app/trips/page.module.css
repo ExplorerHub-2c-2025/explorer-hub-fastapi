@@ -1,0 +1,168 @@
+/* Page Container */
+.pageContainer {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Loading Container */
+.loadingContainer {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loadingSpinner {
+  animation: spin 1s linear infinite;
+  border-radius: 9999px;
+  height: 3rem;
+  width: 3rem;
+  border-bottom: 2px solid hsl(var(--primary));
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Main Content */
+.mainContent {
+  flex: 1;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  width: 100%;
+}
+
+/* Header Section */
+.headerSection {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+}
+
+.headerText h1 {
+  font-size: 1.875rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.headerText p {
+  color: hsl(var(--muted-foreground));
+}
+
+.createButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.buttonIcon {
+  height: 1rem;
+  width: 1rem;
+  margin-right: 0.5rem;
+}
+
+/* Empty State */
+.emptyState {
+  text-align: center;
+  padding: 3rem 0;
+}
+
+.emptyStateContent {
+  max-width: 28rem;
+  margin: 0 auto;
+}
+
+.emptyIcon {
+  height: 3rem;
+  width: 3rem;
+  margin: 0 auto 1rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.emptyTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.emptyText {
+  color: hsl(var(--muted-foreground));
+  margin-bottom: 1.5rem;
+}
+
+/* Trips Grid */
+.tripsGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .tripsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .tripsGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Trip Card */
+.tripCard {
+  overflow: hidden;
+  transition: box-shadow 0.3s;
+  cursor: pointer;
+}
+
+.tripCard:hover {
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+.tripImage {
+  aspect-ratio: 16 / 9;
+  position: relative;
+}
+
+.tripImage img {
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
+}
+
+.tripContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.tripInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.infoIcon {
+  height: 1rem;
+  width: 1rem;
+}
+
+.tripActivities {
+  padding-top: 0.5rem;
+}
+
+.activitiesText {
+  font-size: 0.875rem;
+  font-weight: 500;
+}

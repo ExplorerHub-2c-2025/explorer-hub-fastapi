@@ -38,13 +38,13 @@ export function TripPlanner({ onCreateTrip }: TripPlannerProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-primary" />
+        <CardTitle className={styles.cardTitle}>
+          <Sparkles className={styles.titleIcon} />
           Plan Your Trip
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className={styles.formContainer}>
           <div className={styles.spaceY2}>
             <Label htmlFor="name">Trip Name *</Label>
             <Input
@@ -68,38 +68,38 @@ export function TripPlanner({ onCreateTrip }: TripPlannerProps) {
           </div>
 
           <div className={styles.gridTwo}>
-            <div className={styles.spaceY2}>
+            <div className={styles.fieldContainer}>
               <Label>Start Date *</Label>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start text-left font-normal bg-transparent">
-                    <CalendarIcon className="mr-2 h-4 w-4" />
+                  <Button variant="outline" className={styles.calendarButton}>
+                    <CalendarIcon className={styles.calendarIcon} />
                     {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
+                <PopoverContent className={styles.popoverContent}>
                   <Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus />
                 </PopoverContent>
               </Popover>
             </div>
 
-            <div className={styles.spaceY2}>
+            <div className={styles.fieldContainer}>
               <Label>End Date *</Label>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start text-left font-normal bg-transparent">
-                    <CalendarIcon className="mr-2 h-4 w-4" />
+                  <Button variant="outline" className={styles.calendarButton}>
+                    <CalendarIcon className={styles.calendarIcon} />
                     {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
+                <PopoverContent className={styles.popoverContent}>
                   <Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus />
                 </PopoverContent>
               </Popover>
             </div>
           </div>
 
-          <div className={styles.spaceY2}>
+          <div className={styles.fieldContainer}>
             <Label htmlFor="description">Description (Optional)</Label>
             <Input
               id="description"

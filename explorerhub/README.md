@@ -86,23 +86,6 @@ uvicorn main:app --reload --port 8000
 
 6. API documentation available at [http://localhost:8000/docs](http://localhost:8000/docs)
 
-### Database Setup
-
-1. Create indexes for optimal performance:
-\`\`\`bash
-cd backend
-python scripts/create_indexes.py
-\`\`\`
-
-2. (Optional) Seed with sample data:
-\`\`\`bash
-python scripts/seed_data.py
-\`\`\`
-
-Test credentials after seeding:
-- Regular user: `john@example.com` / `password123`
-- Business user: `business@example.com` / `password123`
-
 ## Project Structure
 
 \`\`\`

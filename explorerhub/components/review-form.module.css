@@ -1,9 +1,49 @@
+.formContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.fieldContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
 .spaceY4 { display: block; }
 
 .spaceY2 { display: block; margin-bottom: 0.5rem; }
 
 .starRow { display: flex; gap: 0.25rem; }
 
-.starBtn { transition: transform 0.15s ease-in-out; }
+.starBtn {
+  transition: transform 0.15s ease-in-out;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+}
 
-.actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
+.starBtn:hover {
+  transform: scale(1.1);
+}
+
+.starIcon {
+  height: 2rem;
+  width: 2rem;
+}
+
+.starFilled {
+  fill: hsl(var(--accent));
+  color: hsl(var(--accent));
+}
+
+.starEmpty {
+  color: hsl(var(--muted-foreground));
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}

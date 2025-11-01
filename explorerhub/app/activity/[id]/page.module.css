@@ -1,0 +1,585 @@
+.pageContainer {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.mainContent {
+  flex: 1;
+}
+
+.loadingContainer {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loadingSpinner {
+  height: 3rem;
+  width: 3rem;
+  animation: spin 1s linear infinite;
+  color: hsl(var(--primary));
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.errorContainer {
+  text-align: center;
+}
+
+.errorTitle {
+  color: rgb(239, 68, 68);
+  margin-bottom: 0.5rem;
+}
+
+.errorText {
+  font-size: 0.875rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.heroSection {
+  position: relative;
+  height: 24rem;
+  background-color: rgb(17, 24, 39);
+}
+
+.heroOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.3), transparent);
+}
+
+.backButtonContainer {
+  position: absolute;
+  top: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 1280px;
+  margin: 0 auto;
+  margin-top: 1.5rem;
+  width: 100%;
+  padding: 0 1rem;
+}
+
+@media (min-width: 768px) {
+  .backButtonContainer {
+    left: 2rem;
+    transform: translateX(0);
+  }
+}
+
+.backButton {
+  display: flex;
+  gap: 0.5rem;
+  background-color: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(4px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.backButton:hover {
+  background-color: white;
+}
+
+.backIcon {
+  height: 1rem;
+  width: 1rem;
+}
+
+.heroContent {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 2rem;
+  color: white;
+}
+
+.heroInner {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.categoryBadge {
+  margin-bottom: 0.5rem;
+}
+
+.heroTitle {
+  font-size: 2.25rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  line-height: 2.5rem;
+}
+
+.heroInfo {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.ratingGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.starIcon {
+  height: 1.25rem;
+  width: 1.25rem;
+  fill: hsl(var(--accent));
+  color: hsl(var(--accent));
+}
+
+.ratingText {
+  font-weight: 500;
+}
+
+.reviewCount {
+  opacity: 0.9;
+}
+
+.priceGroup {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.dollarIcon {
+  height: 1.25rem;
+  width: 1.25rem;
+}
+
+.dollarActive {
+  color: white;
+}
+
+.dollarInactive {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.contentContainer {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.contentGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+}
+
+@media (min-width: 1024px) {
+  .contentGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.mainColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+@media (min-width: 1024px) {
+  .mainColumn {
+    grid-column: span 2;
+  }
+}
+
+.section {
+  margin-bottom: 2rem;
+}
+
+.sectionTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  line-height: 2rem;
+}
+
+.description {
+  color: hsl(var(--muted-foreground));
+  line-height: 1.75;
+}
+
+.tagsContainer {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.photosGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .photosGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.photoItem {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.photoItem:hover {
+  opacity: 0.9;
+}
+
+.photoImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.reviewsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.addReviewButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.addReviewIcon {
+  height: 1rem;
+  width: 1rem;
+}
+
+.reviewsList {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.reviewCard {
+  padding-top: 1.5rem;
+}
+
+.reviewHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.reviewAuthor {
+  font-weight: 600;
+}
+
+.reviewDate {
+  font-size: 0.875rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.reviewRating {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.reviewStarIcon {
+  height: 1rem;
+  width: 1rem;
+  fill: hsl(var(--accent));
+  color: hsl(var(--accent));
+}
+
+.reviewRatingText {
+  font-weight: 500;
+}
+
+.reviewText {
+  color: hsl(var(--muted-foreground));
+  margin-bottom: 1rem;
+}
+
+.reviewActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.reviewActionButton {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.actionIcon {
+  height: 0.875rem;
+  width: 0.875rem;
+}
+
+.deleteButton {
+  color: hsl(var(--destructive)) !important;
+  font-weight: 600 !important;
+  transition: color 0.2s ease !important;
+}
+
+.deleteButton:hover {
+  color: white !important;
+}
+
+.emptyReviews {
+  padding-top: 1.5rem;
+  text-align: center;
+  padding-top: 3rem;
+  padding-bottom: 3rem;
+}
+
+.emptyIcon {
+  height: 3rem;
+  width: 3rem;
+  color: hsl(var(--muted-foreground));
+  margin: 0 auto 1rem;
+  opacity: 0.5;
+}
+
+.emptyText {
+  color: hsl(var(--muted-foreground));
+  margin-bottom: 1rem;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.sidebarCard {
+  padding-top: 1.5rem;
+}
+
+.sidebarButtons {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.buttonFull {
+  width: 100%;
+}
+
+.buttonIcon {
+  height: 1rem;
+  width: 1rem;
+  margin-right: 0.5rem;
+}
+
+.contactSection {
+  padding-top: 1.5rem;
+}
+
+.contactTitle {
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.contactList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.contactItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.contactIcon {
+  height: 1rem;
+  width: 1rem;
+  margin-top: 0.125rem;
+  color: hsl(var(--muted-foreground));
+  flex-shrink: 0;
+}
+
+.contactLink {
+  color: hsl(var(--primary));
+}
+
+.contactLink:hover {
+  text-decoration: underline;
+}
+
+/* Dialog */
+.dialogContent {
+  max-width: 600px;
+}
+
+/* Replies */
+.repliesContainer {
+  margin-top: 1rem;
+  padding-left: 1.5rem;
+  border-left: 2px solid hsl(var(--border));
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.replyItem {
+  position: relative;
+  padding: 0.75rem;
+  padding-right: 3rem;
+  background-color: hsl(var(--muted) / 0.5);
+  border-radius: 0.5rem;
+}
+
+.replyHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+.replyAuthor {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: hsl(var(--foreground));
+}
+
+.replyDate {
+  font-size: 0.75rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.replyText {
+  font-size: 0.875rem;
+  color: hsl(var(--foreground));
+  line-height: 1.5;
+}
+
+.deleteReplyButton {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  height: 1.75rem;
+  width: 1.75rem;
+  padding: 0 !important;
+  min-width: 0 !important;
+  color: hsl(var(--destructive)) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: none !important;
+  transition: all 0.2s ease !important;
+}
+
+.deleteReplyButton:hover {
+  color: white !important;
+}
+
+/* Reply Form */
+.replyForm {
+  margin-top: 1rem;
+  padding: 1rem;
+  background-color: hsl(var(--muted) / 0.3);
+  border-radius: 0.5rem;
+}
+
+.replyTextarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.375rem;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-size: 0.875rem;
+  resize: vertical;
+  min-height: 80px;
+  direction: ltr;
+  text-align: left;
+}
+
+.replyTextarea:focus {
+  outline: none;
+  border-color: hsl(var(--ring));
+  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.2);
+}
+
+.replyFormActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.reviewTitle {
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+  color: hsl(var(--foreground));
+}
+
+/* Nested Replies */
+.nestedRepliesContainer {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.replyActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.replyActionButton {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem !important;
+  height: auto !important;
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.replyActionButton:hover {
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Replies Toggle Button */
+.repliesToggleContainer {
+  margin-top: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.repliesToggleButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: hsl(var(--primary)) !important;
+  padding: 0.5rem 0.75rem !important;
+  border-radius: 0.375rem;
+  transition: all 0.2s ease;
+  background-color: hsl(var(--muted) / 0.3);
+}
+
+.repliesToggleButton:hover {
+  background-color: hsl(var(--muted) / 0.6);
+  color: hsl(var(--primary)) !important;
+}

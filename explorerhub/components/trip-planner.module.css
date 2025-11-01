@@ -1,3 +1,15 @@
+.formContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.fieldContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
 .spaceY4 {
   display: block;
 }
@@ -19,4 +31,35 @@
 
 .fullWidthBtn {
   width: 100%;
+}
+
+.cardTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.titleIcon {
+  height: 1.25rem;
+  width: 1.25rem;
+  color: hsl(var(--primary));
+}
+
+.calendarButton {
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
+  font-weight: normal;
+  background: transparent;
+}
+
+.calendarIcon {
+  margin-right: 0.5rem;
+  height: 1rem;
+  width: 1rem;
+}
+
+.popoverContent {
+  width: auto;
+  padding: 0;
 }

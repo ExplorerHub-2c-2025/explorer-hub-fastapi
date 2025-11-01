@@ -29,56 +29,56 @@ export function ItineraryBuilder({
   onUpdateSchedule,
 }: ItineraryBuilderProps) {
   return (
-    <div className="space-y-4">
+    <div className={styles.rootContainer}>
       <div className={styles.headerRow}>
         <h3 className={styles.title}>Itinerary</h3>
         <Button onClick={onAddActivity} size="sm">
-          <Plus className="h-4 w-4 mr-2" />
+          <Plus className={styles.addIcon} />
           Add Activity
         </Button>
       </div>
 
       {activities.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center">
-            <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <h4 className="font-semibold mb-2">No activities yet</h4>
-            <p className="text-sm text-muted-foreground mb-4">Start building your itinerary by adding activities</p>
+          <CardContent className={styles.emptyState}>
+            <Calendar className={styles.emptyIcon} />
+            <h4 className={styles.emptyTitle}>No activities yet</h4>
+            <p className={styles.emptyText}>Start building your itinerary by adding activities</p>
             <Button onClick={onAddActivity}>
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className={styles.addIcon} />
               Add Your First Activity
             </Button>
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-3">
+        <div className={styles.spaceY3}>
           {activities.map((activity) => (
             <Card key={activity.business_id}>
-              <CardContent className="pt-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h4 className="font-semibold">{activity.business_name}</h4>
+              <CardContent className={styles.activityCard}>
+                <div className={styles.activityContent}>
+                  <div className={styles.activityMain}>
+                    <div className={styles.activityHeader}>
+                      <h4 className={styles.activityTitle}>{activity.business_name}</h4>
                       <Badge variant="secondary">{activity.category}</Badge>
                     </div>
 
                     {activity.scheduled_date && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Clock className="h-4 w-4" />
+                      <div className={styles.timeRow}>
+                        <Clock className={styles.timeIcon} />
                         <span>{format(activity.scheduled_date, "PPP")}</span>
                       </div>
                     )}
 
-                    {activity.notes && <p className="text-sm text-muted-foreground mt-2">{activity.notes}</p>}
+                    {activity.notes && <p className={styles.activityNotes}>{activity.notes}</p>}
                   </div>
 
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => onRemoveActivity(activity.business_id)}
-                    className="text-muted-foreground hover:text-destructive"
+                    className={styles.removeButton}
                   >
-                    <X className="h-4 w-4" />
+                    <X className={styles.removeIcon} />
                   </Button>
                 </div>
               </CardContent>

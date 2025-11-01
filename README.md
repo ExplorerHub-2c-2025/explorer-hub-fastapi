@@ -68,7 +68,7 @@ El frontend estará disponible en: `http://localhost:3000`
 Crear archivo `.env` en `explorerhub/backend/`:
 
 ```env
-MONGODB_URL=mongodb://localhost:27017
+MONGODB_URL= ...
 DATABASE_NAME=ExplorerHub
 JWT_SECRET_KEY=tu-clave-secreta-aqui
 JWT_ALGORITHM=HS256
@@ -97,13 +97,6 @@ NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
 ```bash
 cd explorerhub/backend
 python scripts/create_indexes.py
-```
-
-### Datos de Prueba (Opcional)
-
-```bash
-cd explorerhub/backend
-python scripts/seed_data.py
 ```
 
 ## Endpoints Principales
@@ -153,21 +146,6 @@ python scripts/seed_data.py
    - Vincula el usuario con su negocio mediante `business_id`
    - Retorna token JWT y datos del usuario
 
-## Cambios Recientes
-
-### ✅ Eliminación de Datos Mock
-- Se eliminaron todas las cuentas hardcodeadas
-- Los endpoints `/api/auth/*` ahora hacen proxy al backend FastAPI
-- Todas las operaciones CRUD se conectan directamente a MongoDB
-
-### ✅ IDs Correctos
-- Todos los modelos incluyen el campo `id` (string) mapeado desde `_id` de MongoDB
-- Los ObjectId se convierten automáticamente a strings en las respuestas
-
-### ✅ Página Principal
-- La ruta `/` (localhost:3000) ahora muestra el explorador de experiencias
-- Incluye búsqueda, filtros y listado de actividades
-
 ## Desarrollo
 
 ### Verificar Conexión Backend
@@ -177,30 +155,6 @@ curl http://localhost:8000/docs
 ```
 
 Esto abrirá la documentación interactiva de FastAPI (Swagger UI).
-
-### Verificar Conexión MongoDB
-
-```python
-from motor.motor_asyncio import AsyncIOMotorClient
-
-client = AsyncIOMotorClient("mongodb://localhost:27017")
-db = client.ExplorerHub
-print(await db.list_collection_names())
-```
-
-## Solución de Problemas
-
-### Error: "viajero@test no existe"
-- **Causa**: Estaba usando datos mock en lugar de MongoDB
-- **Solución**: Los endpoints ahora se conectan al backend real
-
-### Error: "No se puede conectar al backend"
-- Verificar que FastAPI esté corriendo en puerto 8000
-- Verificar el archivo `.env.local` en el frontend
-
-### Error: "No se puede conectar a MongoDB"
-- Verificar que MongoDB esté corriendo
-- Verificar la URL de conexión en `backend/.env`
 
 ## Scripts Útiles
 
@@ -214,15 +168,3 @@ npm run start        # Iniciar producción
 uvicorn main:app --reload              # Desarrollo
 uvicorn main:app --host 0.0.0.0 --port 8000  # Producción
 ```
-
-## Contribuir
-
-1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
-
-## Licencia
-
-Este proyecto es de código abierto y está disponible bajo la licencia MIT.
