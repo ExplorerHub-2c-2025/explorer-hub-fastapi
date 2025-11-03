@@ -13,6 +13,8 @@ import { AuthRequiredDialog } from "@/components/auth-required-dialog"
 import { ReviewForm } from "@/components/review-form"
 import { useAuthRequired } from "@/lib/hooks/use-auth-required"
 import styles from "./page.module.css"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 
 interface Business {
   id: number
@@ -215,7 +217,12 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
   const [replyingToReply, setReplyingToReply] = useState<string | null>(null)
   const [nestedReplyTexts, setNestedReplyTexts] = useState<Record<string, string>>({})
   const [expandedReplies, setExpandedReplies] = useState<Set<number>>(new Set())
-  
+  const [openBookingDialog, setOpenBookingDialog] = useState(false)
+  const [bookingName, setBookingName] = useState("")
+  const [bookingAmount, setBookingAmount] = useState("")
+  const [bookingDate, setBookingDate] = useState("")
+  const [bookingTime, setBookingTime] = useState("")
+
   // Alert/Confirm Dialog states
   const [alertDialog, setAlertDialog] = useState<{
     open: boolean
@@ -276,12 +283,15 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
     fetchBusiness()
   }, [resolvedParams.id])
 
-  const handleReserve = () => {
-    console.log("handleReserve clicked")
+  const handleBook = () => {
+    console.log("handleBook clicked")
     requireAuth(() => {
-      // Implementar lógica de reserva
-      console.log("Reservar - Usuario autenticado")
+      setOpenBookingDialog(true);
     })
+  }
+
+  const closeReserve = () => {
+    setOpenBookingDialog(false)
   }
 
   const handleSaveToTrip = () => {
@@ -630,6 +640,50 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
     return count
   }
 
+  const handleBookingSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
+    setIsLoading(true)
+
+    try {
+      const token = localStorage.getItem("token")
+      
+      if (!token) {
+        showAlert('error', 'Sesión expirada', 'Por favor inicia sesión nuevamente')
+        setShowAuthDialog(true)
+        return
+      }
+      
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/businesses/${id}/bookings`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: bookingName , amount: parseInt(bookingAmount), date: bookingDate, time: bookingTime }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.detail || "Error al realizar reserva")
+      }
+
+      if (response.ok) {
+        showAlert('success', '¡Éxito!', 'La reserva se ha realizado correctamente')
+        closeReserve()
+      } else {
+        const errorData = await response.json().catch(() => ({ detail: "Error desconocido" }))
+        showAlert('error', 'Error', errorData.detail || 'No se pudo realizar la reserva')
+      }
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ocurrió un error")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   console.log("Render - showAuthDialog:", showAuthDialog)
 
   if (isLoading) {
@@ -907,7 +961,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
               <Card>
                 <CardContent className={styles.sidebarCard}>
                   <div className={styles.sidebarButtons}>
-                    <Button onClick={handleReserve} className={styles.buttonFull} size="lg">
+                    <Button onClick={handleBook} className={styles.buttonFull} size="lg">
                       <Calendar className={styles.buttonIcon} />
                       Reservar Ahora
                     </Button>
@@ -1008,6 +1062,72 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
               </Button>
             )}
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={openBookingDialog} onOpenChange={closeReserve}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reservar en {activity.name}</DialogTitle>
+            <DialogDescription>Ingrese los datos para realizar la reserva</DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="name">Nombre</Label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="Juan"
+                value={bookingName}
+                onChange={(e) => setBookingName(e.target.value)}
+                required
+                disabled={isLoading}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="amount">Cantidad de Personas</Label>
+              <Input
+                id="amount"
+                type="number"
+                placeholder="2"
+                value={bookingAmount}
+                onChange={(e) => setBookingAmount(e.target.value)}
+                required
+                disabled={isLoading}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="date">Fecha</Label>
+              <Input
+                id="date"
+                type="date"
+                value={bookingDate}
+                onChange={(e) => setBookingDate(e.target.value)}
+                min={new Date().toISOString().split("T")[0]} // fecha mínima hoy
+                required
+                disabled={isLoading}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="time">Hora</Label>
+              <Input
+                id="time"
+                type="time"
+                value={bookingTime}
+                min="9:00" // aca va horario de apertura del negocio
+                max="21:00" // aca va el horario de cierre
+                onChange={(e) => setBookingTime(e.target.value)}
+                required
+                disabled={isLoading}
+              />
+            </div>
+          </div>
+          <Button
+            type="submit"
+            onClick={handleBookingSubmit}
+          >
+            Reservar
+          </Button>
         </DialogContent>
       </Dialog>
 
