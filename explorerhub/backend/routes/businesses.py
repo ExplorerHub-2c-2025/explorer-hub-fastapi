@@ -228,7 +228,22 @@ async def create_booking(
     booking_dict = booking.model_dump()
     booking_dict["business_id"] = business_id
     booking_dict["user_id"] = str(current_user.id)
-    booking_dict["created_at"] = datetime.utcnow().date()
+    # created_at must be a full datetime for Mongo/BSON
+    booking_dict["created_at"] = datetime.utcnow()
+
+    # Mongo/BSON cannot encode python date/time objects directly.
+    # Convert the booking date/time to ISO strings before inserting.
+    # Pydantic will still parse these strings back to date/time when returning the response.
+    if isinstance(booking_dict.get("date"), (datetime,)):
+        # if somehow a datetime is present, convert to date string
+        booking_dict["date"] = booking_dict["date"].date().isoformat()
+    elif booking_dict.get("date") is not None:
+        booking_dict["date"] = booking_dict["date"].isoformat()
+
+    if isinstance(booking_dict.get("time"), (datetime,)):
+        booking_dict["time"] = booking_dict["time"].time().isoformat()
+    elif booking_dict.get("time") is not None:
+        booking_dict["time"] = booking_dict["time"].isoformat()
 
     # Get next sequential ID for booking
     next_id = await get_next_sequence_value("bookings", db)

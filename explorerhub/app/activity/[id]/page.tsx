@@ -223,6 +223,15 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
   const [bookingDate, setBookingDate] = useState("")
   const [bookingTime, setBookingTime] = useState("")
 
+  // Minimum booking date (local timezone) formatted as YYYY-MM-DD for the date input
+  const minBookingDate = (() => {
+    const d = new Date()
+    const yyyy = d.getFullYear()
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    const dd = String(d.getDate()).padStart(2, '0')
+    return `${yyyy}-${mm}-${dd}`
+  })()
+
   // Alert/Confirm Dialog states
   const [alertDialog, setAlertDialog] = useState<{
     open: boolean
@@ -653,6 +662,8 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
         setShowAuthDialog(true)
         return
       }
+
+      console.log(JSON.stringify({ name: bookingName , amount: parseInt(bookingAmount), date: bookingDate, time: bookingTime }))
       
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/businesses/${id}/bookings`, {
         method: "POST",
@@ -667,6 +678,17 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
 
       if (!response.ok) {
         throw new Error(data.detail || "Error al realizar reserva")
+      }
+
+      if (response.status === 401) {
+        localStorage.removeItem("token")
+        localStorage.removeItem("user")
+        showAlert('error', 'Sesión expirada', 'Tu sesión ha expirado. Por favor inicia sesión nuevamente.')
+        setTimeout(() => {
+          setShowAuthDialog(true)
+          setReplyingToReply(null)
+        }, 1500)
+        return
       }
 
       if (response.ok) {
@@ -1093,6 +1115,8 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
                 value={bookingAmount}
                 onChange={(e) => setBookingAmount(e.target.value)}
                 required
+                min={1}
+                max={12}
                 disabled={isLoading}
               />
             </div>
@@ -1103,7 +1127,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
                 type="date"
                 value={bookingDate}
                 onChange={(e) => setBookingDate(e.target.value)}
-                min={new Date().toISOString().split("T")[0]} // fecha mínima hoy
+                min={minBookingDate} // fecha mínima hoy
                 required
                 disabled={isLoading}
               />
@@ -1114,9 +1138,9 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
                 id="time"
                 type="time"
                 value={bookingTime}
-                min="9:00" // aca va horario de apertura del negocio
-                max="21:00" // aca va el horario de cierre
                 onChange={(e) => setBookingTime(e.target.value)}
+                min="09:00" // fecha mínima hoy (zona horaria local)
+                max="21:00"
                 required
                 disabled={isLoading}
               />
