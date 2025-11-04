@@ -73,15 +73,11 @@ export default function TravelerProfile() {
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-primary/10">
       <div className="container mx-auto px-4 py-12">
         <div className="max-w-6xl mx-auto">
-          <div className="mb-8 flex items-center justify-between">
+          <div className="mb-8">
             <div>
               <h1 className="text-3xl font-bold mb-2">¡Hola, {user.name}!</h1>
               <p className="text-muted-foreground">Tu perfil de viajero</p>
             </div>
-            <Button onClick={handleLogout} variant="destructive" className="gap-2">
-              <LogOut className="h-4 w-4" />
-              Cerrar sesión
-            </Button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -141,6 +137,25 @@ export default function TravelerProfile() {
                 </Button>
               </CardContent>
             </Card>
+
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="h-12 w-12 rounded-full bg-destructive/10 flex items-center justify-center">
+                    <LogOut className="h-6 w-6 text-destructive" />
+                  </div>
+                  <div>
+                    <CardTitle>Cerrar Sesión</CardTitle>
+                    <CardDescription>Salir de tu cuenta</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Button onClick={handleLogout} variant="destructive" className="w-full">
+                  Cerrar sesión
+                </Button>
+              </CardContent>
+            </Card>
           </div>
 
           <Card className="mb-8">
@@ -149,7 +164,7 @@ export default function TravelerProfile() {
                 <div className="flex items-center gap-2">
                   <Bookmark className="h-5 w-5 text-primary" />
                   <div>
-                    <CardTitle>Destinos de Interes</CardTitle>
+                    <CardTitle>Destinos Guardados</CardTitle>
                     <CardDescription>
                       {savedActivities.length} experiencia{savedActivities.length !== 1 ? "s" : ""} guardada
                       {savedActivities.length !== 1 ? "s" : ""}
