@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Settings, MapPin, LogOut, Sparkles, Bookmark, Heart, Trash2 } from "lucide-react"
+import { Settings, MapPin, Sparkles, Bookmark, Heart, LogOut } from "lucide-react"
 import { ActivityCard } from "@/components/activity-card"
 
 interface SavedActivity {
@@ -25,7 +25,6 @@ export default function TravelerProfile() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [savedActivities, setSavedActivities] = useState<SavedActivity[]>([])
-  const [showSavedOnly, setShowSavedOnly] = useState(false)
 
   useEffect(() => {
     const userData = localStorage.getItem("user")
@@ -40,7 +39,7 @@ export default function TravelerProfile() {
     }
     setUser(parsedUser)
 
-    const saved = localStorage.getItem("savedActivities")
+    const saved = localStorage.getItem(`savedActivities_${parsedUser.id}`)
     if (saved) {
       setSavedActivities(JSON.parse(saved))
     }
@@ -53,10 +52,13 @@ export default function TravelerProfile() {
     router.refresh()
   }
 
-  const handleRemoveSaved = (activityId: string | number) => {
-    const updated = savedActivities.filter((act) => act.id !== activityId)
-    setSavedActivities(updated)
-    localStorage.setItem("savedActivities", JSON.stringify(updated))
+  const handleSaveToggle = (activityId: string | number, isSaved: boolean) => {
+    if (!isSaved) {
+      // Activity was unsaved, remove it from the list
+      const updated = savedActivities.filter((act) => act.id !== activityId)
+      setSavedActivities(updated)
+      localStorage.setItem(`savedActivities_${user.id}`, JSON.stringify(updated))
+    }
   }
 
   if (!user) {
@@ -71,9 +73,15 @@ export default function TravelerProfile() {
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-primary/10">
       <div className="container mx-auto px-4 py-12">
         <div className="max-w-6xl mx-auto">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2">¡Hola, {user.name}!</h1>
-            <p className="text-muted-foreground">Tu perfil de viajero</p>
+          <div className="mb-8 flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">¡Hola, {user.name}!</h1>
+              <p className="text-muted-foreground">Tu perfil de viajero</p>
+            </div>
+            <Button onClick={handleLogout} variant="destructive" className="gap-2">
+              <LogOut className="h-4 w-4" />
+              Cerrar sesión
+            </Button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -133,25 +141,6 @@ export default function TravelerProfile() {
                 </Button>
               </CardContent>
             </Card>
-
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-full bg-destructive/10 flex items-center justify-center">
-                    <LogOut className="h-6 w-6 text-destructive" />
-                  </div>
-                  <div>
-                    <CardTitle>Cerrar Sesión</CardTitle>
-                    <CardDescription>Salir de tu cuenta</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Button onClick={handleLogout} variant="destructive" className="w-full">
-                  Cerrar sesión
-                </Button>
-              </CardContent>
-            </Card>
           </div>
 
           <Card className="mb-8">
@@ -181,7 +170,7 @@ export default function TravelerProfile() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {savedActivities.map((activity) => (
-                    <div key={activity.id} className="relative">
+                    <div key={activity.id}>
                       <ActivityCard
                         id={activity.id}
                         name={activity.name}
@@ -193,15 +182,8 @@ export default function TravelerProfile() {
                         images={activity.images}
                         description={activity.description}
                         tags={activity.tags}
+                        onSaveToggle={handleSaveToggle}
                       />
-                      <Button
-                        onClick={() => handleRemoveSaved(activity.id)}
-                        variant="ghost"
-                        size="icon"
-                        className="absolute -top-2 -right-2 bg-destructive/90 hover:bg-destructive text-white rounded-full shadow-md"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
                     </div>
                   ))}
                 </div>
@@ -209,45 +191,47 @@ export default function TravelerProfile() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Información Personal</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="flex justify-between py-2 border-b border-gray-200">
-                <span className="text-muted-foreground">Nombre completo:</span>
-                <span className="font-medium">{user.name}</span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-gray-200">
-                <span className="text-muted-foreground">Email:</span>
-                <span className="font-medium">{user.email}</span>
-              </div>
-              {user.country && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <Card>
+              <CardHeader>
+                <CardTitle>Información Personal</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
                 <div className="flex justify-between py-2 border-b border-gray-200">
-                  <span className="text-muted-foreground">País de residencia:</span>
-                  <span className="font-medium">{user.country}</span>
+                  <span className="text-muted-foreground">Nombre completo:</span>
+                  <span className="font-medium">{user.name}</span>
                 </div>
-              )}
-              {user.date_of_birth && (
                 <div className="flex justify-between py-2 border-b border-gray-200">
-                  <span className="text-muted-foreground">Fecha de nacimiento:</span>
-                  <span className="font-medium">{new Date(user.date_of_birth).toLocaleDateString()}</span>
+                  <span className="text-muted-foreground">Email:</span>
+                  <span className="font-medium">{user.email}</span>
                 </div>
-              )}
-              {user.language && (
-                <div className="flex justify-between py-2 border-b border-gray-200">
-                  <span className="text-muted-foreground">Idioma preferido:</span>
-                  <span className="font-medium capitalize">{user.language}</span>
-                </div>
-              )}
-              {user.travel_preferences && user.travel_preferences.length > 0 && (
-                <div className="flex justify-between py-2">
-                  <span className="text-muted-foreground">Preferencias de viaje:</span>
-                  <span className="font-medium capitalize">{user.travel_preferences.join(", ")}</span>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                {user.country && (
+                  <div className="flex justify-between py-2 border-b border-gray-200">
+                    <span className="text-muted-foreground">País de residencia:</span>
+                    <span className="font-medium">{user.country}</span>
+                  </div>
+                )}
+                {user.date_of_birth && (
+                  <div className="flex justify-between py-2 border-b border-gray-200">
+                    <span className="text-muted-foreground">Fecha de nacimiento:</span>
+                    <span className="font-medium">{new Date(user.date_of_birth).toLocaleDateString()}</span>
+                  </div>
+                )}
+                {user.language && (
+                  <div className="flex justify-between py-2 border-b border-gray-200">
+                    <span className="text-muted-foreground">Idioma preferido:</span>
+                    <span className="font-medium capitalize">{user.language}</span>
+                  </div>
+                )}
+                {user.travel_preferences && user.travel_preferences.length > 0 && (
+                  <div className="flex justify-between py-2">
+                    <span className="text-muted-foreground">Preferencias de viaje:</span>
+                    <span className="font-medium capitalize">{user.travel_preferences.join(", ")}</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>

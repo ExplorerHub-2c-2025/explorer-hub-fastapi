@@ -22,6 +22,7 @@ interface ActivityCardProps {
   images?: string[]
   description: string
   tags?: string[]
+  onSaveToggle?: (id: string | number, isSaved: boolean) => void
 }
 
 export function ActivityCard({
@@ -36,16 +37,22 @@ export function ActivityCard({
   images = [],
   description,
   tags = [],
+  onSaveToggle,
 }: ActivityCardProps) {
   // Use images array if available, otherwise fallback to single image
   const imageArray = images && images.length > 0 ? images : image ? [image] : []
 
   const [isSaved, setIsSaved] = useState(() => {
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("savedActivities")
-      if (saved) {
-        const savedActivities = JSON.parse(saved)
-        return savedActivities.some((act: any) => act.id === id)
+      const userData = localStorage.getItem("user")
+      const userId = userData ? JSON.parse(userData).id : null
+
+      if (userId) {
+        const saved = localStorage.getItem(`savedActivities_${userId}`)
+        if (saved) {
+          const savedActivities = JSON.parse(saved)
+          return savedActivities.some((act: any) => act.id === id)
+        }
       }
     }
     return false
@@ -54,12 +61,21 @@ export function ActivityCard({
   const handleSaveActivity = (e: React.MouseEvent) => {
     e.preventDefault()
 
-    const saved = localStorage.getItem("savedActivities")
+    const userData = localStorage.getItem("user")
+    const userId = userData ? JSON.parse(userData).id : null
+
+    if (!userId) return
+
+    const storageKey = `savedActivities_${userId}`
+    const saved = localStorage.getItem(storageKey)
     let savedActivities = saved ? JSON.parse(saved) : []
+
+    let newIsSaved = !isSaved
 
     if (isSaved) {
       // Remove from saved
       savedActivities = savedActivities.filter((act: any) => act.id !== id)
+      newIsSaved = false
     } else {
       // Add to saved
       savedActivities.push({
@@ -74,10 +90,15 @@ export function ActivityCard({
         description,
         tags,
       })
+      newIsSaved = true
     }
 
-    localStorage.setItem("savedActivities", JSON.stringify(savedActivities))
-    setIsSaved(!isSaved)
+    localStorage.setItem(storageKey, JSON.stringify(savedActivities))
+    setIsSaved(newIsSaved)
+
+    if (onSaveToggle) {
+      onSaveToggle(id, newIsSaved)
+    }
   }
 
   return (
