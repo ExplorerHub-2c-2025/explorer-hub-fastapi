@@ -6,6 +6,7 @@ from models.business import BusinessCreate, Business, BusinessInDB
 from models.counter import get_next_sequence_value
 from auth import get_current_active_user
 from models.user import UserInDB
+from models.booking import BookingCreate, Booking
 from utils import serialize_doc, serialize_docs
 
 router = APIRouter(prefix="/api/businesses", tags=["businesses"])
@@ -208,6 +209,53 @@ async def increment_business_view(business_id: int, db = Depends(get_database)):
     """Increment the view count for a business (public endpoint)"""
     await db.businesses.update_one({"id": business_id}, {"$inc": {"views": 1}})
     return None
+
+
+@router.post("/{business_id}/bookings", response_model=Booking, status_code=status.HTTP_201_CREATED)
+async def create_booking(
+    business_id: int,
+    booking: BookingCreate,
+    current_user: UserInDB = Depends(get_current_active_user),
+    db = Depends(get_database)
+):
+    """Create a new booking for a business"""
+    # Check if business exists
+    business = await db.businesses.find_one({"id": business_id})
+    if not business:
+        raise HTTPException(status_code=404, detail="Business not found")
+
+    # Create booking dict
+    booking_dict = booking.model_dump()
+    booking_dict["business_id"] = business_id
+    booking_dict["user_id"] = str(current_user.id)
+    # created_at must be a full datetime for Mongo/BSON
+    booking_dict["created_at"] = datetime.utcnow()
+
+    # Mongo/BSON cannot encode python date/time objects directly.
+    # Convert the booking date/time to ISO strings before inserting.
+    # Pydantic will still parse these strings back to date/time when returning the response.
+    if isinstance(booking_dict.get("date"), (datetime,)):
+        # if somehow a datetime is present, convert to date string
+        booking_dict["date"] = booking_dict["date"].date().isoformat()
+    elif booking_dict.get("date") is not None:
+        booking_dict["date"] = booking_dict["date"].isoformat()
+
+    if isinstance(booking_dict.get("time"), (datetime,)):
+        booking_dict["time"] = booking_dict["time"].time().isoformat()
+    elif booking_dict.get("time") is not None:
+        booking_dict["time"] = booking_dict["time"].isoformat()
+
+    # Get next sequential ID for booking
+    next_id = await get_next_sequence_value("bookings", db)
+    booking_dict["id"] = next_id
+
+    # Insert booking
+    await db.bookings.insert_one(booking_dict)
+    
+    created_booking = await db.bookings.find_one({"id": next_id})
+    created_booking = serialize_doc(created_booking)
+    
+    return Booking(**created_booking)
 
 
 @router.get("/owner/analytics")
