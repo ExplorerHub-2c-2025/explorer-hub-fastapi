@@ -47,7 +47,7 @@ export default function SignInPage() {
       if (data.user.role === "business") {
         router.push("/dashboard/business")
       } else {
-        router.push("/explore")
+        router.push("/")
       }
       router.refresh()
     } catch (err) {
