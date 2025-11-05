@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { ActivityCard } from "@/components/activity-card"
@@ -34,6 +34,7 @@ interface Business {
 
 export default function ExplorePage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [activities, setActivities] = useState<Business[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -46,8 +47,19 @@ export default function ExplorePage() {
         router.push("/dashboard/business")
       }
     }
-    
+
+    // If the home page sent a category/search via query params, prefill local filters
+    const categoryParam = searchParams?.get("category")
+    const searchParam = searchParams?.get("search")
+    if (categoryParam) {
+      setFilters((prev) => ({ ...prev, categories: [categoryParam] }))
+    }
+    if (searchParam) {
+      setSearchQuery(searchParam)
+    }
+
     fetchBusinesses()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router])
 
   const fetchBusinesses = async () => {
