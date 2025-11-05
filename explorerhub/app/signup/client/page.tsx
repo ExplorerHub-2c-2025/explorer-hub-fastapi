@@ -56,6 +56,53 @@ export default function SignUpPage() {
     e.preventDefault()
     setError("")
 
+    // Validación: Todos los campos requeridos
+    if (!formData.name.trim()) {
+      setError("El nombre es obligatorio")
+      return
+    }
+
+    if (!formData.email.trim()) {
+      setError("El correo electrónico es obligatorio")
+      return
+    }
+
+    if (!formData.password) {
+      setError("La contraseña es obligatoria")
+      return
+    }
+
+    if (!formData.birthDate) {
+      setError("La fecha de nacimiento es obligatoria")
+      return
+    }
+
+    if (!formData.country.trim()) {
+      setError("El país de residencia es obligatorio")
+      return
+    }
+
+    // Validación: Contraseñas coinciden
+    if (formData.password !== formData.confirmPassword) {
+      setError("Las contraseñas no coinciden")
+      return
+    }
+
+    // Validación: Longitud de contraseña
+    if (formData.password.length < 8) {
+      setError("La contraseña debe tener al menos 8 caracteres")
+      return
+    }
+
+    // Validación: Edad +18
+    const birthDate = new Date(formData.birthDate)
+    const today = new Date()
+    let age = today.getFullYear() - birthDate.getFullYear()
+    const monthDiff = today.getMonth() - birthDate.getMonth()
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--
+    }
     if (formData.password !== formData.confirmPassword) {
       setError("Las contraseñas no coinciden")
       return
@@ -78,6 +125,16 @@ export default function SignUpPage() {
 
     if (!formData.country) {
       setError("El país de residencia es obligatorio")
+      return
+    }
+    if (age < 18) {
+      setError("Debes ser mayor de 18 años para crear una cuenta")
+      return
+    }
+
+    // Validación: Términos y condiciones
+    if (!agreedToTerms) {
+      setError("Debes aceptar los términos y condiciones")
       return
     }
 
@@ -106,6 +163,10 @@ export default function SignUpPage() {
       const data = await response.json()
 
       if (!response.ok) {
+        // Manejo específico para correo duplicado
+        if (response.status === 400 && data.detail?.includes("already registered")) {
+          throw new Error("Este correo electrónico ya está registrado. Por favor usa otro o inicia sesión.")
+        }
         throw new Error(data.detail || "Error al crear la cuenta")
       }
 

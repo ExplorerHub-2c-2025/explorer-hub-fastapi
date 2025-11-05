@@ -8,6 +8,7 @@ from auth import get_current_active_user
 from models.user import UserInDB
 from models.booking import BookingCreate, Booking
 from utils import serialize_doc, serialize_docs
+from routes.notifications import notify_booking_created
 
 router = APIRouter(prefix="/api/businesses", tags=["businesses"])
 
@@ -231,6 +232,73 @@ async def create_booking(
     # created_at must be a full datetime for Mongo/BSON
     booking_dict["created_at"] = datetime.utcnow()
 
+    # Initialize price and discount fields
+    booking_dict["original_price"] = None
+    booking_dict["final_price"] = None
+    booking_dict["discount_applied"] = 0.0
+    promotion_claim_id = None
+
+    # Validate promotion code if provided
+    if booking_dict.get("promotion_code"):
+        promotion = await db.promotions.find_one({
+            "code": booking_dict["promotion_code"],
+            "business_id": business_id,
+            "is_active": True
+        })
+        
+        if promotion:
+            # Check if user has claimed this promotion and hasn't used it
+            claim = await db.promotion_claims.find_one({
+                "user_id": current_user.id,
+                "promotion_id": promotion["id"],
+                "business_id": business_id,
+                "used": False
+            })
+            
+            if not claim:
+                raise HTTPException(
+                    status_code=400,
+                    detail="No tienes este código promocional disponible o ya lo usaste"
+                )
+            
+            promotion_claim_id = claim["id"]
+            
+            # Check if promotion is still valid
+            from datetime import date as date_type
+            today = date_type.today()
+            
+            start_date = promotion.get("start_date")
+            end_date = promotion.get("end_date")
+            
+            # Convert to date objects for comparison
+            if isinstance(start_date, str):
+                start_date = date_type.fromisoformat(start_date)
+            elif isinstance(start_date, datetime):
+                start_date = start_date.date()
+            
+            if isinstance(end_date, str):
+                end_date = date_type.fromisoformat(end_date)
+            elif isinstance(end_date, datetime):
+                end_date = end_date.date()
+            
+            # Check if promotion is valid (compare dates only)
+            if start_date and end_date and start_date <= today <= end_date:
+                booking_dict["discount_applied"] = promotion.get("discount_percentage", 0.0)
+                # If business has a price, calculate the discount
+                if business.get("price_level"):
+                    # Use price_level as a base price (you can adjust this logic)
+                    base_price = business.get("price_level", 0) * 100  # Example conversion
+                    booking_dict["original_price"] = base_price
+                    discount_amount = base_price * (booking_dict["discount_applied"] / 100)
+                    booking_dict["final_price"] = base_price - discount_amount
+            else:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"El código promocional ha expirado (válido desde {start_date} hasta {end_date})"
+                )
+        else:
+            raise HTTPException(status_code=400, detail="Código promocional inválido")
+
     # Mongo/BSON cannot encode python date/time objects directly.
     # Convert the booking date/time to ISO strings before inserting.
     # Pydantic will still parse these strings back to date/time when returning the response.
@@ -248,12 +316,38 @@ async def create_booking(
     # Get next sequential ID for booking
     next_id = await get_next_sequence_value("bookings", db)
     booking_dict["id"] = next_id
+    booking_dict["status"] = "pending"  # Set default status
 
     # Insert booking
     await db.bookings.insert_one(booking_dict)
     
+    # Mark promotion as used if it was applied
+    if promotion_claim_id:
+        await db.promotion_claims.update_one(
+            {"id": promotion_claim_id},
+            {
+                "$set": {
+                    "used": True,
+                    "used_at": datetime.utcnow(),
+                    "booking_id": next_id
+                }
+            }
+        )
+    
     created_booking = await db.bookings.find_one({"id": next_id})
     created_booking = serialize_doc(created_booking)
+    
+    # Send notifications (user + business owner)
+    await notify_booking_created(
+        booking_id=next_id,
+        booking_date=str(booking_dict["date"]),
+        user_id=current_user.id,
+        business_id=business_id,
+        business_name=business["name"],
+        business_owner_id=int(business["owner_id"]),
+        user_name=current_user.full_name,
+        db=db
+    )
     
     return Booking(**created_booking)
 

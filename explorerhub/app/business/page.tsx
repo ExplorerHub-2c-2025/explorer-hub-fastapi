@@ -7,7 +7,7 @@ import { BusinessStatsCard } from "@/components/business-stats-card"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Store, Star, MessageSquare, TrendingUp, Plus, Edit, Eye, Trash } from "lucide-react"
+import { Store, Star, MessageSquare, TrendingUp, Plus, Edit, Eye, Trash, Tag } from "lucide-react"
 import Link from "next/link"
 
 export default function BusinessDashboardPage() {
@@ -104,12 +104,20 @@ export default function BusinessDashboardPage() {
             <h1 className="text-3xl font-bold mb-2">Panel de Negocios</h1>
             <p className="text-muted-foreground">Gestiona tus negocios y monitorea el rendimiento</p>
           </div>
-          <Link href="/business/new">
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Agregar Negocio
-            </Button>
-          </Link>
+          <div className="flex gap-2">
+            <Link href="/business/promotions">
+              <Button variant="outline">
+                <Tag className="h-4 w-4 mr-2" />
+                Promociones
+              </Button>
+            </Link>
+            <Link href="/business/new">
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Agregar Negocio
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Stats Overview */}

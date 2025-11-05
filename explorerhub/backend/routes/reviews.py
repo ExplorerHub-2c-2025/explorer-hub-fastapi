@@ -7,6 +7,7 @@ from models.counter import get_next_sequence_value
 from auth import get_current_active_user
 from models.user import UserInDB
 from utils import serialize_doc, serialize_docs
+from routes.notifications import notify_new_review, notify_review_response
 
 router = APIRouter(prefix="/api/reviews", tags=["reviews"])
 
@@ -61,6 +62,17 @@ async def create_review(
     # Ensure id is int
     if isinstance(created_review.get("id"), str):
         created_review["id"] = int(created_review["id"])
+    
+    # Send notification to business owner
+    await notify_new_review(
+        review_id=next_id,
+        business_id=review.business_id,
+        business_name=business["name"],
+        business_owner_id=int(business["owner_id"]),
+        user_name=current_user.full_name,
+        rating=review.rating,
+        db=db
+    )
     
     return Review(**created_review)
 
@@ -217,6 +229,18 @@ async def create_reply(
     # Ensure id is int
     if isinstance(updated_review.get("id"), str):
         updated_review["id"] = int(updated_review["id"])
+    
+    # Send notification to review author (if replier is not the same person)
+    if str(current_user.id) != review.get("user_id"):
+        business = await db.businesses.find_one({"id": review.get("business_id")})
+        if business:
+            await notify_review_response(
+                review_id=review_id,
+                user_id=int(review.get("user_id")),
+                business_name=business["name"],
+                responder_name=current_user.full_name,
+                db=db
+            )
     
     return Review(**updated_review)
 
