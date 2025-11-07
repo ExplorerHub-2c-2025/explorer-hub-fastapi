@@ -3,7 +3,7 @@
 import type React from "react"
 
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Star, MapPin, DollarSign, Heart } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -42,62 +42,87 @@ export function ActivityCard({
   // Use images array if available, otherwise fallback to single image
   const imageArray = images && images.length > 0 ? images : image ? [image] : []
 
-  const [isSaved, setIsSaved] = useState(() => {
-    if (typeof window !== "undefined") {
-      const userData = localStorage.getItem("user")
-      const userId = userData ? JSON.parse(userData).id : null
+  const [isSaved, setIsSaved] = useState(false)
+  const [isCheckingFavorite, setIsCheckingFavorite] = useState(true)
 
-      if (userId) {
-        const saved = localStorage.getItem(`savedActivities_${userId}`)
-        if (saved) {
-          const savedActivities = JSON.parse(saved)
-          return savedActivities.some((act: any) => act.id === id)
+  // Verificar si está en favoritos al montar el componente
+  useEffect(() => {
+    const checkFavorite = async () => {
+      if (typeof window === "undefined") return
+
+      const token = localStorage.getItem("token")
+      if (!token) {
+        setIsCheckingFavorite(false)
+        return
+      }
+
+      try {
+        const response = await fetch(`/api/favorites/check/${id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          setIsSaved(data.is_favorite)
         }
+      } catch (error) {
+        console.error("Error checking favorite:", error)
+      } finally {
+        setIsCheckingFavorite(false)
       }
     }
-    return false
-  })
 
-  const handleSaveActivity = (e: React.MouseEvent) => {
+    checkFavorite()
+  }, [id])
+
+  const handleSaveActivity = async (e: React.MouseEvent) => {
     e.preventDefault()
 
-    const userData = localStorage.getItem("user")
-    const userId = userData ? JSON.parse(userData).id : null
-
-    if (!userId) return
-
-    const storageKey = `savedActivities_${userId}`
-    const saved = localStorage.getItem(storageKey)
-    let savedActivities = saved ? JSON.parse(saved) : []
-
-    let newIsSaved = !isSaved
-
-    if (isSaved) {
-      // Remove from saved
-      savedActivities = savedActivities.filter((act: any) => act.id !== id)
-      newIsSaved = false
-    } else {
-      // Add to saved
-      savedActivities.push({
-        id,
-        name,
-        category,
-        location,
-        rating,
-        reviewCount,
-        priceLevel,
-        images: imageArray,
-        description,
-        tags,
-      })
-      newIsSaved = true
+    const token = localStorage.getItem("token")
+    if (!token) {
+      // Redirigir al login si no está autenticado
+      window.location.href = "/sign-in"
+      return
     }
 
-    localStorage.setItem(storageKey, JSON.stringify(savedActivities))
-    setIsSaved(newIsSaved)
+    try {
+      if (isSaved) {
+        // Eliminar de favoritos
+        const response = await fetch(`/api/favorites/${id}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
 
-    if (onSaveToggle) {
-      onSaveToggle(id, newIsSaved)
+        if (response.ok || response.status === 204) {
+          setIsSaved(false)
+          if (onSaveToggle) {
+            onSaveToggle(id, false)
+          }
+        }
+      } else {
+        // Agregar a favoritos
+        const response = await fetch("/api/favorites", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ business_id: Number(id) }),
+        })
+
+        if (response.ok) {
+          setIsSaved(true)
+          if (onSaveToggle) {
+            onSaveToggle(id, true)
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error saving activity:", error)
     }
   }
 

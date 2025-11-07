@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
-import { Calendar, Clock, MapPin, Users, Tag, Percent } from "lucide-react"
+import { Calendar, Clock, MapPin, Users, Tag, Percent, X } from "lucide-react"
 import styles from "./page.module.css"
 
 interface Booking {
@@ -30,6 +30,7 @@ export default function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [cancellingBookingId, setCancellingBookingId] = useState<number | null>(null)
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -92,6 +93,53 @@ export default function BookingsPage() {
 
   const formatTime = (timeString: string) => {
     return timeString.slice(0, 5) // Format HH:MM
+  }
+
+  const handleCancelBooking = async (bookingId: number) => {
+    if (!confirm("¿Estás seguro de que deseas cancelar esta reserva?")) {
+      return
+    }
+
+    setCancellingBookingId(bookingId)
+    
+    try {
+      const token = localStorage.getItem("token")
+      
+      const response = await fetch(`/api/bookings/${bookingId}/cancel`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (response.status === 401) {
+        localStorage.removeItem("token")
+        localStorage.removeItem("user")
+        router.push("/sign-in")
+        return
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || "Error al cancelar la reserva")
+      }
+
+      // Actualizar la lista de reservas
+      setBookings(prevBookings => 
+        prevBookings.map(booking => 
+          booking.id === bookingId 
+            ? { ...booking, status: 'cancelled' as const }
+            : booking
+        )
+      )
+      
+      alert("Reserva cancelada exitosamente")
+    } catch (err) {
+      console.error("Error cancelling booking:", err)
+      alert(err instanceof Error ? err.message : "Error al cancelar la reserva")
+    } finally {
+      setCancellingBookingId(null)
+    }
   }
 
   const getCategoryLabel = (category: string) => {
@@ -248,14 +296,32 @@ export default function BookingsPage() {
                     <span className={styles.bookingDate}>
                       Reservado el {formatDate(booking.created_at)}
                     </span>
-                    <button
-                      className={styles.viewButton}
-                      onClick={() =>
-                        router.push(`/activity/${booking.business_id}`)
-                      }
-                    >
-                      Ver negocio
-                    </button>
+                    <div className={styles.footerActions}>
+                      {booking.status !== 'cancelled' && (
+                        <button
+                          className={styles.cancelButton}
+                          onClick={() => handleCancelBooking(booking.id)}
+                          disabled={cancellingBookingId === booking.id}
+                        >
+                          {cancellingBookingId === booking.id ? (
+                            <>Cancelando...</>
+                          ) : (
+                            <>
+                              <X className={styles.cancelIcon} />
+                              Cancelar reserva
+                            </>
+                          )}
+                        </button>
+                      )}
+                      <button
+                        className={styles.viewButton}
+                        onClick={() =>
+                          router.push(`/activity/${booking.business_id}`)
+                        }
+                      >
+                        Ver negocio
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

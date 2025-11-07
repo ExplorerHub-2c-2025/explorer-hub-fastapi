@@ -37,6 +37,7 @@ interface Business {
   tags: string[]
   phone?: string
   website?: string
+  allows_bookings: boolean
 }
 
 interface Reply {
@@ -247,6 +248,20 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
   const [availablePromoCodes, setAvailablePromoCodes] = useState<any[]>([])
   const [isLoadingPromoCodes, setIsLoadingPromoCodes] = useState(false)
   
+  // Save to Trip dialog
+  const [openSaveToTripDialog, setOpenSaveToTripDialog] = useState(false)
+  const [userTrips, setUserTrips] = useState<any[]>([])
+  const [selectedTripId, setSelectedTripId] = useState<string>("")
+  const [tripNotes, setTripNotes] = useState("")
+  const [tripScheduledDate, setTripScheduledDate] = useState("")
+  const [isLoadingTrips, setIsLoadingTrips] = useState(false)
+  const [isSavingToTrip, setIsSavingToTrip] = useState(false)
+  
+  // Favorites
+  const [isFavorite, setIsFavorite] = useState(false)
+  const [isCheckingFavorite, setIsCheckingFavorite] = useState(false)
+  const [isTogglingFavorite, setIsTogglingFavorite] = useState(false)
+  
   // Promotion creation dialog
   const [openPromotionDialog, setOpenPromotionDialog] = useState(false)
   const [isCreatingPromotion, setIsCreatingPromotion] = useState(false)
@@ -363,6 +378,88 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
     fetchBusiness()
   }, [resolvedParams.id])
 
+  // Check if business is in favorites
+  useEffect(() => {
+    const checkFavorite = async () => {
+      const token = localStorage.getItem("token")
+      if (!token || !activity) return
+
+      setIsCheckingFavorite(true)
+      try {
+        const response = await fetch(`/api/favorites/check/${activity.id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          setIsFavorite(data.is_favorite)
+        }
+      } catch (err) {
+        console.error("Error checking favorite:", err)
+      } finally {
+        setIsCheckingFavorite(false)
+      }
+    }
+
+    checkFavorite()
+  }, [activity])
+
+  const handleToggleFavorite = async () => {
+    requireAuth(async () => {
+      if (!activity) return
+
+      setIsTogglingFavorite(true)
+      try {
+        const token = localStorage.getItem("token")
+        
+        if (isFavorite) {
+          // Remove from favorites
+          const response = await fetch(`/api/favorites/${activity.id}`, {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          })
+
+          if (response.ok || response.status === 204) {
+            setIsFavorite(false)
+            showAlert('success', 'Eliminado', 'Se eliminó de tus destinos de interés')
+          } else {
+            const error = await response.json()
+            showAlert('error', 'Error', error.detail || 'No se pudo eliminar de favoritos')
+          }
+        } else {
+          // Add to favorites
+          const response = await fetch(`/api/favorites`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              business_id: activity.id,
+            }),
+          })
+
+          if (response.ok) {
+            setIsFavorite(true)
+            showAlert('success', '¡Guardado!', 'Se agregó a tus destinos de interés')
+          } else {
+            const error = await response.json()
+            showAlert('error', 'Error', error.detail || 'No se pudo agregar a favoritos')
+          }
+        }
+      } catch (err) {
+        console.error("Error toggling favorite:", err)
+        showAlert('error', 'Error', 'Error al actualizar favoritos')
+      } finally {
+        setIsTogglingFavorite(false)
+      }
+    })
+  }
+
   const handleBook = () => {
     console.log("handleBook clicked")
     requireAuth(async () => {
@@ -416,10 +513,82 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
 
   const handleSaveToTrip = () => {
     console.log("handleSaveToTrip clicked")
-    requireAuth(() => {
-      // Implementar lógica de guardar en viaje
-      console.log("Guardar en viaje - Usuario autenticado")
+    requireAuth(async () => {
+      // Fetch user's trips
+      setIsLoadingTrips(true)
+      setOpenSaveToTripDialog(true)
+      try {
+        const token = localStorage.getItem("token")
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/trips/`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        )
+        
+        if (response.ok) {
+          const trips = await response.json()
+          setUserTrips(trips)
+        } else {
+          showAlert('error', 'Error', 'No se pudieron cargar tus viajes')
+          setUserTrips([])
+        }
+      } catch (err) {
+        console.error("Error fetching trips:", err)
+        showAlert('error', 'Error', 'Error al cargar los viajes')
+        setUserTrips([])
+      } finally {
+        setIsLoadingTrips(false)
+      }
     })
+  }
+
+  const handleConfirmSaveToTrip = async () => {
+    if (!selectedTripId) {
+      showAlert('error', 'Selecciona un viaje', 'Por favor selecciona un viaje')
+      return
+    }
+
+    if (!activity) return
+
+    setIsSavingToTrip(true)
+    try {
+      const token = localStorage.getItem("token")
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/trips/${selectedTripId}/activities`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            business_id: activity.id.toString(),
+            business_name: activity.name,
+            scheduled_date: tripScheduledDate || null,
+            notes: tripNotes || null,
+          }),
+        }
+      )
+
+      if (response.ok) {
+        showAlert('success', '¡Guardado!', 'La actividad se guardó en tu viaje')
+        setOpenSaveToTripDialog(false)
+        setSelectedTripId("")
+        setTripNotes("")
+        setTripScheduledDate("")
+      } else {
+        const error = await response.json()
+        showAlert('error', 'Error', error.detail || 'No se pudo guardar en el viaje')
+      }
+    } catch (err) {
+      console.error("Error saving to trip:", err)
+      showAlert('error', 'Error', 'Error al guardar en el viaje')
+    } finally {
+      setIsSavingToTrip(false)
+    }
   }
 
   const handleAddReview = () => {
@@ -1237,13 +1406,39 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
               <Card>
                 <CardContent className={styles.sidebarCard}>
                   <div className={styles.sidebarButtons}>
-                    <Button onClick={handleBook} className={styles.buttonFull} size="lg">
-                      <Calendar className={styles.buttonIcon} />
-                      Reservar Ahora
-                    </Button>
-                    <Button onClick={handleSaveToTrip} variant="outline" className={styles.buttonFull} size="lg">
-                      <Heart className={styles.buttonIcon} />
+                    {activity.allows_bookings && (
+                      <Button onClick={handleBook} className={styles.buttonFull} size="lg">
+                        <Calendar className={styles.buttonIcon} />
+                        Reservar Ahora
+                      </Button>
+                    )}
+                    <Button 
+                      onClick={handleSaveToTrip} 
+                      variant="outline" 
+                      className={styles.buttonFull} 
+                      size="lg"
+                    >
+                      <Plus className={styles.buttonIcon} />
                       Guardar en Viaje
+                    </Button>
+                    <Button 
+                      onClick={handleToggleFavorite} 
+                      variant={isFavorite ? "default" : "outline"}
+                      className={styles.buttonFull} 
+                      size="lg"
+                      disabled={isTogglingFavorite || isCheckingFavorite}
+                    >
+                      {isTogglingFavorite || isCheckingFavorite ? (
+                        <>
+                          <Loader2 className={`${styles.buttonIcon} animate-spin`} />
+                          {isFavorite ? "Guardando..." : "Guardando..."}
+                        </>
+                      ) : (
+                        <>
+                          <Heart className={`${styles.buttonIcon} ${isFavorite ? 'fill-current' : ''}`} />
+                          {isFavorite ? "Guardado en Favoritos" : "Guardar como Favorito"}
+                        </>
+                      )}
                     </Button>
                   </div>
                 </CardContent>
@@ -1657,6 +1852,112 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
           >
             Reservar
           </Button>
+        </DialogContent>
+      </Dialog>
+
+      {/* Save to Trip Dialog */}
+      <Dialog open={openSaveToTripDialog} onOpenChange={setOpenSaveToTripDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Guardar en Viaje</DialogTitle>
+            <DialogDescription>
+              Agrega esta actividad a uno de tus viajes planificados
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {isLoadingTrips ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : userTrips.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground mb-4">
+                  No tienes viajes creados aún
+                </p>
+                <Button
+                  onClick={() => {
+                    setOpenSaveToTripDialog(false)
+                    router.push("/trips/new")
+                  }}
+                  variant="outline"
+                >
+                  Crear mi primer viaje
+                </Button>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="trip-select">Selecciona un viaje *</Label>
+                  <Select
+                    value={selectedTripId}
+                    onValueChange={setSelectedTripId}
+                  >
+                    <SelectTrigger id="trip-select">
+                      <SelectValue placeholder="Elige un viaje" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {userTrips.map((trip) => (
+                        <SelectItem key={trip.id} value={trip.id.toString()}>
+                          {trip.name} - {trip.destination}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="trip-date">Fecha programada (opcional)</Label>
+                  <Input
+                    id="trip-date"
+                    type="date"
+                    value={tripScheduledDate}
+                    onChange={(e) => setTripScheduledDate(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="trip-notes">Notas (opcional)</Label>
+                  <Textarea
+                    id="trip-notes"
+                    value={tripNotes}
+                    onChange={(e) => setTripNotes(e.target.value)}
+                    placeholder="Ej: Reservar con anticipación, ir temprano..."
+                    rows={3}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+
+          {userTrips.length > 0 && (
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setOpenSaveToTripDialog(false)
+                  setSelectedTripId("")
+                  setTripNotes("")
+                  setTripScheduledDate("")
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleConfirmSaveToTrip}
+                disabled={!selectedTripId || isSavingToTrip}
+              >
+                {isSavingToTrip ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  "Guardar"
+                )}
+              </Button>
+            </DialogFooter>
+          )}
         </DialogContent>
       </Dialog>
 

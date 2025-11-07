@@ -17,6 +17,7 @@ import {
   pollNotifications,
   type Notification,
 } from "@/lib/notificationsService"
+import { isAuthenticated } from "@/lib/auth"
 import styles from "./notification-bell.module.css"
 
 export type NotificationType = 
@@ -131,6 +132,14 @@ export function NotificationBell({ userRole = "traveler" }: NotificationBellProp
   }, [])
 
   const loadNotifications = async () => {
+    // Don't try to load notifications if not authenticated
+    if (!isAuthenticated()) {
+      setNotifications([])
+      setUnreadCount(0)
+      setLoading(false)
+      return
+    }
+
     try {
       setLoading(true)
       setError(null)

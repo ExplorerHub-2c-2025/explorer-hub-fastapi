@@ -25,6 +25,7 @@ export default function TravelerProfile() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [savedActivities, setSavedActivities] = useState<SavedActivity[]>([])
+  const [isLoadingFavorites, setIsLoadingFavorites] = useState(true)
 
   useEffect(() => {
     const userData = localStorage.getItem("user")
@@ -39,11 +40,48 @@ export default function TravelerProfile() {
     }
     setUser(parsedUser)
 
-    const saved = localStorage.getItem(`savedActivities_${parsedUser.id}`)
-    if (saved) {
-      setSavedActivities(JSON.parse(saved))
-    }
+    // Obtener favoritos desde la base de datos
+    fetchFavorites()
   }, [router])
+
+  const fetchFavorites = async () => {
+    try {
+      setIsLoadingFavorites(true)
+      const token = localStorage.getItem("token")
+      
+      if (!token) return
+
+      const response = await fetch("/api/favorites", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (response.ok) {
+        const favorites = await response.json()
+        
+        // Mapear los favoritos al formato de SavedActivity
+        const activities: SavedActivity[] = favorites.map((fav: any) => ({
+          id: fav.business_id,
+          name: fav.business_name,
+          category: fav.business_category,
+          location: fav.business_location,
+          rating: fav.business_rating,
+          reviewCount: fav.business_review_count,
+          priceLevel: fav.business_price_level,
+          images: fav.business_images,
+          description: fav.business_description || "",
+          tags: fav.business_tags,
+        }))
+
+        setSavedActivities(activities)
+      }
+    } catch (error) {
+      console.error("Error fetching favorites:", error)
+    } finally {
+      setIsLoadingFavorites(false)
+    }
+  }
 
   const handleLogout = () => {
     localStorage.removeItem("token")
@@ -52,12 +90,26 @@ export default function TravelerProfile() {
     router.refresh()
   }
 
-  const handleSaveToggle = (activityId: string | number, isSaved: boolean) => {
+  const handleSaveToggle = async (activityId: string | number, isSaved: boolean) => {
     if (!isSaved) {
-      // Activity was unsaved, remove it from the list
+      // Activity was unsaved, remove it from the list and from the database
+      try {
+        const token = localStorage.getItem("token")
+        
+        if (token) {
+          await fetch(`/api/favorites/${activityId}`, {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          })
+        }
+      } catch (error) {
+        console.error("Error removing favorite:", error)
+      }
+      
       const updated = savedActivities.filter((act) => act.id !== activityId)
       setSavedActivities(updated)
-      localStorage.setItem(`savedActivities_${user.id}`, JSON.stringify(updated))
     }
   }
 
@@ -174,7 +226,12 @@ export default function TravelerProfile() {
               </div>
             </CardHeader>
             <CardContent>
-              {savedActivities.length === 0 ? (
+              {isLoadingFavorites ? (
+                <div className="text-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+                  <p className="text-muted-foreground mt-4">Cargando favoritos...</p>
+                </div>
+              ) : savedActivities.length === 0 ? (
                 <div className="text-center py-12">
                   <Heart className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
                   <p className="text-muted-foreground mb-4">Aún no tienes destinos guardados</p>

@@ -48,6 +48,10 @@ async def create_business(
     business_dict["updated_at"] = datetime.utcnow()
     business_dict["is_active"] = True
     
+    # Ensure allows_bookings has a default value
+    if "allows_bookings" not in business_dict:
+        business_dict["allows_bookings"] = True
+    
     await db.businesses.insert_one(business_dict)
     created_business = await db.businesses.find_one({"id": next_id})
     created_business = serialize_doc(created_business)
@@ -99,6 +103,7 @@ async def get_businesses(
         business.setdefault("review_count", 0)
         business.setdefault("created_at", datetime.utcnow())
         business.setdefault("is_active", True)
+        business.setdefault("allows_bookings", True)
     
     return [Business(**b) for b in businesses]
 
@@ -118,6 +123,7 @@ async def get_business(business_id: int, db = Depends(get_database)):
     business.setdefault("review_count", 0)
     business.setdefault("created_at", datetime.utcnow())
     business.setdefault("is_active", True)
+    business.setdefault("allows_bookings", True)
     
     return Business(**business)
 
@@ -152,6 +158,7 @@ async def update_business(
     updated_business.setdefault("review_count", 0)
     updated_business.setdefault("created_at", datetime.utcnow())
     updated_business.setdefault("is_active", True)
+    updated_business.setdefault("allows_bookings", True)
     
     return Business(**updated_business)
 
@@ -201,6 +208,7 @@ async def get_my_businesses(
         business.setdefault("review_count", 0)
         business.setdefault("created_at", datetime.utcnow())
         business.setdefault("is_active", True)
+        business.setdefault("allows_bookings", True)
     
     return [Business(**b) for b in businesses]
 
