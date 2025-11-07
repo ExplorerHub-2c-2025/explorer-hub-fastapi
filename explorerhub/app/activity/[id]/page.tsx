@@ -8,13 +8,16 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
-import { Star, MapPin, Phone, Globe, DollarSign, Calendar, Heart, Loader2, ArrowLeft, Plus, MessageSquare, Trash2, Reply, AlertCircle, CheckCircle2 } from "lucide-react"
+import { Star, MapPin, Phone, Globe, DollarSign, Calendar, Heart, Loader2, ArrowLeft, Plus, MessageSquare, Trash2, Reply, AlertCircle, CheckCircle2, Tag } from "lucide-react"
 import { AuthRequiredDialog } from "@/components/auth-required-dialog"
 import { ReviewForm } from "@/components/review-form"
+import { PromotionCard } from "@/components/promotion-card"
 import { useAuthRequired } from "@/lib/hooks/use-auth-required"
 import styles from "./page.module.css"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface Business {
   id: number
@@ -34,6 +37,7 @@ interface Business {
   tags: string[]
   phone?: string
   website?: string
+  allows_bookings: boolean
 }
 
 interface Reply {
@@ -57,6 +61,23 @@ interface Review {
   helpful_count: number
   replies: Reply[]
   created_at: string
+}
+
+interface Promotion {
+  id: number
+  title: string
+  description: string
+  discount_percentage?: number
+  discount_amount?: number
+  code?: string
+  start_date: string
+  end_date: string
+  terms_conditions?: string
+  current_uses: number
+  max_uses?: number
+  min_purchase?: number
+  is_active: boolean
+  business_id: number
 }
 
 // Componente recursivo para renderizar respuestas (fuera del componente principal)
@@ -207,6 +228,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
   const router = useRouter()
   const [activity, setActivity] = useState<Business | null>(null)
   const [reviews, setReviews] = useState<Review[]>([])
+  const [promotions, setPromotions] = useState<Promotion[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showReviewForm, setShowReviewForm] = useState(false)
@@ -219,9 +241,44 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
   const [expandedReplies, setExpandedReplies] = useState<Set<number>>(new Set())
   const [openBookingDialog, setOpenBookingDialog] = useState(false)
   const [bookingName, setBookingName] = useState("")
-  const [bookingAmount, setBookingAmount] = useState("")
+  const [bookingAmount, setBookingAmount] = useState("1") // Default 1 person
   const [bookingDate, setBookingDate] = useState("")
   const [bookingTime, setBookingTime] = useState("")
+  const [bookingPromoCode, setBookingPromoCode] = useState("")
+  const [availablePromoCodes, setAvailablePromoCodes] = useState<any[]>([])
+  const [isLoadingPromoCodes, setIsLoadingPromoCodes] = useState(false)
+  
+  // Save to Trip dialog
+  const [openSaveToTripDialog, setOpenSaveToTripDialog] = useState(false)
+  const [userTrips, setUserTrips] = useState<any[]>([])
+  const [selectedTripId, setSelectedTripId] = useState<string>("")
+  const [tripNotes, setTripNotes] = useState("")
+  const [tripScheduledDate, setTripScheduledDate] = useState("")
+  const [isLoadingTrips, setIsLoadingTrips] = useState(false)
+  const [isSavingToTrip, setIsSavingToTrip] = useState(false)
+  
+  // Favorites
+  const [isFavorite, setIsFavorite] = useState(false)
+  const [isCheckingFavorite, setIsCheckingFavorite] = useState(false)
+  const [isTogglingFavorite, setIsTogglingFavorite] = useState(false)
+  
+  // Promotion creation dialog
+  const [openPromotionDialog, setOpenPromotionDialog] = useState(false)
+  const [isCreatingPromotion, setIsCreatingPromotion] = useState(false)
+  const [isOwner, setIsOwner] = useState(false)
+  const [isBusinessUser, setIsBusinessUser] = useState(false)
+  const [promotionForm, setPromotionForm] = useState({
+    title: "",
+    description: "",
+    discountType: "percentage",
+    discountValue: "",
+    code: "",
+    startDate: "",
+    endDate: "",
+    termsConditions: "",
+    maxUses: "",
+    minPurchase: "",
+  })
 
   // Minimum booking date (local timezone) formatted as YYYY-MM-DD for the date input
   const minBookingDate = (() => {
@@ -270,16 +327,45 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
 
         const data = await response.json()
         setActivity(data)
+        
+        // Check if current user is the owner
+        const userData = localStorage.getItem("user")
+        if (userData) {
+          try {
+            const user = JSON.parse(userData)
+            if (user.role === "business") {
+              setIsBusinessUser(true)
+              if (String(user.id) === String(data.owner_id)) {
+                setIsOwner(true)
+              }
+            }
+          } catch (e) {
+            console.error("Error parsing user data:", e)
+          }
+        }
 
         // Fetch reviews - ruta correcta
         const reviewsResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/reviews/business/${resolvedParams.id}`)
         console.log("Fetching reviews from:", `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/reviews/business/${resolvedParams.id}`)
+
+        // Fetch promotions
+        const promotionsResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/promotions?business_id=${resolvedParams.id}&active_only=true`)
+        console.log("Fetching promotions from:", `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/promotions?business_id=${resolvedParams.id}&active_only=true`)
+        
         if (reviewsResponse.ok) {
           const reviewsData = await reviewsResponse.json()
           console.log("Reviews recibidas:", reviewsData)
           setReviews(reviewsData)
         } else {
           console.error("Error al obtener reseñas:", reviewsResponse.status)
+        }
+
+        if (promotionsResponse.ok) {
+          const promotionsData = await promotionsResponse.json()
+          console.log("Promociones recibidas:", promotionsData)
+          setPromotions(promotionsData)
+        } else {
+          console.error("Error al obtener promociones:", promotionsResponse.status)
         }
       } catch (err) {
         console.error("Error fetching business:", err)
@@ -292,23 +378,217 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
     fetchBusiness()
   }, [resolvedParams.id])
 
+  // Check if business is in favorites
+  useEffect(() => {
+    const checkFavorite = async () => {
+      const token = localStorage.getItem("token")
+      if (!token || !activity) return
+
+      setIsCheckingFavorite(true)
+      try {
+        const response = await fetch(`/api/favorites/check/${activity.id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          setIsFavorite(data.is_favorite)
+        }
+      } catch (err) {
+        console.error("Error checking favorite:", err)
+      } finally {
+        setIsCheckingFavorite(false)
+      }
+    }
+
+    checkFavorite()
+  }, [activity])
+
+  const handleToggleFavorite = async () => {
+    requireAuth(async () => {
+      if (!activity) return
+
+      setIsTogglingFavorite(true)
+      try {
+        const token = localStorage.getItem("token")
+        
+        if (isFavorite) {
+          // Remove from favorites
+          const response = await fetch(`/api/favorites/${activity.id}`, {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          })
+
+          if (response.ok || response.status === 204) {
+            setIsFavorite(false)
+            showAlert('success', 'Eliminado', 'Se eliminó de tus destinos de interés')
+          } else {
+            const error = await response.json()
+            showAlert('error', 'Error', error.detail || 'No se pudo eliminar de favoritos')
+          }
+        } else {
+          // Add to favorites
+          const response = await fetch(`/api/favorites`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              business_id: activity.id,
+            }),
+          })
+
+          if (response.ok) {
+            setIsFavorite(true)
+            showAlert('success', '¡Guardado!', 'Se agregó a tus destinos de interés')
+          } else {
+            const error = await response.json()
+            showAlert('error', 'Error', error.detail || 'No se pudo agregar a favoritos')
+          }
+        }
+      } catch (err) {
+        console.error("Error toggling favorite:", err)
+        showAlert('error', 'Error', 'Error al actualizar favoritos')
+      } finally {
+        setIsTogglingFavorite(false)
+      }
+    })
+  }
+
   const handleBook = () => {
     console.log("handleBook clicked")
-    requireAuth(() => {
+    requireAuth(async () => {
+      // Load available promo codes when opening booking dialog
+      await fetchAvailablePromoCodes()
       setOpenBookingDialog(true);
     })
   }
 
+  const fetchAvailablePromoCodes = async () => {
+    try {
+      setIsLoadingPromoCodes(true)
+      const token = localStorage.getItem("token")
+      
+      if (!token) {
+        console.log("No token found, skipping promo code fetch")
+        setAvailablePromoCodes([])
+        return
+      }
+      
+      const response = await fetch(`/api/promotions/available/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        console.log("Available promo codes fetched:", data.length, "codes")
+        setAvailablePromoCodes(data)
+      } else {
+        // Don't log error for 404 or when user simply has no codes
+        if (response.status !== 404 && response.status !== 401) {
+          const errorData = await response.json().catch(() => ({}))
+          console.warn("Could not fetch promo codes:", response.status, errorData)
+        }
+        setAvailablePromoCodes([])
+      }
+    } catch (err) {
+      console.error("Error fetching available promo codes:", err)
+      setAvailablePromoCodes([])
+    } finally {
+      setIsLoadingPromoCodes(false)
+    }
+  }
+
   const closeReserve = () => {
     setOpenBookingDialog(false)
+    setBookingPromoCode("")
   }
 
   const handleSaveToTrip = () => {
     console.log("handleSaveToTrip clicked")
-    requireAuth(() => {
-      // Implementar lógica de guardar en viaje
-      console.log("Guardar en viaje - Usuario autenticado")
+    requireAuth(async () => {
+      // Fetch user's trips
+      setIsLoadingTrips(true)
+      setOpenSaveToTripDialog(true)
+      try {
+        const token = localStorage.getItem("token")
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/trips/`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        )
+        
+        if (response.ok) {
+          const trips = await response.json()
+          setUserTrips(trips)
+        } else {
+          showAlert('error', 'Error', 'No se pudieron cargar tus viajes')
+          setUserTrips([])
+        }
+      } catch (err) {
+        console.error("Error fetching trips:", err)
+        showAlert('error', 'Error', 'Error al cargar los viajes')
+        setUserTrips([])
+      } finally {
+        setIsLoadingTrips(false)
+      }
     })
+  }
+
+  const handleConfirmSaveToTrip = async () => {
+    if (!selectedTripId) {
+      showAlert('error', 'Selecciona un viaje', 'Por favor selecciona un viaje')
+      return
+    }
+
+    if (!activity) return
+
+    setIsSavingToTrip(true)
+    try {
+      const token = localStorage.getItem("token")
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/trips/${selectedTripId}/activities`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            business_id: activity.id.toString(),
+            business_name: activity.name,
+            scheduled_date: tripScheduledDate || null,
+            notes: tripNotes || null,
+          }),
+        }
+      )
+
+      if (response.ok) {
+        showAlert('success', '¡Guardado!', 'La actividad se guardó en tu viaje')
+        setOpenSaveToTripDialog(false)
+        setSelectedTripId("")
+        setTripNotes("")
+        setTripScheduledDate("")
+      } else {
+        const error = await response.json()
+        showAlert('error', 'Error', error.detail || 'No se pudo guardar en el viaje')
+      }
+    } catch (err) {
+      console.error("Error saving to trip:", err)
+      showAlert('error', 'Error', 'Error al guardar en el viaje')
+    } finally {
+      setIsSavingToTrip(false)
+    }
   }
 
   const handleAddReview = () => {
@@ -317,6 +597,139 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
       console.log("Agregar reseña - Usuario autenticado")
       setShowReviewForm(true)
     })
+  }
+
+  const handleClaimPromotion = async (promotionId: number) => {
+    console.log("handleClaimPromotion clicked for promotion:", promotionId)
+    requireAuth(async () => {
+      try {
+        const token = localStorage.getItem("token")
+        
+        if (!token) {
+          showAlert('error', 'Sesión requerida', 'Debes iniciar sesión para reclamar una promoción')
+          setShowAuthDialog(true)
+          return
+        }
+
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/promotions/${promotionId}/claim`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        )
+
+        if (response.status === 401) {
+          localStorage.removeItem("token")
+          localStorage.removeItem("user")
+          showAlert('error', 'Sesión expirada', 'Tu sesión ha expirado. Por favor inicia sesión nuevamente.')
+          setTimeout(() => setShowAuthDialog(true), 1500)
+          return
+        }
+
+        if (response.ok) {
+          const data = await response.json()
+          showAlert('success', '¡Promoción reclamada!', 'La promoción ha sido agregada a tu cuenta. Puedes verla en tu perfil.')
+          
+          // Actualizar el conteo de usos
+          setPromotions(prev => prev.map(p => 
+            p.id === promotionId 
+              ? { ...p, current_uses: p.current_uses + 1 }
+              : p
+          ))
+        } else {
+          const errorData = await response.json()
+          showAlert('error', 'Error', errorData.detail || 'No se pudo reclamar la promoción')
+        }
+      } catch (error) {
+        console.error("Error al reclamar promoción:", error)
+        showAlert('error', 'Error', 'Error al reclamar la promoción')
+      }
+    })
+  }
+
+  const handleCreatePromotion = async () => {
+    if (!activity) return
+    
+    setIsCreatingPromotion(true)
+    setError(null)
+
+    try {
+      const token = localStorage.getItem("token")
+      
+      if (!token) {
+        showAlert('error', 'Sesión requerida', 'Debes iniciar sesión para crear una promoción')
+        setShowAuthDialog(true)
+        return
+      }
+
+      const promotionData: any = {
+        title: promotionForm.title,
+        description: promotionForm.description || undefined,
+        start_date: promotionForm.startDate,
+        end_date: promotionForm.endDate,
+        terms_conditions: promotionForm.termsConditions || undefined,
+        code: promotionForm.code || undefined,
+        max_uses: promotionForm.maxUses ? parseInt(promotionForm.maxUses) : undefined,
+        min_purchase: promotionForm.minPurchase ? parseFloat(promotionForm.minPurchase) : undefined,
+      }
+
+      if (promotionForm.discountType === "percentage") {
+        promotionData.discount_percentage = parseInt(promotionForm.discountValue)
+      } else {
+        promotionData.discount_amount = parseFloat(promotionForm.discountValue)
+      }
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/api/promotions?business_id=${activity.id}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(promotionData),
+        }
+      )
+
+      if (response.status === 401) {
+        localStorage.removeItem("token")
+        localStorage.removeItem("user")
+        showAlert('error', 'Sesión expirada', 'Tu sesión ha expirado. Por favor inicia sesión nuevamente.')
+        setTimeout(() => setShowAuthDialog(true), 1500)
+        return
+      }
+
+      if (response.ok) {
+        const newPromotion = await response.json()
+        showAlert('success', '¡Promoción creada!', 'La promoción ha sido creada exitosamente.')
+        setOpenPromotionDialog(false)
+        setPromotionForm({
+          title: "",
+          description: "",
+          discountType: "percentage",
+          discountValue: "",
+          code: "",
+          startDate: "",
+          endDate: "",
+          termsConditions: "",
+          maxUses: "",
+          minPurchase: "",
+        })
+        // Agregar la nueva promoción a la lista
+        setPromotions(prev => [...prev, newPromotion])
+      } else {
+        const errorData = await response.json()
+        showAlert('error', 'Error', errorData.detail || 'Error al crear la promoción')
+      }
+    } catch (error) {
+      console.error("Error creating promotion:", error)
+      showAlert('error', 'Error', 'Error al crear la promoción')
+    } finally {
+      setIsCreatingPromotion(false)
+    }
   }
 
   const handleReviewSuccess = async (reviewData: any) => {
@@ -663,15 +1076,25 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
         return
       }
 
-      console.log(JSON.stringify({ name: bookingName , amount: parseInt(bookingAmount), date: bookingDate, time: bookingTime }))
+      const bookingPayload = {
+        name: bookingName,
+        amount: parseInt(bookingAmount) || 1, // Default to 1 if empty
+        date: bookingDate,
+        time: bookingTime.includes(':') && bookingTime.split(':').length === 2 
+          ? `${bookingTime}:00` 
+          : bookingTime, // Add seconds if not present
+        ...(bookingPromoCode && { promotion_code: bookingPromoCode })
+      }
+
+      console.log('Booking payload:', JSON.stringify(bookingPayload, null, 2))
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/businesses/${id}/bookings`, {
+      const response = await fetch(`/api/businesses/${id}/bookings`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ name: bookingName , amount: parseInt(bookingAmount), date: bookingDate, time: bookingTime }),
+        body: JSON.stringify(bookingPayload),
       })
 
       const data = await response.json()
@@ -983,13 +1406,39 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
               <Card>
                 <CardContent className={styles.sidebarCard}>
                   <div className={styles.sidebarButtons}>
-                    <Button onClick={handleBook} className={styles.buttonFull} size="lg">
-                      <Calendar className={styles.buttonIcon} />
-                      Reservar Ahora
-                    </Button>
-                    <Button onClick={handleSaveToTrip} variant="outline" className={styles.buttonFull} size="lg">
-                      <Heart className={styles.buttonIcon} />
+                    {activity.allows_bookings && (
+                      <Button onClick={handleBook} className={styles.buttonFull} size="lg">
+                        <Calendar className={styles.buttonIcon} />
+                        Reservar Ahora
+                      </Button>
+                    )}
+                    <Button 
+                      onClick={handleSaveToTrip} 
+                      variant="outline" 
+                      className={styles.buttonFull} 
+                      size="lg"
+                    >
+                      <Plus className={styles.buttonIcon} />
                       Guardar en Viaje
+                    </Button>
+                    <Button 
+                      onClick={handleToggleFavorite} 
+                      variant={isFavorite ? "default" : "outline"}
+                      className={styles.buttonFull} 
+                      size="lg"
+                      disabled={isTogglingFavorite || isCheckingFavorite}
+                    >
+                      {isTogglingFavorite || isCheckingFavorite ? (
+                        <>
+                          <Loader2 className={`${styles.buttonIcon} animate-spin`} />
+                          {isFavorite ? "Guardando..." : "Guardando..."}
+                        </>
+                      ) : (
+                        <>
+                          <Heart className={`${styles.buttonIcon} ${isFavorite ? 'fill-current' : ''}`} />
+                          {isFavorite ? "Guardado en Favoritos" : "Guardar como Favorito"}
+                        </>
+                      )}
                     </Button>
                   </div>
                 </CardContent>
@@ -1022,6 +1471,58 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Promotions Section */}
+              <Card>
+                <CardContent className={styles.contactSection}>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <Tag className="h-5 w-5 text-primary flex-shrink-0" />
+                      <h3 className={styles.contactTitle}>
+                        Promociones ({promotions.length})
+                      </h3>
+                    </div>
+                    {isOwner && (
+                      <Button onClick={() => setOpenPromotionDialog(true)} size="sm">
+                        <Plus className="h-4 w-4 mr-1" />
+                        Crear
+                      </Button>
+                    )}
+                  </div>
+                  {promotions.length > 0 ? (
+                    <div className="space-y-4">
+                      {promotions.map((promotion) => (
+                        <PromotionCard
+                          key={promotion.id}
+                          id={promotion.id}
+                          title={promotion.title}
+                          description={promotion.description}
+                          discountPercentage={promotion.discount_percentage}
+                          discountAmount={promotion.discount_amount}
+                          code={promotion.code}
+                          startDate={promotion.start_date}
+                          endDate={promotion.end_date}
+                          termsConditions={promotion.terms_conditions}
+                          currentUses={promotion.current_uses}
+                          maxUses={promotion.max_uses}
+                          minPurchase={promotion.min_purchase}
+                          isActive={promotion.is_active}
+                          onClaim={isBusinessUser ? undefined : handleClaimPromotion}
+                          showActions={true}
+                          compact={true}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 text-sm text-muted-foreground">
+                      {isOwner 
+                        ? "No hay promociones. ¡Crea una para atraer clientes!"
+                        : "Sin promociones activas."
+                      }
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>
@@ -1048,6 +1549,167 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
         open={showAuthDialog} 
         onOpenChange={setShowAuthDialog}
       />
+
+      {/* Create Promotion Dialog */}
+      <Dialog open={openPromotionDialog} onOpenChange={setOpenPromotionDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Crear Nueva Promoción</DialogTitle>
+            <DialogDescription>
+              Completa los detalles de la promoción que deseas ofrecer
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="promo-title">Título de la Promoción *</Label>
+              <Input
+                id="promo-title"
+                value={promotionForm.title}
+                onChange={(e) => setPromotionForm({ ...promotionForm, title: e.target.value })}
+                placeholder="Ej: Descuento de Verano"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="promo-description">Descripción (opcional)</Label>
+              <Textarea
+                id="promo-description"
+                value={promotionForm.description}
+                onChange={(e) => setPromotionForm({ ...promotionForm, description: e.target.value })}
+                placeholder="Describe los detalles de la promoción"
+                rows={3}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="promo-discountType">Tipo de Descuento *</Label>
+                <Select
+                  value={promotionForm.discountType}
+                  onValueChange={(value) => setPromotionForm({ ...promotionForm, discountType: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="percentage">Porcentaje (%)</SelectItem>
+                    <SelectItem value="amount">Monto Fijo ($)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="promo-discountValue">
+                  Valor del Descuento * {promotionForm.discountType === "percentage" ? "(%)" : "($)"}
+                </Label>
+                <Input
+                  id="promo-discountValue"
+                  type="number"
+                  value={promotionForm.discountValue}
+                  onChange={(e) => setPromotionForm({ ...promotionForm, discountValue: e.target.value })}
+                  placeholder={promotionForm.discountType === "percentage" ? "10" : "50"}
+                  min="0"
+                  max={promotionForm.discountType === "percentage" ? "100" : undefined}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="promo-code">Código Promocional (opcional)</Label>
+              <Input
+                id="promo-code"
+                value={promotionForm.code}
+                onChange={(e) => setPromotionForm({ ...promotionForm, code: e.target.value.toUpperCase() })}
+                placeholder="VERANO2025"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="promo-startDate">Fecha de Inicio *</Label>
+                <Input
+                  id="promo-startDate"
+                  type="date"
+                  value={promotionForm.startDate}
+                  onChange={(e) => setPromotionForm({ ...promotionForm, startDate: e.target.value })}
+                  min={minBookingDate}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="promo-endDate">Fecha de Fin *</Label>
+                <Input
+                  id="promo-endDate"
+                  type="date"
+                  value={promotionForm.endDate}
+                  onChange={(e) => setPromotionForm({ ...promotionForm, endDate: e.target.value })}
+                  min={promotionForm.startDate || minBookingDate}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="promo-maxUses">Máximo de Usos (opcional)</Label>
+                <Input
+                  id="promo-maxUses"
+                  type="number"
+                  value={promotionForm.maxUses}
+                  onChange={(e) => setPromotionForm({ ...promotionForm, maxUses: e.target.value })}
+                  placeholder="100"
+                  min="0"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="promo-minPurchase">Compra Mínima $ (opcional)</Label>
+                <Input
+                  id="promo-minPurchase"
+                  type="number"
+                  value={promotionForm.minPurchase}
+                  onChange={(e) => setPromotionForm({ ...promotionForm, minPurchase: e.target.value })}
+                  placeholder="50.00"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="promo-termsConditions">Términos y Condiciones (opcional)</Label>
+              <Textarea
+                id="promo-termsConditions"
+                value={promotionForm.termsConditions}
+                onChange={(e) => setPromotionForm({ ...promotionForm, termsConditions: e.target.value })}
+                placeholder="Especifica las condiciones de uso de la promoción"
+                rows={3}
+              />
+            </div>
+
+            <Button 
+              onClick={handleCreatePromotion} 
+              disabled={
+                isCreatingPromotion || 
+                !promotionForm.title || 
+                !promotionForm.discountValue || 
+                !promotionForm.startDate || 
+                !promotionForm.endDate
+              } 
+              className="w-full"
+            >
+              {isCreatingPromotion ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Creando...
+                </>
+              ) : (
+                "Crear Promoción"
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Alert/Confirm Dialog */}
       <Dialog open={alertDialog.open} onOpenChange={closeAlert}>
@@ -1145,6 +1807,44 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
                 disabled={isLoading}
               />
             </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="promoCode">Código Promocional (opcional)</Label>
+              {isLoadingPromoCodes ? (
+                <div className="flex items-center justify-center py-2">
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <span className="text-sm text-muted-foreground">Cargando códigos...</span>
+                </div>
+              ) : availablePromoCodes.length > 0 ? (
+                <>
+                  <Select
+                    value={bookingPromoCode || "NONE"}
+                    onValueChange={(value) => setBookingPromoCode(value === "NONE" ? "" : value)}
+                    disabled={isLoading}
+                  >
+                    <SelectTrigger id="promoCode" className="w-full">
+                      <SelectValue placeholder="Selecciona un código promocional" />
+                    </SelectTrigger>
+                    <SelectContent position="popper" align="start" sideOffset={5} className="w-full">
+                      <SelectItem value="NONE">Sin código promocional</SelectItem>
+                      {availablePromoCodes.map((promo) => (
+                        <SelectItem key={promo.id} value={promo.code}>
+                          {promo.code} - {promo.discount_percentage}% OFF
+                          {promo.title && ` (${promo.title})`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Selecciona uno de tus códigos promocionales disponibles
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground py-2">
+                  No tienes códigos promocionales disponibles para este negocio.
+                  {promotions.length > 0 && " Reclama uno en la sección de promociones."}
+                </p>
+              )}
+            </div>
           </div>
           <Button
             type="submit"
@@ -1152,6 +1852,112 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
           >
             Reservar
           </Button>
+        </DialogContent>
+      </Dialog>
+
+      {/* Save to Trip Dialog */}
+      <Dialog open={openSaveToTripDialog} onOpenChange={setOpenSaveToTripDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Guardar en Viaje</DialogTitle>
+            <DialogDescription>
+              Agrega esta actividad a uno de tus viajes planificados
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {isLoadingTrips ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : userTrips.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground mb-4">
+                  No tienes viajes creados aún
+                </p>
+                <Button
+                  onClick={() => {
+                    setOpenSaveToTripDialog(false)
+                    router.push("/trips/new")
+                  }}
+                  variant="outline"
+                >
+                  Crear mi primer viaje
+                </Button>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="trip-select">Selecciona un viaje *</Label>
+                  <Select
+                    value={selectedTripId}
+                    onValueChange={setSelectedTripId}
+                  >
+                    <SelectTrigger id="trip-select">
+                      <SelectValue placeholder="Elige un viaje" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {userTrips.map((trip) => (
+                        <SelectItem key={trip.id} value={trip.id.toString()}>
+                          {trip.name} - {trip.destination}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="trip-date">Fecha programada (opcional)</Label>
+                  <Input
+                    id="trip-date"
+                    type="date"
+                    value={tripScheduledDate}
+                    onChange={(e) => setTripScheduledDate(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="trip-notes">Notas (opcional)</Label>
+                  <Textarea
+                    id="trip-notes"
+                    value={tripNotes}
+                    onChange={(e) => setTripNotes(e.target.value)}
+                    placeholder="Ej: Reservar con anticipación, ir temprano..."
+                    rows={3}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+
+          {userTrips.length > 0 && (
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setOpenSaveToTripDialog(false)
+                  setSelectedTripId("")
+                  setTripNotes("")
+                  setTripScheduledDate("")
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleConfirmSaveToTrip}
+                disabled={!selectedTripId || isSavingToTrip}
+              >
+                {isSavingToTrip ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  "Guardar"
+                )}
+              </Button>
+            </DialogFooter>
+          )}
         </DialogContent>
       </Dialog>
 

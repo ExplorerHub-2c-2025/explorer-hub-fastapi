@@ -10,6 +10,11 @@ class Database:
         """Connect to MongoDB"""
         cls.client = AsyncIOMotorClient(settings.mongodb_url)
         print(f"Connected to MongoDB: {settings.mongodb_url}")
+        
+        if cls.client:
+            # Optionally, you can add a ping command to verify the connection
+            await cls.client.admin.command('ping')
+            print("MongoDB connection verified")
     
     @classmethod
     async def close_db(cls):

@@ -131,3 +131,15 @@
 [data-radix-dialog-content] {
   z-index: 9999 !important;
 }
+
+/* Force Select dropdown to appear above Dialog/Modal */
+[data-radix-select-content],
+[data-radix-popper-content-wrapper] {
+  z-index: 99999 !important;
+}
+
+/* Ensure Select content is visible and clickable */
+[data-slot="select-content"] {
+  z-index: 99999 !important;
+  position: relative;
+}

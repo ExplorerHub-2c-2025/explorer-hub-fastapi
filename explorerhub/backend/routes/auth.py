@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import timedelta, datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from database import get_database
@@ -32,6 +32,35 @@ async def signup(user: UserCreate, db = Depends(get_database)):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Role must be either 'client' or 'business'"
+        )
+    
+    # Validate age +18 if birth_date is provided
+    if hasattr(user, 'birth_date') and user.birth_date:
+        birth_date = datetime.fromisoformat(user.birth_date.replace('Z', '+00:00')) if isinstance(user.birth_date, str) else user.birth_date
+        today = datetime.now()
+        age = today.year - birth_date.year
+        
+        # Adjust age if birthday hasn't occurred yet this year
+        if (today.month, today.day) < (birth_date.month, birth_date.day):
+            age -= 1
+        
+        if age < 18:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="You must be at least 18 years old to create an account"
+            )
+    
+    # Validate required fields
+    if not user.full_name or not user.full_name.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Full name is required"
+        )
+    
+    if not user.email or not user.email.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email is required"
         )
     
     # Create new user

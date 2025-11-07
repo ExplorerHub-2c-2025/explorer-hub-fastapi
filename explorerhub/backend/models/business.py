@@ -23,6 +23,7 @@ class BusinessBase(BaseModel):
     price_level: int = Field(ge=1, le=4)
     images: List[str] = []
     tags: List[str] = []
+    allows_bookings: bool = True
 
 
 class BusinessCreate(BusinessBase):
@@ -52,3 +53,4 @@ class Business(BusinessBase):
     review_count: int
     created_at: datetime
     is_active: bool
+    allows_bookings: bool

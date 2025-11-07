@@ -11,6 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { NotificationBell } from "@/components/notification-bell"
 import { getUser, logout } from "@/lib/auth"
 import { useRouter } from "next/navigation"
 
@@ -51,6 +52,12 @@ export function Header() {
                 <Link href="/dashboard/business" className={styles.navLink}>
                   Dashboard
                 </Link>
+                <Link href="/dashboard/business/bookings" className={styles.navLink}>
+                  Reservas
+                </Link>
+                <Link href="/business/promotions" className={styles.navLink}>
+                  Promociones
+                </Link>
                 <Link href="/dashboard/business/analytics" className={styles.navLink}>
                   Analytics
                 </Link>
@@ -62,6 +69,9 @@ export function Header() {
                 </Link>
                 {user && (
                   <>
+                    <Link href="/bookings" className={styles.navLink}>
+                      Reservas
+                    </Link>
                     <Link href="/trips" className={styles.navLink}>
                       Mis Viajes
                     </Link>
@@ -77,58 +87,71 @@ export function Header() {
 
         <div className={styles.right}>
           {user ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className={styles.userButton}>
-                  <User className={styles.userIcon} />
-                  <span className={styles.userHidden}>{user.name || user.email}</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className={styles.dropdownContent}>
-                {user.role === "business" ? (
-                  <>
-                    <DropdownMenuItem asChild>
-                      <Link href="/dashboard/business" className={styles.menuItem}>
-                        Dashboard
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/dashboard/business/analytics" className={styles.menuItem}>
-                        Analytics
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/dashboard/business/edit-profile" className={styles.menuItem}>
-                        Perfil
-                      </Link>
-                    </DropdownMenuItem>
-                  </>
-                ) : (
-                  <>
-                    <DropdownMenuItem asChild>
-                      <Link href="/trips" className={styles.menuItem}>
-                        Mis Viajes
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/reviews" className={styles.menuItem}>
-                        Reseñas
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/profile/traveler" className={styles.menuItem}>
-                        Perfil
-                      </Link>
-                    </DropdownMenuItem>
-                  </>
-                )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className={styles.menuItemDestructive}>
-                  <LogOut className={styles.menuIcon} />
-                  Cerrar Sesión
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <>
+              <NotificationBell userRole={user.role} />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className={styles.userButton}>
+                    <User className={styles.userIcon} />
+                    <span className={styles.userHidden}>{user.name || user.email}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className={styles.dropdownContent}>
+                  {user.role === "business" ? (
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link href="/dashboard/business" className={styles.menuItem}>
+                          Dashboard
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/business/promotions" className={styles.menuItem}>
+                          Promociones
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/dashboard/business/analytics" className={styles.menuItem}>
+                          Analytics
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/dashboard/business/edit-profile" className={styles.menuItem}>
+                          Perfil
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
+                  ) : (
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link href="/bookings" className={styles.menuItem}>
+                          Reservas
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/trips" className={styles.menuItem}>
+                          Mis Viajes
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/reviews" className={styles.menuItem}>
+                          Reseñas
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/profile/traveler" className={styles.menuItem}>
+                          Perfil
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className={styles.menuItemDestructive}>
+                    <LogOut className={styles.menuIcon} />
+                    Cerrar Sesión
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
           ) : (
             <div className={styles.authButtons}>
               <Button variant="ghost" size="sm" asChild>

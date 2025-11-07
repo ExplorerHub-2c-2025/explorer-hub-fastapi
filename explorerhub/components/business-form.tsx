@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
 import { X, Upload, Image as ImageIcon } from "lucide-react"
 import styles from "./business-form.module.css"
 
@@ -32,6 +33,7 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
     price_level: initialData?.price_level || 2,
     tags: initialData?.tags ? initialData.tags.join(", ") : "",
     images: initialData?.images || [],
+    allows_bookings: initialData?.allows_bookings !== undefined ? initialData.allows_bookings : true,
   })
   
   const [imageUrls, setImageUrls] = useState<string[]>(initialData?.images || [])
@@ -64,6 +66,7 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
       },
       tags: formData.tags.split(",").map((tag: string) => tag.trim()).filter((tag: string) => tag),
       images: imageUrls,
+      allows_bookings: formData.allows_bookings,
     }
     onSubmit(submitData)
   }
@@ -211,6 +214,24 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
                 onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
                 placeholder="ej: Italiano, Cena Elegante, Romántico"
               />
+            </div>
+          </div>
+
+          <div className={styles.spaceY2}>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="allows_bookings"
+                checked={formData.allows_bookings}
+                onCheckedChange={(checked) => 
+                  setFormData({ ...formData, allows_bookings: checked as boolean })
+                }
+              />
+              <Label 
+                htmlFor="allows_bookings" 
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Permitir reservas en este negocio
+              </Label>
             </div>
           </div>
 
