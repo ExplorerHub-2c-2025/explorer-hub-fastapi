@@ -13,7 +13,7 @@ from database import get_database
 from auth import get_current_user
 from bson import ObjectId
 
-router = APIRouter(prefix="/notifications", tags=["notifications"])
+router = APIRouter(prefix="/api/notifications", tags=["notifications"])
 
 
 async def create_notification(
