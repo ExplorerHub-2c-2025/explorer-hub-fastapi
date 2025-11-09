@@ -8,7 +8,7 @@ import { Footer } from "@/components/footer"
 import { ActivityCard } from "@/components/activity-card"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Briefcase, Plus, Edit, Eye, Loader2 } from "lucide-react"
+import { Briefcase, Plus, Edit, Eye, Loader2, Users, Calendar, Clock } from "lucide-react"
 
 interface Business {
   id: number
@@ -33,7 +33,9 @@ export default function BusinessDashboard() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [businesses, setBusinesses] = useState<Business[]>([])
+  const [capacityInfo, setCapacityInfo] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingCapacity, setIsLoadingCapacity] = useState(false)
 
   useEffect(() => {
     const userData = localStorage.getItem("user")
@@ -48,6 +50,7 @@ export default function BusinessDashboard() {
     }
     setUser(parsedUser)
     fetchMyBusinesses()
+    fetchCapacityInfo()
   }, [router])
 
   const fetchMyBusinesses = async () => {
@@ -67,6 +70,27 @@ export default function BusinessDashboard() {
       console.error("Error fetching businesses:", error)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const fetchCapacityInfo = async () => {
+    try {
+      setIsLoadingCapacity(true)
+      const token = localStorage.getItem("token")
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/businesses/owner/capacity-usage`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setCapacityInfo(data)
+      }
+    } catch (error) {
+      console.error("Error fetching capacity info:", error)
+    } finally {
+      setIsLoadingCapacity(false)
     }
   }
 
@@ -175,6 +199,87 @@ export default function BusinessDashboard() {
               )}
             </CardContent>
           </Card>
+
+          {/* Capacity Usage Section */}
+          {capacityInfo.length > 0 && (
+            <Card className="mt-8">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Ocupación de Cupos
+                </CardTitle>
+                <CardDescription>
+                  Información sobre la ocupación de cupos en tus establecimientos con límite de capacidad
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoadingCapacity ? (
+                  <div className="flex justify-center items-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {capacityInfo.map((business) => (
+                      <div key={business.business_id} className="border rounded-lg p-4">
+                        <h3 className="font-semibold text-lg mb-3">{business.business_name}</h3>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Capacidad máxima: {business.max_capacity} personas
+                        </p>
+
+                        {business.capacity_usage.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">No hay reservas confirmadas próximamente</p>
+                        ) : (
+                          <div className="space-y-3">
+                            {business.capacity_usage.map((usage: any, index: number) => (
+                              <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                                <div className="flex items-center gap-3">
+                                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                                  <div>
+                                    <p className="font-medium">{usage.date}</p>
+                                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                      <Clock className="h-3 w-3" />
+                                      {usage.time}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="text-right">
+                                  <div className="flex items-center gap-2">
+                                    <Users className="h-4 w-4" />
+                                    <span className="font-medium">
+                                      {usage.used}/{usage.max_capacity}
+                                    </span>
+                                  </div>
+                                  <div className="text-sm text-muted-foreground">
+                                    {usage.bookings.length} reserva{usage.bookings.length !== 1 ? 's' : ''}
+                                  </div>
+                                </div>
+
+                                <div className="w-24">
+                                  <div className="w-full bg-gray-200 rounded-full h-2">
+                                    <div
+                                      className={`h-2 rounded-full ${
+                                        usage.used / usage.max_capacity >= 0.9
+                                          ? 'bg-red-500'
+                                          : usage.used / usage.max_capacity >= 0.7
+                                          ? 'bg-yellow-500'
+                                          : 'bg-green-500'
+                                      }`}
+                                      style={{ width: `${(usage.used / usage.max_capacity) * 100}%` }}
+                                    ></div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
           </div>
         </div>
       </main>

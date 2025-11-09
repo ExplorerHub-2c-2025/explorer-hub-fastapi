@@ -16,7 +16,7 @@ class Favorite(BaseModel):
 
 class FavoriteWithBusiness(Favorite):
     business_name: str
-    business_category: str
+    business_categories: list[str]
     business_location: str
     business_rating: float
     business_review_count: int

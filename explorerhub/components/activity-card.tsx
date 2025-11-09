@@ -13,7 +13,8 @@ import styles from "./activity-card.module.css"
 interface ActivityCardProps {
   id: string | number
   name: string
-  category: string
+  category?: string  // Hacer opcional para compatibilidad
+  categories?: string[]  // Nuevo campo para array de categorías
   location: string
   rating: number
   reviewCount: number
@@ -29,6 +30,7 @@ export function ActivityCard({
   id,
   name,
   category,
+  categories,
   location,
   rating,
   reviewCount,
@@ -41,6 +43,9 @@ export function ActivityCard({
 }: ActivityCardProps) {
   // Use images array if available, otherwise fallback to single image
   const imageArray = images && images.length > 0 ? images : image ? [image] : []
+  
+  // Use categories array if available, otherwise fallback to category string
+  const displayCategory = categories && categories.length > 0 ? categories[0] : category || 'Sin categoría'
 
   const [isSaved, setIsSaved] = useState(false)
   const [isCheckingFavorite, setIsCheckingFavorite] = useState(true)
@@ -131,7 +136,7 @@ export function ActivityCard({
       <div className={styles.card}>
         <div className={styles.imageWrapper}>
           <ImageGallery images={imageArray} alt={name} />
-          <Badge className={styles.badge}>{category}</Badge>
+          <Badge className={styles.badge}>{displayCategory}</Badge>
           <Button
             onClick={handleSaveActivity}
             variant="ghost"

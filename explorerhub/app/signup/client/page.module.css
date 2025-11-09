@@ -24,10 +24,8 @@
   width: 100%;
   max-width: 42rem;
   position: relative;
-  backdrop-filter: blur(8px);
-  background-color: hsl(var(--background) / 0.95);
+  background-color: white !important;
 }
-
 /* Header */
 .header {
   display: flex;
@@ -168,6 +166,8 @@
 
 .submitButton {
   width: 100%;
+  background-color: #573F23;
+  margin-top: 1rem;
 }
 
 .loadingIcon {

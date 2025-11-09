@@ -39,6 +39,8 @@ async def create_review(
     review_dict = review.model_dump()
     review_dict["user_id"] = str(current_user.id)
     review_dict["user_name"] = current_user.full_name
+    review_dict["username"] = current_user.username if hasattr(current_user, 'username') else None
+    review_dict["profile_picture"] = current_user.profile_picture if hasattr(current_user, 'profile_picture') else None
     review_dict["helpful_count"] = 0
     review_dict["replies"] = []
     review_dict["created_at"] = datetime.utcnow()
@@ -209,6 +211,8 @@ async def create_reply(
         "id": next_reply_id,
         "user_id": str(current_user.id),
         "user_name": current_user.full_name,
+        "username": current_user.username if hasattr(current_user, 'username') else None,
+        "profile_picture": current_user.profile_picture if hasattr(current_user, 'profile_picture') else None,
         "text": reply.text,
         "created_at": datetime.utcnow()
     }
@@ -280,6 +284,8 @@ async def create_nested_reply(
         "id": next_id,
         "user_id": str(current_user.id),
         "user_name": current_user.full_name,
+        "username": current_user.username if hasattr(current_user, 'username') else None,
+        "profile_picture": current_user.profile_picture if hasattr(current_user, 'profile_picture') else None,
         "text": reply_text,
         "created_at": datetime.utcnow(),
         "replies": []

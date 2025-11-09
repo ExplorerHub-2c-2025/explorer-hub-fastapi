@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Capacity Scheduler every hour
+Requires=capacity-scheduler.service
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=1h
+Unit=capacity-scheduler.service
+
+[Install]
+WantedBy=timers.target

@@ -13,7 +13,7 @@ from database import get_database
 from auth import get_current_user
 from bson import ObjectId
 
-router = APIRouter(prefix="/notifications", tags=["notifications"])
+router = APIRouter(prefix="/api/notifications", tags=["notifications"])
 
 
 async def create_notification(
@@ -81,6 +81,27 @@ async def get_notification_stats(
     return NotificationStats(total=total, unread=unread)
 
 
+@router.patch("/mark-all-read")
+async def mark_all_as_read(
+    current_user = Depends(get_current_user),
+    db = Depends(get_database)
+):
+    """
+    Mark all notifications as read for the current user.
+    """
+    user_id = current_user.id
+    
+    result = await db.notifications.update_many(
+        {"user_id": user_id, "read": False},
+        {"$set": {"read": True}}
+    )
+    
+    return {
+        "message": "All notifications marked as read",
+        "modified_count": result.modified_count
+    }
+
+
 @router.patch("/{notification_id}", response_model=Notification)
 async def update_notification(
     notification_id: int,
@@ -126,27 +147,6 @@ async def update_notification(
         updated_notification["created_at"] = updated_notification["created_at"].isoformat()
     
     return Notification(**updated_notification)
-
-
-@router.patch("/mark-all-read")
-async def mark_all_as_read(
-    current_user = Depends(get_current_user),
-    db = Depends(get_database)
-):
-    """
-    Mark all notifications as read for the current user.
-    """
-    user_id = current_user.id
-    
-    result = await db.notifications.update_many(
-        {"user_id": user_id, "read": False},
-        {"$set": {"read": True}}
-    )
-    
-    return {
-        "message": "All notifications marked as read",
-        "modified_count": result.modified_count
-    }
 
 
 @router.delete("/{notification_id}")
@@ -350,19 +350,31 @@ async def notify_review_response(
     await create_notification(notification, db)
 
 
-async def notify_promo_expired(
-    promo_id: int,
-    promo_code: str,
-    business_owner_id: int,
+async def notify_capacity_released(
+    released_count: int,
     db
 ):
-    """Create notification when a promo code is exhausted."""
-    notification = NotificationCreate(
-        user_id=business_owner_id,
-        type=NotificationType.promo_expired,
-        title="Código promocional agotado",
-        description=f"El código promocional {promo_code} ha alcanzado su límite de usos.",
-        link="/business/promotions",
-        context_id=promo_id
-    )
-    await create_notification(notification, db)
+    """Create notifications for business owners when capacity slots are released."""
+    if released_count == 0:
+        return
+
+    # Find all business owners who have businesses with capacity limits
+    businesses_with_capacity = await db.businesses.find({
+        "max_capacity": {"$exists": True, "$ne": None},
+        "is_active": True
+    }).to_list(length=None)
+
+    # Get unique business owner IDs
+    owner_ids = list(set(int(business["owner_id"]) for business in businesses_with_capacity))
+
+    # Notify each business owner
+    for owner_id in owner_ids:
+        notification = NotificationCreate(
+            user_id=owner_id,
+            type=NotificationType.address_change,  # Reusing existing type, could create new one
+            title="Cupos liberados",
+            description=f"Se han liberado {released_count} cupos de reservas expiradas en tus establecimientos.",
+            link="/dashboard/business",
+            context_id=0  # No specific context
+        )
+        await create_notification(notification, db)

@@ -2,12 +2,13 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  background-color: #faf8f6;
 }
 
 .mainContent {
   flex: 1;
   padding: 2rem 1rem;
-  background: #f9fafb;
+  background-color: #faf8f6;
 }
 
 .container {
@@ -23,13 +24,14 @@
 .title {
   font-size: 2.5rem;
   font-weight: 700;
-  color: #1a202c;
+  color: #573F23;
   margin-bottom: 0.5rem;
 }
 
 .subtitle {
   font-size: 1.125rem;
-  color: #718096;
+  color: #573F23;
+  opacity: 0.8;
 }
 
 .loadingContainer {
@@ -55,13 +57,14 @@
 }
 
 .errorMessage {
-  background-color: #f9fafb;
-  border: 1px solid #d1d5db;
+  background-color: white;
+  border: 1px solid #e9e4df;
   padding: 1rem;
   border-radius: 8px;
-  color: #374151;
+  color: #573F23;
   text-align: center;
   margin-bottom: 2rem;
+  box-shadow: 0 2px 8px rgba(87, 63, 35, 0.1);
 }
 
 .emptyState {
@@ -69,29 +72,30 @@
   padding: 4rem 2rem;
   background: white;
   border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(87, 63, 35, 0.1);
 }
 
 .emptyIcon {
   width: 64px;
   height: 64px;
-  color: #d1d5db;
+  color: #A08058;
   margin: 0 auto 1.5rem;
 }
 
 .emptyState h2 {
   font-size: 1.5rem;
-  color: #1f2937;
+  color: #573F23;
   margin-bottom: 0.5rem;
 }
 
 .emptyState p {
-  color: #6b7280;
+  color: #573F23;
+  opacity: 0.7;
   margin-bottom: 2rem;
 }
 
 .exploreButton {
-  background: #374151;
+  background: #A08058;
   color: white;
   padding: 0.75rem 2rem;
   border: none;
@@ -103,7 +107,7 @@
 }
 
 .exploreButton:hover {
-  background: #1f2937;
+  background: #8a6d4a;
 }
 
 .bookingsGrid {
@@ -112,25 +116,74 @@
   gap: 2rem;
 }
 
+.carouselSection {
+  margin-bottom: 3rem;
+}
+
+.sectionTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #573F23;
+  margin-bottom: 1.5rem;
+}
+
+.carousel {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 1rem 0;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: #A08058 #e9e4df;
+  position: relative;
+  z-index: 1;
+}
+
+.carousel::-webkit-scrollbar {
+  height: 6px;
+}
+
+.carousel::-webkit-scrollbar-track {
+  background: #e9e4df;
+  border-radius: 3px;
+}
+
+.carousel::-webkit-scrollbar-thumb {
+  background: #A08058;
+  border-radius: 3px;
+}
+
+.carousel::-webkit-scrollbar-thumb:hover {
+  background: #8a6d4a;
+}
+
 .bookingCard {
   background: white;
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e5e7eb;
-  transition: box-shadow 0.2s;
+  box-shadow: 0 2px 8px rgba(87, 63, 35, 0.1);
+  border: 1px solid #e9e4df;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  min-width: 280px;
+  max-width: 280px;
+  flex-shrink: 0;
 }
 
 .bookingCard:hover {
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 6px 20px rgba(87, 63, 35, 0.2);
+  transform: translateY(-2px);
 }
 
 .imageContainer {
   position: relative;
   width: 100%;
-  height: 200px;
+  height: 160px;
   overflow: hidden;
-  background: #f3f4f6;
+  background: #e9e4df;
 }
 
 .image {
@@ -143,15 +196,16 @@
   position: absolute;
   top: 12px;
   right: 12px;
-  background: #374151;
+  background: #A08058;
   color: white;
   padding: 0.5rem 1rem;
-  border-radius: 6px;
+  border-radius: 12px;
   font-weight: 600;
   font-size: 0.875rem;
   display: flex;
   align-items: center;
   gap: 0.25rem;
+  z-index: 1;
 }
 
 .discountIcon {
@@ -160,15 +214,18 @@
 }
 
 .cardContent {
-  padding: 1.5rem;
+  padding: 1rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .cardHeader {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 0.75rem;
-  gap: 1rem;
+  margin-bottom: 0.5rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
 }
 
@@ -180,50 +237,66 @@
 }
 
 .businessName {
-  font-size: 1.25rem;
+  font-size: 1rem;
   font-weight: 700;
-  color: #1a202c;
+  color: #573F23;
   margin: 0;
   flex: 1;
+  line-height: 1.3;
 }
 
 .category {
-  background: #f3f4f6;
-  color: #374151;
+  background: #e9e4df;
+  color: #573F23;
   padding: 0.25rem 0.75rem;
-  border-radius: 6px;
+  border-radius: 12px;
   font-size: 0.75rem;
   font-weight: 600;
   white-space: nowrap;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #e9e4df;
 }
 
 .bookingName {
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 600;
-  color: #4b5563;
-  margin-bottom: 1rem;
+  color: #573F23;
+  margin-bottom: 0.75rem;
+  line-height: 1.3;
 }
 
 .details {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
 }
 
 .detailItem {
   display: flex;
   align-items: center;
+  gap: 0.4rem;
+  color: #573F23;
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+.detailItem:first-child {
+  width: 100%;
+}
+
+.detailRow {
+  display: flex;
   gap: 0.5rem;
-  color: #6b7280;
-  font-size: 0.875rem;
+}
+
+.detailRow .detailItem {
+  flex: 1;
 }
 
 .icon {
-  width: 18px;
-  height: 18px;
-  color: #9ca3af;
+  width: 14px;
+  height: 14px;
+  color: #A08058;
 }
 
 .promotionInfo {
@@ -231,16 +304,17 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
+  background: #faf8f6;
+  border: 1px solid #e9e4df;
   border-radius: 8px;
   margin-bottom: 1rem;
   font-size: 0.875rem;
-  color: #6b7280;
+  color: #573F23;
+  opacity: 0.8;
 }
 
 .promotionInfo strong {
-  color: #374151;
+  color: #573F23;
   font-weight: 700;
 }
 
@@ -249,38 +323,40 @@
   align-items: center;
   gap: 1rem;
   padding: 1rem;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
+  background: #faf8f6;
+  border: 1px solid #e9e4df;
   border-radius: 8px;
   margin-bottom: 1rem;
 }
 
 .originalPrice {
   font-size: 0.875rem;
-  color: #9ca3af;
+  color: #573F23;
+  opacity: 0.6;
   text-decoration: line-through;
 }
 
 .finalPrice {
   font-size: 1.25rem;
   font-weight: 700;
-  color: #1f2937;
+  color: #573F23;
 }
 
 .savings {
   font-size: 0.875rem;
-  color: #6b7280;
+  color: #573F23;
+  opacity: 0.8;
   font-weight: 600;
   margin-left: auto;
 }
 
 .cardFooter {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
-  padding-top: 1rem;
-  border-top: 1px solid #e5e7eb;
-  gap: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e9e4df;
+  gap: 0.5rem;
   flex-wrap: wrap;
 }
 
@@ -290,18 +366,13 @@
   flex-wrap: wrap;
 }
 
-.bookingDate {
-  font-size: 0.75rem;
-  color: #9ca3af;
-}
-
 .cancelButton {
   background: #dc2626;
   color: white;
-  padding: 0.5rem 1rem;
+  padding: 0.4rem 0.8rem;
   border: none;
-  border-radius: 6px;
-  font-size: 0.875rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
@@ -319,31 +390,26 @@
   cursor: not-allowed;
 }
 
-.cancelIcon {
-  width: 16px;
-  height: 16px;
-}
-
 .viewButton {
-  background: #374151;
+  background: #A08058;
   color: white;
-  padding: 0.5rem 1.25rem;
+  padding: 0.4rem 1rem;
   border: none;
-  border-radius: 6px;
-  font-size: 0.875rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
 }
 
 .viewButton:hover {
-  background: #1f2937;
+  background: #8a6d4a;
 }
 
 .statusBadge {
   display: inline-block;
   padding: 0.25rem 0.75rem;
-  border-radius: 6px;
+  border-radius: 12px;
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -353,19 +419,19 @@
 
 .statusPending {
   background: #fffbeb;
-  color: #78350f;
-  border-color: #fde68a;
+  color: #92400e;
+  border-color: #fed7aa;
 }
 
 .statusConfirmed {
   background: #f0fdf4;
-  color: #14532d;
+  color: #166534;
   border-color: #bbf7d0;
 }
 
 .statusCancelled {
   background: #fef2f2;
-  color: #7f1d1d;
+  color: #991b1b;
   border-color: #fecaca;
 }
 
@@ -374,22 +440,16 @@
     font-size: 2rem;
   }
 
-  .bookingsGrid {
-    grid-template-columns: 1fr;
+  .carousel {
+    gap: 0.75rem;
   }
 
-  .cardFooter {
-    flex-direction: column;
-    align-items: flex-start;
+  .bookingCard {
+    min-width: 240px;
+    max-width: 240px;
   }
 
-  .footerActions {
-    width: 100%;
-  }
-
-  .viewButton,
-  .cancelButton {
-    width: 100%;
-    justify-content: center;
+  .imageContainer {
+    height: 140px;
   }
 }

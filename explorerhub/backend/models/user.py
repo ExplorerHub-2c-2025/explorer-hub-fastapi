@@ -23,11 +23,14 @@ class PyObjectId(ObjectId):
 class UserBase(BaseModel):
     email: EmailStr
     full_name: str
+    username: Optional[str] = None
+    profile_picture: Optional[str] = None
     role: str = "client"  # "client" or "business"
 
 
 class UserCreate(UserBase):
     password: str
+    username: str  # Required on creation
     birth_date: Optional[str] = None
     country: Optional[str] = None
     language: Optional[str] = "es"
@@ -35,13 +38,15 @@ class UserCreate(UserBase):
 
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    identifier: str  # Can be email or username
     password: str
 
 
 class UserInDB(UserBase):
     id: Optional[int] = Field(default=None)
     hashed_password: str
+    username: str
+    profile_picture: Optional[str] = None
     birth_date: Optional[str] = None
     country: Optional[str] = None
     language: Optional[str] = "es"
@@ -57,6 +62,8 @@ class UserInDB(UserBase):
 
 class User(UserBase):
     id: int
+    username: str
+    profile_picture: Optional[str] = None
     
     class Config:
         from_attributes = True

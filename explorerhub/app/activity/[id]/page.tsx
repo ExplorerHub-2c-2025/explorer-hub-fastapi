@@ -23,7 +23,7 @@ interface Business {
   id: number
   name: string
   description: string
-  category: string
+  categories: string[]  // Cambiado de category: string a categories: string[]
   location: {
     address: string
     city: string
@@ -1190,7 +1190,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
           {/* Contenido inferior (nombre, categoría, etc.) */}
           <div className={styles.heroContent}>
             <div className={styles.heroInner}>
-              <Badge className={styles.categoryBadge}>{activity.category}</Badge>
+              <Badge className={styles.categoryBadge}>{activity.categories && activity.categories.length > 0 ? activity.categories[0] : 'Sin categoría'}</Badge>
               <h1 className={styles.heroTitle}>{activity.name}</h1>
               <div className={styles.heroInfo}>
                 <div className={styles.ratingGroup}>

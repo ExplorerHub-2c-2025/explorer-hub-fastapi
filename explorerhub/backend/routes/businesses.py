@@ -61,7 +61,7 @@ async def create_business(
 
 @router.get("/", response_model=List[Business])
 async def get_businesses(
-    category: Optional[str] = None,
+    category: Optional[List[str]] = Query(None),
     city: Optional[str] = None,
     min_rating: Optional[float] = None,
     max_price: Optional[int] = None,
@@ -74,7 +74,8 @@ async def get_businesses(
     query = {"is_active": True}
     
     if category:
-        query["category"] = category
+        # Filter by multiple categories - business must have at least one of the specified categories
+        query["categories"] = {"$in": category}
     
     if city:
         query["location.city"] = {"$regex": city, "$options": "i"}
@@ -104,6 +105,8 @@ async def get_businesses(
         business.setdefault("created_at", datetime.utcnow())
         business.setdefault("is_active", True)
         business.setdefault("allows_bookings", True)
+        business.setdefault("categories", [])
+        business.setdefault("max_capacity", None)
     
     return [Business(**b) for b in businesses]
 
@@ -228,11 +231,29 @@ async def create_booking(
     db = Depends(get_database)
 ):
     """Create a new booking for a business"""
+    from utils import check_capacity_availability
+    
     # Check if business exists
     business = await db.businesses.find_one({"id": business_id})
     if not business:
         raise HTTPException(status_code=404, detail="Business not found")
-
+    
+    # Check if business allows bookings
+    if not business.get("allows_bookings", True):
+        raise HTTPException(status_code=400, detail="Este establecimiento no acepta reservas")
+    
+    # Check capacity availability if business has capacity limits
+    if business.get("max_capacity") is not None:
+        is_available, current_used, max_capacity = await check_capacity_availability(
+            db, business_id, booking.date, booking.time, booking.amount
+        )
+        
+        if not is_available:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"No hay suficiente capacidad disponible. Capacidad máxima: {max_capacity}, actualmente usado: {current_used}, solicitado: {booking.amount}"
+            )
+    
     # Create booking dict
     booking_dict = booking.model_dump()
     booking_dict["business_id"] = business_id
@@ -385,3 +406,70 @@ async def owner_analytics(current_user: UserInDB = Depends(get_current_active_us
         "total_reviews": total_reviews,
         "total_views": total_views,
     }
+
+
+@router.get("/owner/capacity-usage")
+async def get_capacity_usage(current_user: UserInDB = Depends(get_current_active_user), db = Depends(get_database)):
+    """Get capacity usage information for business owner's establishments."""
+    user_id = current_user.id if current_user.id is not None else None
+    if user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="User ID not found"
+        )
+
+    # Get businesses with capacity limits
+    businesses = await db.businesses.find({
+        "owner_id": str(user_id),
+        "max_capacity": {"$exists": True, "$ne": None}
+    }).to_list(length=100)
+
+    capacity_info = []
+
+    for business in businesses:
+        business_id = business["id"]
+        max_capacity = business["max_capacity"]
+
+        # Get upcoming confirmed bookings for this business
+        from datetime import date
+        today = date.today().isoformat()
+
+        upcoming_bookings = await db.bookings.find({
+            "business_id": business_id,
+            "status": "confirmed",
+            "date": {"$gte": today}
+        }).sort("date", 1).sort("time", 1).to_list(length=100)
+
+        # Group bookings by date and time
+        capacity_usage = {}
+        for booking in upcoming_bookings:
+            date_key = booking["date"]
+            time_key = booking["time"]
+            key = f"{date_key} {time_key}"
+
+            if key not in capacity_usage:
+                capacity_usage[key] = {
+                    "date": date_key,
+                    "time": time_key,
+                    "used": 0,
+                    "max_capacity": max_capacity,
+                    "bookings": []
+                }
+
+            capacity_usage[key]["used"] += booking.get("amount", 1)
+            capacity_usage[key]["bookings"].append({
+                "id": booking["id"],
+                "amount": booking.get("amount", 1),
+                "user_name": f"Usuario {booking['user_id']}"  # Simplified, could join with users table
+            })
+
+        business_info = {
+            "business_id": business_id,
+            "business_name": business["name"],
+            "max_capacity": max_capacity,
+            "capacity_usage": list(capacity_usage.values())
+        }
+
+        capacity_info.append(business_info)
+
+    return capacity_info

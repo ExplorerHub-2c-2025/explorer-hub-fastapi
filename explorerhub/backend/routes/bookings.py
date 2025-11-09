@@ -35,7 +35,7 @@ async def get_my_bookings(
         if business:
             business = serialize_doc(business)
             booking["business_name"] = business.get("name", "Negocio no disponible")
-            booking["business_category"] = business.get("category", "")
+            booking["business_categories"] = business.get("categories", [])
             booking["business_image"] = business.get("images", [None])[0] if business.get("images") else None
         else:
             booking["business_name"] = "Negocio no disponible"

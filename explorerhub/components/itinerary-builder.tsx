@@ -10,7 +10,7 @@ interface Activity {
   id: string
   business_id: string
   business_name: string
-  category: string
+  categories: string[]
   scheduled_date?: Date
   notes?: string
 }
@@ -59,7 +59,7 @@ export function ItineraryBuilder({
                   <div className={styles.activityMain}>
                     <div className={styles.activityHeader}>
                       <h4 className={styles.activityTitle}>{activity.business_name}</h4>
-                      <Badge variant="secondary">{activity.category}</Badge>
+                      <Badge variant="secondary">{activity.categories && activity.categories.length > 0 ? activity.categories[0] : 'Sin categoría'}</Badge>
                     </div>
 
                     {activity.scheduled_date && (

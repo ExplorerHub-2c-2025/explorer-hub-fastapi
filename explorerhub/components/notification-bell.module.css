@@ -62,8 +62,8 @@
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
   animation: badgeAppear 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   position: absolute;
-  bottom: 0.5rem;
-  right: 0.5rem;
+  top: 1.5rem;
+  left: 1.5rem;
   z-index: 10;
 }
 
@@ -96,3 +96,15 @@
     font-size: 0.7rem;
   }
 }
+
+/* Estilo para el botón "Marcar todas como leídas" */
+.markAllButton {
+  color: #2563eb; /* blue-600 */
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.markAllButton:hover {
+  background-color: #A08058;
+  color: white;
+}
+

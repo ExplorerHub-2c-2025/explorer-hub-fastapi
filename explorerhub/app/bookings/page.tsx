@@ -212,121 +212,286 @@ export default function BookingsPage() {
             </div>
           )}
 
-          <div className={styles.bookingsGrid}>
-            {bookings.map((booking) => (
-              <div key={booking.id} className={styles.bookingCard}>
-                {booking.business_image && (
-                  <div className={styles.imageContainer}>
-                    <img
-                      src={booking.business_image}
-                      alt={booking.business_name}
-                      className={styles.image}
-                    />
-                    {booking.discount_applied > 0 && (
-                      <div className={styles.discountBadge}>
-                        <Percent className={styles.discountIcon} />
-                        {booking.discount_applied}% OFF
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                <div className={styles.cardContent}>
-                  <div className={styles.cardHeader}>
-                    <h3 className={styles.businessName}>
-                      {booking.business_name}
-                    </h3>
-                    <div className={styles.badges}>
-                      <span className={styles.category}>
-                        {getCategoryLabel(booking.business_category)}
-                      </span>
-                      {getStatusBadge(booking.status)}
-                    </div>
-                  </div>
-
-                  <h4 className={styles.bookingName}>{booking.name}</h4>
-
-                  <div className={styles.details}>
-                    <div className={styles.detailItem}>
-                      <Calendar className={styles.icon} />
-                      <span>{formatDate(booking.date)}</span>
-                    </div>
-
-                    <div className={styles.detailItem}>
-                      <Clock className={styles.icon} />
-                      <span>{formatTime(booking.time)}</span>
-                    </div>
-
-                    <div className={styles.detailItem}>
-                      <Users className={styles.icon} />
-                      <span>
-                        {booking.amount}{" "}
-                        {booking.amount === 1 ? "persona" : "personas"}
-                      </span>
-                    </div>
-                  </div>
-
-                  {booking.promotion_code && (
-                    <div className={styles.promotionInfo}>
-                      <Tag className={styles.icon} />
-                      <span>
-                        Código: <strong>{booking.promotion_code}</strong>
-                      </span>
-                    </div>
-                  )}
-
-                  {booking.original_price && booking.final_price && (
-                    <div className={styles.priceInfo}>
-                      <div className={styles.originalPrice}>
-                        ${booking.original_price.toFixed(2)}
-                      </div>
-                      <div className={styles.finalPrice}>
-                        ${booking.final_price.toFixed(2)}
-                      </div>
-                      <div className={styles.savings}>
-                        Ahorraste: $
-                        {(booking.original_price - booking.final_price).toFixed(
-                          2
+          {!isLoading && bookings.length > 0 && (
+            <>
+              {/* Próximas reservas */}
+              <div className={styles.carouselSection}>
+                <h2 className={styles.sectionTitle}>Próximas reservas</h2>
+                <div className={styles.carousel}>
+                  {bookings
+                    .filter(booking => booking.status !== 'cancelled')
+                    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                    .slice(0, 10)
+                    .map((booking) => (
+                      <div key={`upcoming-${booking.id}`} className={styles.bookingCard}>
+                        {booking.business_image && (
+                          <div className={styles.imageContainer}>
+                            <img
+                              src={booking.business_image}
+                              alt={booking.business_name}
+                              className={styles.image}
+                            />
+                            {booking.discount_applied > 0 && (
+                              <div className={styles.discountBadge}>
+                                <Percent className={styles.discountIcon} />
+                                {booking.discount_applied}% OFF
+                              </div>
+                            )}
+                          </div>
                         )}
-                      </div>
-                    </div>
-                  )}
 
-                  <div className={styles.cardFooter}>
-                    <span className={styles.bookingDate}>
-                      Reservado el {formatDate(booking.created_at)}
-                    </span>
-                    <div className={styles.footerActions}>
-                      {booking.status !== 'cancelled' && (
-                        <button
-                          className={styles.cancelButton}
-                          onClick={() => handleCancelBooking(booking.id)}
-                          disabled={cancellingBookingId === booking.id}
-                        >
-                          {cancellingBookingId === booking.id ? (
-                            <>Cancelando...</>
-                          ) : (
-                            <>
-                              <X className={styles.cancelIcon} />
-                              Cancelar reserva
-                            </>
-                          )}
-                        </button>
-                      )}
-                      <button
-                        className={styles.viewButton}
-                        onClick={() =>
-                          router.push(`/activity/${booking.business_id}`)
-                        }
-                      >
-                        Ver negocio
-                      </button>
-                    </div>
-                  </div>
+                        <div className={styles.cardContent}>
+                          <div className={styles.cardHeader}>
+                            <h3 className={styles.businessName}>
+                              {booking.business_name}
+                            </h3>
+                            <div className={styles.badges}>
+                              {getStatusBadge(booking.status)}
+                            </div>
+                          </div>
+
+                          <h4 className={styles.bookingName}>{booking.name}</h4>
+
+                          <div className={styles.details}>
+                            <div className={styles.detailItem}>
+                              <Calendar className={styles.icon} />
+                              <span>{formatDate(booking.date)}</span>
+                            </div>
+
+                            <div className={styles.detailRow}>
+                              <div className={styles.detailItem}>
+                                <Clock className={styles.icon} />
+                                <span>{formatTime(booking.time)}</span>
+                              </div>
+
+                              <div className={styles.detailItem}>
+                                <Users className={styles.icon} />
+                                <span>
+                                  {booking.amount}{" "}
+                                  {booking.amount === 1 ? "persona" : "personas"}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className={styles.cardFooter}>
+                            <div className={styles.footerActions}>
+                              {booking.status !== 'cancelled' && (
+                                <button
+                                  className={styles.cancelButton}
+                                  onClick={() => handleCancelBooking(booking.id)}
+                                  disabled={cancellingBookingId === booking.id}
+                                >
+                                  {cancellingBookingId === booking.id ? (
+                                    <>Cancelando...</>
+                                  ) : (
+                                    <>
+                                      <X className={styles.cancelIcon} />
+                                      Cancelar
+                                    </>
+                                  )}
+                                </button>
+                              )}
+                              <button
+                                className={styles.viewButton}
+                                onClick={() =>
+                                  router.push(`/activity/${booking.business_id}`)
+                                }
+                              >
+                                Ver
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                 </div>
               </div>
-            ))}
-          </div>
+
+              {/* Últimas reservas */}
+              <div className={styles.carouselSection}>
+                <h2 className={styles.sectionTitle}>Últimas reservas</h2>
+                <div className={styles.carousel}>
+                  {bookings
+                    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                    .slice(0, 10)
+                    .map((booking) => (
+                      <div key={`recent-${booking.id}`} className={styles.bookingCard}>
+                        {booking.business_image && (
+                          <div className={styles.imageContainer}>
+                            <img
+                              src={booking.business_image}
+                              alt={booking.business_name}
+                              className={styles.image}
+                            />
+                            {booking.discount_applied > 0 && (
+                              <div className={styles.discountBadge}>
+                                <Percent className={styles.discountIcon} />
+                                {booking.discount_applied}% OFF
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        <div className={styles.cardContent}>
+                          <div className={styles.cardHeader}>
+                            <h3 className={styles.businessName}>
+                              {booking.business_name}
+                            </h3>
+                            <div className={styles.badges}>
+                              {getStatusBadge(booking.status)}
+                            </div>
+                          </div>
+
+                          <h4 className={styles.bookingName}>{booking.name}</h4>
+
+                          <div className={styles.details}>
+                            <div className={styles.detailItem}>
+                              <Calendar className={styles.icon} />
+                              <span>{formatDate(booking.date)}</span>
+                            </div>
+
+                            <div className={styles.detailRow}>
+                              <div className={styles.detailItem}>
+                                <Clock className={styles.icon} />
+                                <span>{formatTime(booking.time)}</span>
+                              </div>
+
+                              <div className={styles.detailItem}>
+                                <Users className={styles.icon} />
+                                <span>
+                                  {booking.amount}{" "}
+                                  {booking.amount === 1 ? "persona" : "personas"}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className={styles.cardFooter}>
+                            <div className={styles.footerActions}>
+                              {booking.status !== 'cancelled' && (
+                                <button
+                                  className={styles.cancelButton}
+                                  onClick={() => handleCancelBooking(booking.id)}
+                                  disabled={cancellingBookingId === booking.id}
+                                >
+                                  {cancellingBookingId === booking.id ? (
+                                    <>Cancelando...</>
+                                  ) : (
+                                    <>
+                                      <X className={styles.cancelIcon} />
+                                      Cancelar
+                                    </>
+                                  )}
+                                </button>
+                              )}
+                              <button
+                                className={styles.viewButton}
+                                onClick={() =>
+                                  router.push(`/activity/${booking.business_id}`)
+                                }
+                              >
+                                Ver
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+
+              {/* Todas las reservas */}
+              <div className={styles.carouselSection}>
+                <h2 className={styles.sectionTitle}>Todas las reservas</h2>
+                <div className={styles.carousel}>
+                  {bookings.map((booking) => (
+                    <div key={`all-${booking.id}`} className={styles.bookingCard}>
+                      {booking.business_image && (
+                        <div className={styles.imageContainer}>
+                          <img
+                            src={booking.business_image}
+                            alt={booking.business_name}
+                            className={styles.image}
+                          />
+                          {booking.discount_applied > 0 && (
+                            <div className={styles.discountBadge}>
+                              <Percent className={styles.discountIcon} />
+                              {booking.discount_applied}% OFF
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <div className={styles.cardContent}>
+                        <div className={styles.cardHeader}>
+                          <h3 className={styles.businessName}>
+                            {booking.business_name}
+                          </h3>
+                          <div className={styles.badges}>
+                            {getStatusBadge(booking.status)}
+                          </div>
+                        </div>
+
+                        <h4 className={styles.bookingName}>{booking.name}</h4>
+
+                        <div className={styles.details}>
+                          <div className={styles.detailItem}>
+                            <Calendar className={styles.icon} />
+                            <span>{formatDate(booking.date)}</span>
+                          </div>
+
+                          <div className={styles.detailRow}>
+                            <div className={styles.detailItem}>
+                              <Clock className={styles.icon} />
+                              <span>{formatTime(booking.time)}</span>
+                            </div>
+
+                            <div className={styles.detailItem}>
+                              <Users className={styles.icon} />
+                              <span>
+                                {booking.amount}{" "}
+                                {booking.amount === 1 ? "persona" : "personas"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className={styles.cardFooter}>
+                          <div className={styles.footerActions}>
+                            {booking.status !== 'cancelled' && (
+                              <button
+                                className={styles.cancelButton}
+                                onClick={() => handleCancelBooking(booking.id)}
+                                disabled={cancellingBookingId === booking.id}
+                              >
+                                {cancellingBookingId === booking.id ? (
+                                  <>Cancelando...</>
+                                ) : (
+                                  <>
+                                    <X className={styles.cancelIcon} />
+                                    Cancelar
+                                  </>
+                                )}
+                              </button>
+                            )}
+                            <button
+                              className={styles.viewButton}
+                              onClick={() =>
+                                router.push(`/activity/${booking.business_id}`)
+                              }
+                            >
+                              Ver
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </main>
       <Footer />

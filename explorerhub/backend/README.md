@@ -34,3 +34,36 @@ Create a `.env` file with:
 MONGODB_URL=your_mongodb_connection_string
 JWT_SECRET_KEY=your_secret_key
 ```
+
+## Automated Capacity Management
+
+The system includes an automated capacity management system that:
+
+- **Automatically releases expired bookings** every hour
+- **Sends notifications** to users when capacity slots become available
+- **Provides real-time capacity monitoring** in the business dashboard
+
+### Setup Automated Capacity Release
+
+The capacity scheduler runs automatically every hour via systemd:
+
+1. The scheduler is configured as a systemd service and timer
+2. It runs `scripts/capacity_scheduler.py` which releases expired bookings
+3. Notifications are sent to users waiting for capacity slots
+4. Business owners can monitor capacity usage in their dashboard
+
+### Manual Capacity Release
+
+You can also run capacity release manually:
+```bash
+cd explorerhub/backend/
+python3 scripts/release_expired_capacity.py
+```
+
+### Testing the Scheduler
+
+To test the automated scheduler:
+```bash
+cd explorerhub/backend/
+python3 scripts/capacity_scheduler.py
+```

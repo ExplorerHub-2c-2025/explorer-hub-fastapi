@@ -8,6 +8,8 @@ class Reply(BaseModel):
     id: int
     user_id: str
     user_name: str
+    username: Optional[str] = None
+    profile_picture: Optional[str] = None
     text: str
     created_at: datetime
     replies: List['Reply'] = []
@@ -37,6 +39,8 @@ class ReviewInDB(ReviewBase):
     id: Optional[str] = Field(alias="_id", default=None)
     user_id: str
     user_name: str
+    username: Optional[str] = None
+    profile_picture: Optional[str] = None
     helpful_count: int = 0
     replies: List[Reply] = []
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -51,6 +55,8 @@ class Review(ReviewBase):
     id: int
     user_id: str
     user_name: str
+    username: Optional[str] = None
+    profile_picture: Optional[str] = None
     helpful_count: int
     replies: List[Reply] = []
     created_at: datetime
