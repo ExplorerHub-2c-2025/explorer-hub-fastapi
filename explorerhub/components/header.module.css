@@ -5,6 +5,7 @@
   border-bottom: 1px solid #e5e7eb;
   background: rgba(255,255,255,0.95);
   backdrop-filter: blur(4px);
+  z-index: 1000;
 }
 
 .container {
