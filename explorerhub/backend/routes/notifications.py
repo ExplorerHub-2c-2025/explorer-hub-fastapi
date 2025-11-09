@@ -81,6 +81,27 @@ async def get_notification_stats(
     return NotificationStats(total=total, unread=unread)
 
 
+@router.patch("/mark-all-read")
+async def mark_all_as_read(
+    current_user = Depends(get_current_user),
+    db = Depends(get_database)
+):
+    """
+    Mark all notifications as read for the current user.
+    """
+    user_id = current_user.id
+    
+    result = await db.notifications.update_many(
+        {"user_id": user_id, "read": False},
+        {"$set": {"read": True}}
+    )
+    
+    return {
+        "message": "All notifications marked as read",
+        "modified_count": result.modified_count
+    }
+
+
 @router.patch("/{notification_id}", response_model=Notification)
 async def update_notification(
     notification_id: int,
@@ -126,27 +147,6 @@ async def update_notification(
         updated_notification["created_at"] = updated_notification["created_at"].isoformat()
     
     return Notification(**updated_notification)
-
-
-@router.patch("/mark-all-read")
-async def mark_all_as_read(
-    current_user = Depends(get_current_user),
-    db = Depends(get_database)
-):
-    """
-    Mark all notifications as read for the current user.
-    """
-    user_id = current_user.id
-    
-    result = await db.notifications.update_many(
-        {"user_id": user_id, "read": False},
-        {"$set": {"read": True}}
-    )
-    
-    return {
-        "message": "All notifications marked as read",
-        "modified_count": result.modified_count
-    }
 
 
 @router.delete("/{notification_id}")

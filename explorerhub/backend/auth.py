@@ -58,7 +58,11 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db = Depends(get
     from utils import serialize_doc
     user = serialize_doc(user)
     
-    return UserInDB(**user)
+    try:
+        return UserInDB(**user)
+    except Exception as e:
+        # If validation fails, treat as invalid credentials
+        raise credentials_exception
 
 
 async def get_current_active_user(current_user: UserInDB = Depends(get_current_user)) -> UserInDB:

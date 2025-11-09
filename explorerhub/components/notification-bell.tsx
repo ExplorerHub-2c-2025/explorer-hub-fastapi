@@ -195,12 +195,20 @@ export function NotificationBell({ userRole = "traveler" }: NotificationBellProp
         <Button
           variant="ghost"
           size="icon"
-          className="relative"
+          className="relative px-2"
           aria-label="Notificaciones"
         >
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-semibold">
+            <span
+              className={cn(
+                styles.notificationBadge,
+                styles.badge,
+                unreadCount > 9 ? "min-w-[28px] px-1.5" : "w-5"
+              )}
+              aria-label={`${unreadCount} notificación${unreadCount > 1 ? 'es' : ''} sin leer`}
+              role="status"
+            >
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}
@@ -214,7 +222,7 @@ export function NotificationBell({ userRole = "traveler" }: NotificationBellProp
               variant="ghost"
               size="sm"
               onClick={markAllAsRead}
-              className="text-xs text-blue-600 hover:text-blue-700"
+              className={cn("text-xs", styles.markAllButton)}
             >
               Marcar todas como leídas
             </Button>
