@@ -1,0 +1,148 @@
+/* Review Card Styles */
+.reviewCard {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(87, 63, 35, 0.1);
+  transition: box-shadow 0.2s ease;
+}
+
+.reviewCard:hover {
+  box-shadow: 0 4px 12px rgba(87, 63, 35, 0.15);
+}
+
+/* Header */
+.reviewHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  gap: 1rem;
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.profilePicture {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #A08058;
+}
+
+.profilePlaceholder {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #A08058 0%, #8a6d4a 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.userDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.userName {
+  font-weight: 600;
+  color: #573F23;
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.userFullName {
+  font-size: 0.875rem;
+  color: #8a7866;
+  margin: 0;
+}
+
+/* Rating */
+.rating {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.star {
+  width: 1.125rem;
+  height: 1.125rem;
+  color: #e0ddd9;
+  transition: all 0.2s ease;
+}
+
+.starFilled {
+  color: #A08058;
+}
+
+/* Content */
+.reviewContent {
+  margin-bottom: 1rem;
+}
+
+.reviewTitle {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #573F23;
+  margin: 0 0 0.5rem 0;
+}
+
+.reviewText {
+  font-size: 0.95rem;
+  color: #5a5550;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Footer */
+.reviewFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e9e4df;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.reviewDate {
+  font-size: 0.875rem;
+  color: #8a7866;
+}
+
+.helpfulCount {
+  font-size: 0.875rem;
+  color: #A08058;
+  font-weight: 500;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .reviewCard {
+    padding: 1rem;
+  }
+
+  .reviewHeader {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .profilePicture,
+  .profilePlaceholder {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  .reviewFooter {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

@@ -22,10 +22,11 @@
 /* Card */
 .card {
   width: 100%;
-  max-width: 42rem;
+  max-width: 28rem;
   position: relative;
-  background-color: white !important;
+  background-color: #e8e8e8 !important;
 }
+
 /* Header */
 .header {
   display: flex;
@@ -72,102 +73,65 @@
   gap: 1rem;
 }
 
-/* Grid */
-.grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
-}
-
-@media (min-width: 768px) {
-  .grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-/* Field Container */
 .fieldContainer {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-/* Checkbox Row */
-.checkboxRow {
+/* Password Container */
+.passwordContainer {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
 }
 
-.checkboxLabel {
-  font-size: 0.875rem;
-  font-weight: 500;
+.passwordInput {
+  padding-right: 3rem;
 }
 
-/* Preferences */
-.preferencesContainer {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.preferencesGrid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.75rem;
-}
-
-@media (min-width: 768px) {
-  .preferencesGrid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-.preferenceItem {
+.eyeButton {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: center;
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  transition: background-color 0.2s;
 }
 
-.preferenceLabel {
-  font-size: 0.875rem;
-  font-weight: 500;
-  line-height: 1;
+.eyeButton:hover {
+  background-color: rgba(0, 0, 0, 0.1);
 }
 
-/* Terms Container */
-.termsContainer {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
+.eyeButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-.termsLabel {
-  font-size: 0.875rem;
+.eyeIcon {
+  height: 1rem;
+  width: 1rem;
   color: hsl(var(--muted-foreground));
-  line-height: 1;
-}
-
-.termsLink {
-  color: hsl(var(--primary));
-  text-decoration: none;
-}
-
-.termsLink:hover {
-  text-decoration: underline;
 }
 
 /* Footer */
 .footer {
   display: flex;
   flex-direction: column;
+  margin-top: 1rem;
   gap: 1rem;
 }
 
 .submitButton {
   width: 100%;
   background-color: #573F23;
-  margin-top: 1rem;
 }
 
 .loadingIcon {
@@ -184,20 +148,4 @@
   to {
     transform: rotate(360deg);
   }
-}
-
-.footerText {
-  font-size: 0.875rem;
-  text-align: center;
-  color: hsl(var(--muted-foreground));
-}
-
-.signinLink {
-  color: hsl(var(--primary));
-  font-weight: 500;
-  text-decoration: none;
-}
-
-.signinLink:hover {
-  text-decoration: underline;
 }

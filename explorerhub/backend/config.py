@@ -15,6 +15,16 @@ class Settings(BaseSettings):
     # CORS
     cors_origins: list = ["http://localhost:3000", "http://localhost:3001"]
     
+    # Email
+    smtp_server: str = "smtp.mailtrap.io"
+    smtp_port: int = 2525
+    smtp_username: Optional[str] = None
+    smtp_password: Optional[str] = None
+    mail_use_tls: bool = True
+    mail_use_ssl: bool = False
+    from_email: Optional[str] = None
+    from_name: str = "ExplorerHub"
+    
     class Config:
         env_file = ".env"
 

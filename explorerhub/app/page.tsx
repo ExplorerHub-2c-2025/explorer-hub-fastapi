@@ -28,7 +28,7 @@ const mainCategories = [
   { icon: Home, label: "Buscar todo", href: "/explore" },
   { icon: Building2, label: "Hoteles", href: "/explore?category=Hoteles" },
   { icon: Utensils, label: "Restaurantes", href: "/explore?category=Restaurant" },
-  { icon: Compass, label: "Cosas que hacer", href: "/explore?category=Activity" },
+  { icon: Compass, label: "Cosas que hacer", href: "/explore?category=Activity&category=Cultural&category=Entertainment" },
   { icon: Plane, label: "Viajes", href: "/trips" },
 ]
 

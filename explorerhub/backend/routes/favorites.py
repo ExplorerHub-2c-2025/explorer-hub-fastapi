@@ -151,3 +151,16 @@ async def check_favorite(
     })
     
     return {"is_favorite": favorite is not None}
+
+
+@router.get("/count/{business_id}", response_model=dict)
+async def get_favorite_count(
+    business_id: int,
+    db = Depends(get_database)
+):
+    """
+    Obtener el número total de usuarios que han agregado este negocio a favoritos.
+    """
+    count = await db.favorites.count_documents({"business_id": business_id})
+    
+    return {"count": count}

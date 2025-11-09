@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, LogIn } from "lucide-react"
+import { Loader2, LogIn, Eye, EyeOff } from "lucide-react"
 import styles from "./page.module.css"
 
 export default function SignInPage() {
@@ -18,6 +18,7 @@ export default function SignInPage() {
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -30,7 +31,7 @@ export default function SignInPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ identifier: email, password }),
       })
 
       const data = await response.json()
@@ -78,11 +79,11 @@ export default function SignInPage() {
               </Alert>
             )}
             <div className={styles.fieldContainer}>
-              <Label htmlFor="email">Correo electrónico</Label>
+              <Label htmlFor="email">Correo electrónico o nombre de usuario</Label>
               <Input
                 id="email"
-                type="email"
-                placeholder="tu@email.com"
+                type="text"
+                placeholder="tu@email.com o tuusuario"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -96,15 +97,30 @@ export default function SignInPage() {
                   ¿Olvidaste tu contraseña?
                 </Link>
               </div>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Ingresa tu contraseña"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={isLoading}
-              />
+              <div className={styles.passwordContainer}>
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Ingresa tu contraseña"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={isLoading}
+                  className={styles.passwordInput}
+                />
+                <button
+                  type="button"
+                  className={styles.eyeButton}
+                  onClick={() => setShowPassword(!showPassword)}
+                  disabled={isLoading}
+                >
+                  {showPassword ? (
+                    <EyeOff className={styles.eyeIcon} />
+                  ) : (
+                    <Eye className={styles.eyeIcon} />
+                  )}
+                </button>
+              </div>
             </div>
           </CardContent>
           <CardFooter className={styles.footer}>

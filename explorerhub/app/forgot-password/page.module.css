@@ -22,10 +22,11 @@
 /* Card */
 .card {
   width: 100%;
-  max-width: 42rem;
+  max-width: 28rem;
   position: relative;
-  background-color: white !important;
+  background-color: #e8e8e8 !important;
 }
+
 /* Header */
 .header {
   display: flex;
@@ -63,6 +64,7 @@
 
 .description {
   text-align: center;
+  line-height: 1.5;
 }
 
 /* Content */
@@ -72,102 +74,23 @@
   gap: 1rem;
 }
 
-/* Grid */
-.grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
-}
-
-@media (min-width: 768px) {
-  .grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-/* Field Container */
 .fieldContainer {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-/* Checkbox Row */
-.checkboxRow {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.checkboxLabel {
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-/* Preferences */
-.preferencesContainer {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.preferencesGrid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.75rem;
-}
-
-@media (min-width: 768px) {
-  .preferencesGrid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-.preferenceItem {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.preferenceLabel {
-  font-size: 0.875rem;
-  font-weight: 500;
-  line-height: 1;
-}
-
-/* Terms Container */
-.termsContainer {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-}
-
-.termsLabel {
-  font-size: 0.875rem;
-  color: hsl(var(--muted-foreground));
-  line-height: 1;
-}
-
-.termsLink {
-  color: hsl(var(--primary));
-  text-decoration: none;
-}
-
-.termsLink:hover {
-  text-decoration: underline;
-}
-
 /* Footer */
 .footer {
   display: flex;
   flex-direction: column;
+  margin-top: 1rem;
   gap: 1rem;
 }
 
 .submitButton {
   width: 100%;
   background-color: #573F23;
-  margin-top: 1rem;
 }
 
 .loadingIcon {
@@ -189,15 +112,26 @@
 .footerText {
   font-size: 0.875rem;
   text-align: center;
-  color: hsl(var(--muted-foreground));
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.signinLink {
+.backButton {
   color: hsl(var(--primary));
   font-weight: 500;
   text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 }
 
-.signinLink:hover {
-  text-decoration: underline;
+.backButton:hover {
+  background-color: rgba(87, 63, 35, 0.1);
+}
+
+.backIcon {
+  height: 1rem;
+  width: 1rem;
 }

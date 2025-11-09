@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { NotificationBell } from "@/components/notification-bell"
 import { getUser, logout } from "@/lib/auth"
+import { getProfilePictureUrl } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 
 import styles from "./header.module.css"
@@ -20,6 +21,7 @@ import styles from "./header.module.css"
 export function Header() {
   const [user, setUser] = useState<any>(null)
   const router = useRouter()
+  console.log("Rendering Header, user:", user)
 
   useEffect(() => {
     const userData = getUser()
@@ -92,8 +94,14 @@ export function Header() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className={styles.userButton}>
-                    <User className={styles.userIcon} />
-                    <span className={styles.userHidden}>{user.name || user.email}</span>
+                    <img 
+                      src={getProfilePictureUrl(user.profile_picture)}
+                      alt={user.username || user.full_name}
+                      className={styles.profilePicture}
+                    />
+                    <span className={styles.userName}>
+                      {user.username || user.full_name || user.email}
+                    </span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className={styles.dropdownContent}>

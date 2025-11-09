@@ -1,7 +1,7 @@
 "use client"
 
-import type React from "react"
-import { useState } from "react"
+import React from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -9,10 +9,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2, Users, CheckCircle2 } from "lucide-react"
+import { Loader2, Users, CheckCircle2, X } from "lucide-react"
 import styles from "./page.module.css"
 
 export default function SignUpPage() {
@@ -20,12 +19,17 @@ export default function SignUpPage() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    username: "",
     password: "",
     confirmPassword: "",
     birthDate: "",
     country: "",
     language: "es",
   })
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null)
+  const [isCheckingUsername, setIsCheckingUsername] = useState(false)
+  const [profilePreview, setProfilePreview] = useState<string | null>(null)
+  const [profilePictureUrl, setProfilePictureUrl] = useState("")
   const [preferences, setPreferences] = useState({
     adventure: false,
     culture: false,
@@ -43,6 +47,44 @@ export default function SignUpPage() {
       ...formData,
       [e.target.name]: e.target.value,
     })
+  }
+
+  const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.toLowerCase().replace(/\s/g, "")
+    setFormData({ ...formData, username: value })
+    setUsernameAvailable(null)
+  }
+
+  // Debounced username availability check
+  const checkUsernameAvailability = async (username: string) => {
+    if (!username) return
+    setIsCheckingUsername(true)
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/auth/check-username/${username}`
+      )
+      const data = await res.json()
+      setUsernameAvailable(data.available)
+    } catch (err) {
+      console.error("Error checking username:", err)
+      setUsernameAvailable(null)
+    } finally {
+      setIsCheckingUsername(false)
+    }
+  }
+
+  // watch username and debounce
+  useEffect(() => {
+    const id = setTimeout(() => {
+      if (formData.username) checkUsernameAvailability(formData.username)
+    }, 500)
+    return () => clearTimeout(id)
+  }, [formData.username])
+
+  const handleProfilePictureUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const url = e.target.value
+    setProfilePictureUrl(url)
+    setProfilePreview(url || null)
   }
 
   const handlePreferenceChange = (preference: string, checked: boolean) => {
@@ -64,6 +106,21 @@ export default function SignUpPage() {
 
     if (!formData.email.trim()) {
       setError("El correo electrónico es obligatorio")
+      return
+    }
+
+    if (!formData.username.trim()) {
+      setError("El nombre de usuario es obligatorio")
+      return
+    }
+
+    if (formData.username !== formData.username.toLowerCase().replace(/\s/g, "")) {
+      setError("El nombre de usuario debe estar en minúsculas y sin espacios")
+      return
+    }
+
+    if (usernameAvailable === false) {
+      setError("El nombre de usuario no está disponible")
       return
     }
 
@@ -118,8 +175,8 @@ export default function SignUpPage() {
       return
     }
 
-    if (!formData.birthDate) {
-      setError("La fecha de nacimiento es obligatoria")
+    if (profilePictureUrl && !profilePictureUrl.match(/^https?:\/\/.+\.(jpg|jpeg|png|webp)$/i)) {
+      setError("La URL de la imagen debe ser una URL válida que termine en .jpg, .png o .webp")
       return
     }
 
@@ -144,11 +201,13 @@ export default function SignUpPage() {
       const payload: any = {
         full_name: formData.name,
         email: formData.email,
+        username: formData.username || undefined,
         password: formData.password,
         role: isBusiness ? "business" : "client",
         birth_date: formData.birthDate,
         country: formData.country,
         language: formData.language,
+        profile_picture: profilePictureUrl || undefined,
         preferences: Object.keys(preferences).filter((key) => preferences[key as keyof typeof preferences]),
       }
 
@@ -242,6 +301,43 @@ export default function SignUpPage() {
               </div>
             </div>
 
+            <div className={styles.fieldContainer}>
+              <Label htmlFor="username">Nombre de usuario *</Label>
+              <div style={{ position: 'relative' }}>
+                <Input
+                  id="username"
+                  name="username"
+                  type="text"
+                  placeholder="juanperez"
+                  value={formData.username}
+                  onChange={handleUsernameChange}
+                  required
+                  disabled={isLoading}
+                />
+                {isCheckingUsername && (
+                  <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)' }}>
+                    <Loader2 className="animate-spin" size={16} />
+                  </div>
+                )}
+                {!isCheckingUsername && usernameAvailable === true && (
+                  <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)' }}>
+                    <CheckCircle2 size={16} color="green" />
+                  </div>
+                )}
+                {!isCheckingUsername && usernameAvailable === false && (
+                  <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)' }}>
+                    <X size={16} color="red" />
+                  </div>
+                )}
+              </div>
+              {usernameAvailable === false && (
+                <p style={{ color: 'red', fontSize: '12px', marginTop: '4px' }}>Este nombre de usuario ya está en uso</p>
+              )}
+              {usernameAvailable === true && (
+                <p style={{ color: 'green', fontSize: '12px', marginTop: '4px' }}>Nombre de usuario disponible</p>
+              )}
+            </div>
+
             <div className={styles.checkboxRow}>
               <Checkbox id="isBusiness" checked={isBusiness} onCheckedChange={(c) => setIsBusiness(c as boolean)} disabled={isLoading} />
               <label htmlFor="isBusiness" className={styles.checkboxLabel}>
@@ -325,29 +421,30 @@ export default function SignUpPage() {
               </Select>
             </div>
 
-            <div className={styles.preferencesContainer}>
-              <Label>Preferencias de viaje</Label>
-              <div className={styles.preferencesGrid}>
-                {[
-                  { id: "adventure", label: "Aventura" },
-                  { id: "culture", label: "Cultura" },
-                  { id: "gastronomy", label: "Gastronomía" },
-                  { id: "relax", label: "Relax" },
-                  { id: "nature", label: "Naturaleza" },
-                ].map((pref) => (
-                  <div key={pref.id} className={styles.preferenceItem}>
-                    <Checkbox
-                      id={pref.id}
-                      checked={preferences[pref.id as keyof typeof preferences]}
-                      onCheckedChange={(checked) => handlePreferenceChange(pref.id, checked as boolean)}
-                      disabled={isLoading}
-                    />
-                    <label htmlFor={pref.id} className={styles.preferenceLabel}>
-                      {pref.label}
-                    </label>
-                  </div>
-                ))}
+            <div className={styles.fieldContainer}>
+              <Label htmlFor="profilePicture">Foto de perfil (opcional)</Label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Input
+                  id="profilePicture"
+                  type="url"
+                  placeholder="https://ejemplo.com/imagen.jpg"
+                  value={profilePictureUrl}
+                  onChange={handleProfilePictureUrlChange}
+                  disabled={isLoading}
+                  style={{ flex: 1 }}
+                />
+                {profilePreview && (
+                  <img
+                    src={profilePreview}
+                    alt="Preview"
+                    style={{ width: '50px', height: '50px', borderRadius: '50%', objectFit: 'cover' }}
+                    onError={() => setProfilePreview(null)}
+                  />
+                )}
               </div>
+              <p style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                Ingresa la URL de una imagen externa (JPG, PNG, WebP).
+              </p>
             </div>
 
             <div className={styles.termsContainer}>
