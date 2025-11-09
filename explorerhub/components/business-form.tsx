@@ -23,7 +23,7 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
   const [formData, setFormData] = useState({
     name: initialData?.name || "",
     description: initialData?.description || "",
-    category: initialData?.category || "",
+    categories: initialData?.categories || [], // Cambiado de category a categories
     address: initialData?.location?.address || "",
     city: initialData?.location?.city || "",
     state: initialData?.location?.state || "",
@@ -34,10 +34,40 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
     tags: initialData?.tags ? initialData.tags.join(", ") : "",
     images: initialData?.images || [],
     allows_bookings: initialData?.allows_bookings !== undefined ? initialData.allows_bookings : true,
+    max_capacity: initialData?.max_capacity || "", // Nuevo campo para cupo máximo
   })
   
   const [imageUrls, setImageUrls] = useState<string[]>(initialData?.images || [])
   const [newImageUrl, setNewImageUrl] = useState("")
+
+  // Lista de categorías disponibles
+  const availableCategories = [
+    { value: "Restaurant", label: "Restaurante" },
+    { value: "Activity", label: "Actividad" },
+    { value: "Attraction", label: "Atracción" },
+    { value: "Nature", label: "Naturaleza" },
+    { value: "Cultural", label: "Cultural" },
+    { value: "Entertainment", label: "Entretenimiento" },
+    { value: "Shopping", label: "Compras" },
+    { value: "Nightlife", label: "Vida Nocturna" },
+  ]
+
+  const handleCategoryToggle = (categoryValue: string) => {
+    const currentCategories = formData.categories
+    const isSelected = currentCategories.includes(categoryValue)
+    
+    if (isSelected) {
+      setFormData({
+        ...formData,
+        categories: currentCategories.filter(cat => cat !== categoryValue)
+      })
+    } else {
+      setFormData({
+        ...formData,
+        categories: [...currentCategories, categoryValue]
+      })
+    }
+  }
 
   const handleAddImage = () => {
     if (newImageUrl.trim()) {
@@ -56,6 +86,13 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Validar que al menos una categoría esté seleccionada
+    if (formData.categories.length === 0) {
+      alert("Debes seleccionar al menos una categoría")
+      return
+    }
+    
     const submitData = {
       ...formData,
       location: {
@@ -67,6 +104,7 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
       tags: formData.tags.split(",").map((tag: string) => tag.trim()).filter((tag: string) => tag),
       images: imageUrls,
       allows_bookings: formData.allows_bookings,
+      max_capacity: formData.max_capacity ? parseInt(formData.max_capacity) : null,
     }
     onSubmit(submitData)
   }
@@ -90,23 +128,27 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
             </div>
 
             <div className={styles.spaceY2}>
-              <Label htmlFor="category">Categoría *</Label>
-              <Select
-                value={formData.category}
-                onValueChange={(value) => setFormData({ ...formData, category: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona una categoría" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Restaurant">Restaurante</SelectItem>
-                  <SelectItem value="Activity">Actividad</SelectItem>
-                  <SelectItem value="Attraction">Atracción</SelectItem>
-                  <SelectItem value="Nature">Naturaleza</SelectItem>
-                  <SelectItem value="Cultural">Cultural</SelectItem>
-                  <SelectItem value="Entertainment">Entretenimiento</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Categorías *</Label>
+              <div className={styles.categoryGrid}>
+                {availableCategories.map((cat) => (
+                  <div key={cat.value} className={styles.categoryCheckbox}>
+                    <Checkbox
+                      id={`category-${cat.value}`}
+                      checked={formData.categories.includes(cat.value)}
+                      onCheckedChange={() => handleCategoryToggle(cat.value)}
+                    />
+                    <Label 
+                      htmlFor={`category-${cat.value}`}
+                      className="text-sm font-normal cursor-pointer"
+                    >
+                      {cat.label}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+              {formData.categories.length === 0 && (
+                <p className="text-sm text-red-500 mt-1">Selecciona al menos una categoría</p>
+              )}
             </div>
           </div>
 
@@ -207,13 +249,18 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
             </div>
 
             <div className={styles.spaceY2}>
-              <Label htmlFor="tags">Etiquetas (separadas por comas)</Label>
+              <Label htmlFor="max_capacity">Cupo Máximo (opcional)</Label>
               <Input
-                id="tags"
-                value={formData.tags}
-                onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                placeholder="ej: Italiano, Cena Elegante, Romántico"
+                id="max_capacity"
+                type="number"
+                min="1"
+                value={formData.max_capacity}
+                onChange={(e) => setFormData({ ...formData, max_capacity: e.target.value })}
+                placeholder="ej: 50 personas"
               />
+              <p className="text-xs text-gray-500 mt-1">
+                Límite de personas que pueden reservar al mismo tiempo
+              </p>
             </div>
           </div>
 

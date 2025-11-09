@@ -12,7 +12,7 @@ interface Business {
   id: number
   name: string
   description: string
-  category: string
+  categories: string[] // Cambiado de category: string a categories: string[]
   location: {
     address: string
     city: string
@@ -25,6 +25,8 @@ interface Business {
   images: string[]
   tags: string[]
   is_active: boolean
+  allows_bookings: boolean
+  max_capacity?: number
 }
 
 export default function ExplorePage() {
@@ -160,7 +162,9 @@ export default function ExplorePage() {
 
     // Apply category filter
     if (filters.categories.length > 0) {
-      filtered = filtered.filter((activity) => filters.categories.includes(activity.category))
+      filtered = filtered.filter((activity) => 
+        activity.categories.some(cat => filters.categories.includes(cat))
+      )
     }
 
     // Apply price range filter
@@ -326,7 +330,7 @@ export default function ExplorePage() {
 
                             {/* Badge */}
                             <div className={styles.badge}>
-                              {activity.category}
+                              {activity.categories[0] || 'Sin categoría'}
                             </div>
                           </div>
                         </div>

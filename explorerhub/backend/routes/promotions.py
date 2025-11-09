@@ -7,7 +7,7 @@ from models.counter import get_next_sequence_value
 from auth import get_current_active_user
 from models.user import UserInDB
 from utils import serialize_doc, serialize_docs
-from routes.notifications import notify_new_promotion, notify_promo_expired
+from routes.notifications import notify_new_promotion
 
 router = APIRouter(prefix="/api/promotions", tags=["promotions"])
 

@@ -1,0 +1,9 @@
+from .auth import router as auth
+from .businesses import router as businesses
+from .reviews import router as reviews
+from .trips import router as trips
+from .promotions import router as promotions
+from .bookings import router as bookings
+from .notifications import router as notifications
+from .favorites import router as favorites
+from .profile import router as profile

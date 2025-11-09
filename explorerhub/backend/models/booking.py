@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from datetime import date, time, datetime
-from typing import Optional
+from typing import Optional, List
 from enum import Enum
 
 
@@ -32,7 +32,7 @@ class Booking(BookingCreate):
 
 class BookingWithBusiness(Booking):
     business_name: str
-    business_category: str
+    business_categories: List[str] = []  # Cambiado de business_category a business_categories
     business_image: Optional[str] = None
 
 

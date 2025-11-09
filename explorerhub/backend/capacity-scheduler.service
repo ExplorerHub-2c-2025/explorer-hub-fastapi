@@ -1,0 +1,14 @@
+[Unit]
+Description=Capacity Scheduler Service
+After=network.target
+
+[Service]
+Type=simple
+User=facundo
+WorkingDirectory=/home/facundo/Desktop/explorer-hub-fastapi/explorerhub/backend
+ExecStart=/home/facundo/Desktop/explorer-hub-fastapi/explorerhub/backend/start_capacity_scheduler.sh
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

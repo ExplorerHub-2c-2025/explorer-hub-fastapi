@@ -55,3 +55,9 @@ class Business(BusinessBase):
     created_at: datetime
     is_active: bool
     allows_bookings: bool
+    max_capacity: Optional[int] = None
+
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }

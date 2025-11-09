@@ -6,7 +6,7 @@ from database import get_database
 from models.favorite import FavoriteCreate, Favorite, FavoriteWithBusiness
 from models.counter import get_next_sequence_value
 
-router = APIRouter(prefix="/favorites", tags=["favorites"])
+router = APIRouter(prefix="/api/favorites", tags=["favorites"])
 
 
 @router.post("", response_model=Favorite, status_code=status.HTTP_201_CREATED)
@@ -121,7 +121,7 @@ async def get_favorites(
             business_id=fav["business_id"],
             created_at=fav["created_at"],
             business_name=business.get("name", ""),
-            business_category=business.get("category", ""),
+            business_categories=business.get("categories", []),
             business_location=business.get("location", ""),
             business_rating=business.get("rating", 0.0),
             business_review_count=business.get("review_count", 0),

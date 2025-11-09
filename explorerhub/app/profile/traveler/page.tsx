@@ -11,7 +11,7 @@ import { ActivityCard } from "@/components/activity-card"
 interface SavedActivity {
   id: string | number
   name: string
-  category: string
+  categories: string[]
   location: string
   rating: number
   reviewCount: number
@@ -64,7 +64,7 @@ export default function TravelerProfile() {
         const activities: SavedActivity[] = favorites.map((fav: any) => ({
           id: fav.business_id,
           name: fav.business_name,
-          category: fav.business_category,
+          categories: fav.business_categories,
           location: fav.business_location,
           rating: fav.business_rating,
           reviewCount: fav.business_review_count,
@@ -246,7 +246,7 @@ export default function TravelerProfile() {
                       <ActivityCard
                         id={activity.id}
                         name={activity.name}
-                        category={activity.category}
+                        categories={activity.categories}
                         location={activity.location}
                         rating={activity.rating}
                         reviewCount={activity.reviewCount}

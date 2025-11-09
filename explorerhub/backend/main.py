@@ -47,15 +47,15 @@ def log_cors_origins():
     import logging
     logging.getLogger('uvicorn.info').info(f"CORS origins configured: {origins}")
 
-app.include_router(auth.router)
-app.include_router(businesses.router)
-app.include_router(reviews.router)
-app.include_router(trips.router)
-app.include_router(promotions.router)
-app.include_router(bookings.router)
-app.include_router(notifications.router)
-app.include_router(favorites.router)
-app.include_router(profile.router)
+app.include_router(auth)
+app.include_router(businesses)
+app.include_router(reviews)
+app.include_router(trips)
+app.include_router(promotions)
+app.include_router(bookings)
+app.include_router(notifications)
+app.include_router(favorites)
+app.include_router(profile)
 
 # Mount uploads directory
 uploads_dir = Path("uploads")
