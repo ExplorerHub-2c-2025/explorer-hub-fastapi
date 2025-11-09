@@ -16,7 +16,7 @@ class Location(BaseModel):
 class BusinessBase(BaseModel):
     name: str
     description: str
-    category: str
+    categories: List[str] = []  # Cambiado de category: str a categories: List[str]
     location: Location
     phone: Optional[str] = None
     website: Optional[str] = None
@@ -24,6 +24,7 @@ class BusinessBase(BaseModel):
     images: List[str] = []
     tags: List[str] = []
     allows_bookings: bool = True
+    max_capacity: Optional[int] = None  # Cupo máximo de personas
 
 
 class BusinessCreate(BusinessBase):
