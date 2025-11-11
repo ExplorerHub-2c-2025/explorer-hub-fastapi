@@ -147,6 +147,7 @@ async def update_business(
         raise HTTPException(status_code=403, detail="Not authorized to update this business")
     
     update_data = business_update.model_dump()
+    update_data["updated_at"] = datetime.utcnow()
     await db.businesses.update_one(
         {"id": business_id},
         {"$set": update_data}

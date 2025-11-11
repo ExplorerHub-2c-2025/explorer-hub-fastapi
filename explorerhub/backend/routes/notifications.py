@@ -310,6 +310,25 @@ async def notify_booking_cancelled(
     await create_notification(notification, db)
 
 
+async def notify_booking_self_cancelled(
+    booking_id: int,
+    booking_date: str,
+    user_id: int,
+    business_name: str,
+    db
+):
+    """Create notification when user cancels their own booking."""
+    notification = NotificationCreate(
+        user_id=user_id,
+        type=NotificationType.booking_cancelled,
+        title="Reserva cancelada",
+        description=f"Has cancelado tu reserva en {business_name} el día {booking_date}.",
+        link="/bookings",
+        context_id=booking_id
+    )
+    await create_notification(notification, db)
+
+
 async def notify_new_review(
     review_id: int,
     business_id: int,

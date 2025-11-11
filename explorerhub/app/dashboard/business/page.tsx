@@ -9,12 +9,14 @@ import { ActivityCard } from "@/components/activity-card"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Briefcase, Plus, Edit, Eye, Loader2, Users, Calendar, Clock } from "lucide-react"
+import styles from "./page.module.css"
 
 interface Business {
   id: number
   name: string
   description: string
-  category: string
+  category: string | string[]
+  categories?: string[]
   location: {
     address: string
     city: string
@@ -116,13 +118,13 @@ export default function BusinessDashboard() {
                 <p className="text-muted-foreground">Gestiona tus establecimientos</p>
               </div>
               <div className="flex gap-3">
-                <Button asChild variant="outline">
+                <Button asChild variant="outline" className={styles.editProfileButton}>
                   <Link href="/profile/edit">
                     <Edit className="mr-2 h-4 w-4" />
                     Editar Perfil
                   </Link>
                 </Button>
-                <Button asChild>
+                <Button asChild className={styles.addBusinessButton}>
                   <Link href="/business/new">
                     <Plus className="mr-2 h-4 w-4" />
                     Agregar Negocio
@@ -151,7 +153,7 @@ export default function BusinessDashboard() {
                   <Briefcase className="h-16 w-16 mx-auto text-muted-foreground/50 mb-4" />
                   <h3 className="text-lg font-semibold mb-2">No tienes negocios registrados</h3>
                   <p className="text-muted-foreground mb-6">Comienza agregando tu primer establecimiento</p>
-                  <Button asChild>
+                  <Button asChild className={styles.addBusinessButton}>
                     <Link href="/business/new">
                       <Plus className="mr-2 h-4 w-4" />
                       Agregar Negocio
@@ -159,9 +161,9 @@ export default function BusinessDashboard() {
                   </Button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {businesses.map((business) => (
-                    <div key={business.id} className="relative">
+                    <div key={business.id} className="relative flex flex-col h-full">
                       {!business.is_active && (
                         <div className="absolute top-2 right-2 px-3 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full font-medium">
                           Inactivo
@@ -170,7 +172,7 @@ export default function BusinessDashboard() {
                       <ActivityCard
                         id={business.id}
                         name={business.name}
-                        category={business.category}
+                        categories={business.categories || (business.category ? (Array.isArray(business.category) ? business.category : [business.category]) : [])}
                         location={`${business.location.city}, ${business.location.state}`}
                         rating={business.rating}
                         reviewCount={business.review_count}
@@ -178,15 +180,16 @@ export default function BusinessDashboard() {
                         images={business.images}
                         description={business.description}
                         tags={business.tags}
+                        badgeClassName={styles.categoryBadge}
                       />
                       <div className="flex gap-2 mt-3">
-                        <Button asChild variant="outline" size="sm" className="flex-1">
+                        <Button asChild variant="outline" size="sm" className={`${styles.viewButton} flex-1`}>
                           <Link href={`/activity/${business.id}`}>
                             <Eye className="h-4 w-4 mr-2" />
                             Ver
                           </Link>
                         </Button>
-                        <Button asChild size="sm" className="flex-1">
+                        <Button asChild size="sm" className={`${styles.editButton} flex-1`}>
                           <Link href={`/business/${business.id}/edit`}>
                             <Edit className="h-4 w-4 mr-2" />
                             Editar

@@ -64,10 +64,18 @@ export default function EditBusinessPage({ params }: { params: Promise<{ id: str
         body: JSON.stringify(data),
       })
 
-      if (!res.ok) throw new Error("Failed to update business")
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ detail: "Unknown error" }))
+        console.error("API Error Response:", errorData)
+        throw new Error(`Failed to update business: ${errorData.detail || res.statusText}`)
+      }
+      
+      const result = await res.json()
+      console.log("Update successful:", result)
       router.push("/dashboard/business")
     } catch (error) {
       console.error("Error updating business:", error)
+      alert(`Error al actualizar el negocio: ${error instanceof Error ? error.message : 'Error desconocido'}`)
     } finally {
       setIsLoading(false)
     }
