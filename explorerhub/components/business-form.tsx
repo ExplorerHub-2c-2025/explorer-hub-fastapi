@@ -10,7 +10,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
-import { X, Upload, Image as ImageIcon } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { X, Upload, Image as ImageIcon, ChevronDown } from "lucide-react"
 import styles from "./business-form.module.css"
 
 interface BusinessFormProps {
@@ -50,6 +51,10 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
     { value: "Entertainment", label: "Entretenimiento" },
     { value: "Shopping", label: "Compras" },
     { value: "Nightlife", label: "Vida Nocturna" },
+    { value: "Accommodation", label: "Alojamiento" },
+    { value: "Wellness", label: "Bienestar" },
+    { value: "Historical", label: "Histórico" },
+    { value: "Family", label: "Familiar" },
   ]
 
   const handleCategoryToggle = (categoryValue: string) => {
@@ -59,7 +64,7 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
     if (isSelected) {
       setFormData({
         ...formData,
-        categories: currentCategories.filter(cat => cat !== categoryValue)
+        categories: currentCategories.filter((cat: string) => cat !== categoryValue)
       })
     } else {
       setFormData({
@@ -129,23 +134,45 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
 
             <div className={styles.spaceY2}>
               <Label>Categorías *</Label>
-              <div className={styles.categoryGrid}>
-                {availableCategories.map((cat) => (
-                  <div key={cat.value} className={styles.categoryCheckbox}>
-                    <Checkbox
-                      id={`category-${cat.value}`}
-                      checked={formData.categories.includes(cat.value)}
-                      onCheckedChange={() => handleCategoryToggle(cat.value)}
-                    />
-                    <Label 
-                      htmlFor={`category-${cat.value}`}
-                      className="text-sm font-normal cursor-pointer"
-                    >
-                      {cat.label}
-                    </Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    className={`${styles.multiSelectTrigger} justify-between`}
+                  >
+                    <span className={styles.multiSelectText}>
+                      {formData.categories.length > 0
+                        ? formData.categories.length <= 2
+                          ? formData.categories.map((cat: string) => 
+                              availableCategories.find(c => c.value === cat)?.label
+                            ).join(", ")
+                          : `${formData.categories.length} categorías seleccionadas`
+                        : "Seleccionar categorías..."}
+                    </span>
+                    <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className={`${styles.multiSelectContent} w-full p-0`} align="start">
+                  <div className="p-2">
+                    {availableCategories.map((cat) => (
+                      <div key={cat.value} className={styles.multiSelectItem}>
+                        <Checkbox
+                          id={`category-${cat.value}`}
+                          checked={formData.categories.includes(cat.value)}
+                          onCheckedChange={() => handleCategoryToggle(cat.value)}
+                        />
+                        <Label 
+                          htmlFor={`category-${cat.value}`}
+                          className={`${styles.multiSelectLabel} text-sm font-normal cursor-pointer`}
+                        >
+                          {cat.label}
+                        </Label>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </PopoverContent>
+              </Popover>
               {formData.categories.length === 0 && (
                 <p className="text-sm text-red-500 mt-1">Selecciona al menos una categoría</p>
               )}
