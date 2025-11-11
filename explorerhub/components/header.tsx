@@ -75,7 +75,7 @@ export function Header() {
                       Reservas
                     </Link>
                     <Link href="/trips" className={styles.navLink}>
-                      Mis Viajes
+                      Viajes
                     </Link>
                     <Link href="/reviews" className={styles.navLink}>
                       Reseñas
@@ -131,13 +131,18 @@ export function Header() {
                   ) : (
                     <>
                       <DropdownMenuItem asChild>
+                        <Link href="/favorites" className={styles.menuItem}>
+                          Favoritos
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
                         <Link href="/bookings" className={styles.menuItem}>
                           Reservas
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
                         <Link href="/trips" className={styles.menuItem}>
-                          Mis Viajes
+                          Viajes
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>

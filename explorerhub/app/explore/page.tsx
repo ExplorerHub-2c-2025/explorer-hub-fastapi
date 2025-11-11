@@ -92,10 +92,24 @@ export default function ExplorePage() {
     }
   }
 
-  const loadFavorites = () => {
-    const storedFavorites = localStorage.getItem('favorites')
-    if (storedFavorites) {
-      setFavorites(new Set(JSON.parse(storedFavorites)))
+  const loadFavorites = async () => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+
+    try {
+      const response = await fetch('/api/favorites', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      
+      if (response.ok) {
+        const favoritesData = await response.json()
+        const favoriteIds = new Set<number>(favoritesData.map((fav: any) => fav.business_id as number))
+        setFavorites(favoriteIds)
+      }
+    } catch (error) {
+      console.error('Error loading favorites:', error)
     }
   }
 
@@ -104,7 +118,7 @@ export default function ExplorePage() {
     
     for (const business of businesses) {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/favorites/count/${business.id}`)
+        const response = await fetch(`/api/favorites/count/${business.id}`)
         if (response.ok) {
           const data = await response.json()
           counts[business.id] = data.count
@@ -118,15 +132,62 @@ export default function ExplorePage() {
     setFavoriteCounts(counts)
   }
 
-  const toggleFavorite = (id: number) => {
-    const newFavorites = new Set(favorites)
-    if (newFavorites.has(id)) {
-      newFavorites.delete(id)
-    } else {
-      newFavorites.add(id)
+  const toggleFavorite = async (id: number) => {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      // TODO: Show login dialog
+      console.log('User not logged in')
+      return
     }
-    setFavorites(newFavorites)
-    localStorage.setItem('favorites', JSON.stringify(Array.from(newFavorites)))
+
+    try {
+      const isCurrentlyFavorite = favorites.has(id)
+      
+      if (isCurrentlyFavorite) {
+        // Remove from favorites
+        const response = await fetch(`/api/favorites/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+        
+        if (response.ok) {
+          const newFavorites = new Set(favorites)
+          newFavorites.delete(id)
+          setFavorites(newFavorites)
+          // Update favorite count
+          setFavoriteCounts(prev => ({
+            ...prev,
+            [id]: Math.max(0, (prev[id] || 0) - 1)
+          }))
+        }
+      } else {
+        // Add to favorites
+        const response = await fetch('/api/favorites', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ business_id: id })
+        })
+        
+        if (response.ok) {
+          const newFavorites = new Set(favorites)
+          newFavorites.add(id)
+          setFavorites(newFavorites)
+          // Update favorite count
+          setFavoriteCounts(prev => ({
+            ...prev,
+            [id]: (prev[id] || 0) + 1
+          }))
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error)
+    }
   }
 
   const nextImage = (id: number, maxImages: number) => {
@@ -249,7 +310,6 @@ export default function ExplorePage() {
             <div className={styles.headerTop}>
               <h1 className={styles.mainTitle}>
                 Las experiencias más populares
-                {searchQuery && ` - "${searchQuery}"`}
               </h1>
               <div className={styles.viewButtons}>
                 <Button 

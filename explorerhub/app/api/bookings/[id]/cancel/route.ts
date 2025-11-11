@@ -4,7 +4,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '');
@@ -16,7 +16,9 @@ export async function PUT(
       );
     }
 
-    const response = await fetch(`${API_URL}/api/bookings/${params.id}/cancel`, {
+    const { id } = await params;
+
+    const response = await fetch(`${API_URL}/api/bookings/${id}/cancel`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`,

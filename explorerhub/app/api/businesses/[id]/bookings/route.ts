@@ -4,11 +4,11 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '');
-    
+
     if (!token) {
       return NextResponse.json(
         { error: 'No autorizado' },
@@ -16,7 +16,8 @@ export async function GET(
       );
     }
 
-    const response = await fetch(`${API_URL}/api/bookings/business/${params.id}`, {
+    const { id } = await params;
+    const response = await fetch(`${API_URL}/api/bookings/business/${id}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
       },
@@ -40,11 +41,11 @@ export async function GET(
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '');
-    
+
     if (!token) {
       return NextResponse.json(
         { error: 'No autorizado' },
@@ -52,9 +53,10 @@ export async function POST(
       );
     }
 
+    const { id } = await params;
     const body = await req.json();
 
-    const response = await fetch(`${API_URL}/api/businesses/${params.id}/bookings`, {
+    const response = await fetch(`${API_URL}/api/businesses/${id}/bookings`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,

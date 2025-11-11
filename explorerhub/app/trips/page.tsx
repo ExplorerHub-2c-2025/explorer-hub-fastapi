@@ -64,7 +64,7 @@ export default function TripsPage() {
       <main className={styles.mainContent}>
         <div className={styles.headerSection}>
           <div className={styles.headerText}>
-            <h1>Mis Viajes</h1>
+            <h1>Viajes</h1>
             <p>Planifica y organiza tus aventuras de viaje</p>
           </div>
           <Link href="/trips/new">

@@ -51,6 +51,7 @@ class UserInDB(UserBase):
     country: Optional[str] = None
     language: Optional[str] = "es"
     preferences: Optional[List[str]] = []
+    favorites: Optional[List[int]] = []  # List of activity IDs
     
     class Config:
         populate_by_name = True
@@ -64,6 +65,7 @@ class User(UserBase):
     id: int
     username: str
     profile_picture: Optional[str] = None
+    favorites: Optional[List[int]] = []  # List of activity IDs
     
     class Config:
         from_attributes = True
