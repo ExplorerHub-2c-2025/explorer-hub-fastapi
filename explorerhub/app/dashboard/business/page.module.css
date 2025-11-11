@@ -1,0 +1,46 @@
+.editButton {
+    background-color: #573F23 !important;
+    color: #e8e8e8 !important;
+    border-color: #573F23 !important;
+}
+
+.editButton:hover {
+    background-color: #4a3320 !important;
+    border-color: #4a3320 !important;
+}
+
+.viewButton {
+    color: black !important;
+}
+
+.viewButton:hover {
+    background-color: #A08058 !important;
+    border-color: #A08058 !important;
+    color: #e8e8e8 !important;
+}
+
+.editProfileButton {
+    color: black !important;
+}
+
+.editProfileButton:hover {
+    background-color: #A08058 !important;
+    border-color: #A08058 !important;
+    color: #e8e8e8 !important;
+}
+
+.addBusinessButton {
+    background-color: #573F23 !important;
+    color: #e8e8e8 !important;
+    border-color: #573F23 !important;
+}
+
+.addBusinessButton:hover {
+    background-color: #4a3320 !important;
+    border-color: #4a3320 !important;
+}
+
+.categoryBadge {
+    background-color: #573F23 !important;
+    color: #e8e8e8 !important;
+}
