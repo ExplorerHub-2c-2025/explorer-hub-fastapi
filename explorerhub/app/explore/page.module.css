@@ -532,29 +532,193 @@
   opacity: 0.7;
 }
 
-/* Map Placeholder */
-.mapPlaceholder {
+/* Map Layout */
+.mapLayout {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 5rem 0;
-  background: white;
-  border-radius: 12px;
-  margin: 2rem 0;
+  gap: 2rem;
+  margin: 2rem auto;
+  align-items: flex-start;
+  max-width: 1400px;
+  padding: 0 1.5rem;
 }
 
-.mapIcon {
-  width: 4rem;
-  height: 4rem;
-  color: #A08058;
+.mapSidebar {
+  flex: 0 0 300px;
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 2rem;
+}
+
+.mapContainer {
+  flex: 1;
+  max-width: 70%;
+  height: 600px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.filterSection {
+  margin-bottom: 1.5rem;
+}
+
+.filterTitle {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #573F23;
+  margin-bottom: 0.75rem;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  font-size: 0.875rem;
   margin-bottom: 1rem;
 }
 
-.mapPlaceholder p {
-  font-size: 1.125rem;
+.priceSlider {
+  margin-bottom: 1rem;
+}
+
+.sliderContainer {
+  margin-bottom: 0.5rem;
+}
+
+.sliderLabels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.categoryCheckbox {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.checkbox {
+  margin-right: 0.5rem;
+}
+
+.priceSlider {
+  width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  background: #ddd;
+  outline: none;
+}
+
+.priceSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #A08058;
+  cursor: pointer;
+}
+
+.priceRangeSelects {
+  display: flex;
+  gap: 1rem;
+  align-items: end;
+}
+
+.priceSelectGroup {
+  flex: 1;
+}
+
+.priceSelectLabel {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
   color: #573F23;
-  opacity: 0.7;
+  margin-bottom: 0.5rem;
+}
+
+.priceSelect {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #e5e5e5;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  background: white;
+}
+
+.priceRangeDisplay {
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  color: #666;
+  text-align: center;
+  padding: 0.5rem;
+  background: #f9f9f9;
+  border-radius: 4px;
+}
+
+.categorySelect {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  background: white;
+  min-height: 120px;
+}
+
+.categorySelect option {
+  padding: 0.25rem;
+}
+
+.multiSelectTrigger {
+  width: 100%;
+  justify-content: space-between;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  padding: 0.75rem;
+  background: white;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.multiSelectText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.multiSelectContent {
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.multiSelectItem {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.15s ease;
+}
+
+.multiSelectItem:hover {
+  background-color: #f3f4f6;
+}
+
+.multiSelectLabel {
+  margin-left: 0.5rem;
+  cursor: pointer;
 }
 
 /* Responsive Adjustments */
@@ -584,4 +748,34 @@
   .imageContainer {
     height: 180px;
   }
+
+  .mapLayout {
+    flex-direction: column;
+  }
+
+  .mapSidebar {
+    position: static;
+    flex: none;
+    margin-bottom: 1rem;
+  }
+
+  .mapContainer {
+    max-width: 100%;
+    height: 400px;
+  }
+}
+
+/* Loading spinner animation */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loadingSpinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #A08058;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }

@@ -5,8 +5,14 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
-import { Search, Loader2, MapPin, Grid3x3, Heart, ChevronLeft, ChevronRight, Star, Plus, MessageCircle } from "lucide-react"
+import { Search, Loader2, MapPin, Grid3x3, Heart, ChevronLeft, ChevronRight, Star, Plus, MessageCircle, ChevronDown } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Checkbox } from "@/components/ui/checkbox"
+import dynamic from 'next/dynamic'
 import styles from "./page.module.css"
+
+// Dynamic import for Map component to avoid SSR issues
+const Map = dynamic(() => import('./MapComponent'), { ssr: false })
 
 interface Business {
   id: number
@@ -144,6 +150,39 @@ export default function ExplorePage() {
     categories: [] as string[],
     minRating: 0,
   })
+
+  // Lista de categorías disponibles (igual que en BusinessForm)
+  const availableCategories = [
+    { value: "Restaurante", label: "Restaurante" },
+    { value: "Actividad", label: "Actividad" },
+    { value: "Atracción", label: "Atracción" },
+    { value: "Naturaleza", label: "Naturaleza" },
+    { value: "Cultural", label: "Cultural" },
+    { value: "Entretenimiento", label: "Entretenimiento" },
+    { value: "Compras", label: "Compras" },
+    { value: "Vida Nocturna", label: "Vida Nocturna" },
+    { value: "Alojamiento", label: "Alojamiento" },
+    { value: "Bienestar", label: "Bienestar" },
+    { value: "Histórico", label: "Histórico" },
+    { value: "Familiar", label: "Familiar" },
+  ]
+
+  const handleCategoryToggle = (categoryValue: string) => {
+    const currentCategories = filters.categories
+    const isSelected = currentCategories.includes(categoryValue)
+    
+    if (isSelected) {
+      setFilters({
+        ...filters,
+        categories: currentCategories.filter((cat: string) => cat !== categoryValue)
+      })
+    } else {
+      setFilters({
+        ...filters,
+        categories: [...currentCategories, categoryValue]
+      })
+    }
+  }
 
   const filteredActivities = useMemo(() => {
     let filtered = activities.filter(activity => activity.is_active)
@@ -401,11 +440,133 @@ export default function ExplorePage() {
                 </div>
               )}
 
-              {/* Map View Placeholder */}
+              {/* Map View */}
               {viewMode === 'map' && (
-                <div className={styles.mapPlaceholder}>
-                  <MapPin className={styles.mapIcon} />
-                  <p>Vista de mapa próximamente</p>
+                <div className={styles.mapLayout}>
+                  {/* Sidebar with Filters */}
+                  <div className={styles.mapSidebar}>
+                    <div className={styles.filterSection}>
+                      <h3 className={styles.filterTitle}>Buscar</h3>
+                      <input
+                        type="text"
+                        placeholder="Buscar establecimientos..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className={styles.searchInput}
+                      />
+                    </div>
+
+                    <div className={styles.filterSection}>
+                      <h3 className={styles.filterTitle}>Rango de Precio</h3>
+                      <div className={styles.priceRangeSelects}>
+                        <div className={styles.priceSelectGroup}>
+                          <label className={styles.priceSelectLabel}>Mínimo</label>
+                          <select
+                            value={filters.priceRange[0]}
+                            onChange={(e) => {
+                              const newMin = parseInt(e.target.value)
+                              setFilters(prev => ({ 
+                                ...prev, 
+                                priceRange: [newMin, Math.max(newMin, prev.priceRange[1])] 
+                              }))
+                            }}
+                            className={styles.priceSelect}
+                          >
+                            <option value={1}>$</option>
+                            <option value={2}>$$</option>
+                            <option value={3}>$$$</option>
+                            <option value={4}>$$$$</option>
+                          </select>
+                        </div>
+                        <div className={styles.priceSelectGroup}>
+                          <label className={styles.priceSelectLabel}>Máximo</label>
+                          <select
+                            value={filters.priceRange[1]}
+                            onChange={(e) => {
+                              const newMax = parseInt(e.target.value)
+                              setFilters(prev => ({ 
+                                ...prev, 
+                                priceRange: [Math.min(prev.priceRange[0], newMax), newMax] 
+                              }))
+                            }}
+                            className={styles.priceSelect}
+                          >
+                            <option value={1}>$</option>
+                            <option value={2}>$$</option>
+                            <option value={3}>$$$</option>
+                            <option value={4}>$$$$</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className={styles.priceRangeDisplay}>
+                        Rango seleccionado: {'$'.repeat(filters.priceRange[0])} - {'$'.repeat(filters.priceRange[1])}
+                      </div>
+                    </div>
+
+                    <div className={styles.filterSection}>
+                      <h3 className={styles.filterTitle}>Calificación Mínima</h3>
+                      <select
+                        value={filters.minRating}
+                        onChange={(e) => setFilters(prev => ({ ...prev, minRating: parseInt(e.target.value) }))}
+                        className={styles.searchInput}
+                      >
+                        <option value={0}>Todas las calificaciones</option>
+                        <option value={1}>★ y arriba</option>
+                        <option value={2}>★★ y arriba</option>
+                        <option value={3}>★★★ y arriba</option>
+                        <option value={4}>★★★★ y arriba</option>
+                        <option value={5}>★★★★★</option>
+                      </select>
+                    </div>
+
+                    <div className={styles.filterSection}>
+                      <h3 className={styles.filterTitle}>Categorías</h3>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className={`${styles.multiSelectTrigger} justify-between`}
+                          >
+                            <span className={styles.multiSelectText}>
+                              {filters.categories.length > 0
+                                ? filters.categories.length <= 2
+                                  ? filters.categories.map((cat) => 
+                                      availableCategories.find(c => c.value === cat)?.label
+                                    ).join(", ")
+                                  : `${filters.categories.length} categorías seleccionadas`
+                                : "Seleccionar categorías..."}
+                            </span>
+                            <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className={`${styles.multiSelectContent} w-full p-0`} align="start">
+                          <div className="p-2">
+                            {availableCategories.map((cat) => (
+                              <div key={cat.value} className={styles.multiSelectItem}>
+                                <Checkbox
+                                  id={`category-${cat.value}`}
+                                  checked={filters.categories.includes(cat.value)}
+                                  onCheckedChange={() => handleCategoryToggle(cat.value)}
+                                />
+                                <label 
+                                  htmlFor={`category-${cat.value}`}
+                                  className={`${styles.multiSelectLabel} text-sm font-normal cursor-pointer`}
+                                >
+                                  {cat.label}
+                                </label>
+                              </div>
+                            ))}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+
+                  {/* Map Container */}
+                  <div className={styles.mapContainer}>
+                    <Map businesses={filteredActivities} />
+                  </div>
                 </div>
               )}
 

@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -10,7 +10,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
-import { X, Upload, Image as ImageIcon } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { X, Upload, Image as ImageIcon, ChevronDown } from "lucide-react"
 import styles from "./business-form.module.css"
 
 interface BusinessFormProps {
@@ -40,16 +41,43 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
   const [imageUrls, setImageUrls] = useState<string[]>(initialData?.images || [])
   const [newImageUrl, setNewImageUrl] = useState("")
 
+  // Update form data when initialData changes
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        name: initialData.name || "",
+        description: initialData.description || "",
+        categories: initialData.categories || [],
+        address: initialData.location?.address || "",
+        city: initialData.location?.city || "",
+        state: initialData.location?.state || "",
+        country: initialData.location?.country || "",
+        phone: initialData.phone || "",
+        website: initialData.website || "",
+        price_level: initialData.price_level || 2,
+        tags: initialData.tags ? initialData.tags.join(", ") : "",
+        images: initialData.images || [],
+        allows_bookings: initialData.allows_bookings !== undefined ? initialData.allows_bookings : true,
+        max_capacity: initialData.max_capacity || "",
+      })
+      setImageUrls(initialData.images || [])
+    }
+  }, [initialData])
+
   // Lista de categorías disponibles
   const availableCategories = [
-    { value: "Restaurant", label: "Restaurante" },
-    { value: "Activity", label: "Actividad" },
-    { value: "Attraction", label: "Atracción" },
-    { value: "Nature", label: "Naturaleza" },
+    { value: "Restaurante", label: "Restaurante" },
+    { value: "Actividad", label: "Actividad" },
+    { value: "Atracción", label: "Atracción" },
+    { value: "Naturaleza", label: "Naturaleza" },
     { value: "Cultural", label: "Cultural" },
-    { value: "Entertainment", label: "Entretenimiento" },
-    { value: "Shopping", label: "Compras" },
-    { value: "Nightlife", label: "Vida Nocturna" },
+    { value: "Entretenimiento", label: "Entretenimiento" },
+    { value: "Compras", label: "Compras" },
+    { value: "Vida Nocturna", label: "Vida Nocturna" },
+    { value: "Alojamiento", label: "Alojamiento" },
+    { value: "Bienestar", label: "Bienestar" },
+    { value: "Histórico", label: "Histórico" },
+    { value: "Familiar", label: "Familiar" },
   ]
 
   const handleCategoryToggle = (categoryValue: string) => {
@@ -59,7 +87,7 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
     if (isSelected) {
       setFormData({
         ...formData,
-        categories: currentCategories.filter(cat => cat !== categoryValue)
+        categories: currentCategories.filter((cat: string) => cat !== categoryValue)
       })
     } else {
       setFormData({
@@ -101,7 +129,9 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
         state: formData.state,
         country: formData.country,
       },
-      tags: formData.tags.split(",").map((tag: string) => tag.trim()).filter((tag: string) => tag),
+      tags: Array.isArray(formData.tags) 
+        ? formData.tags 
+        : formData.tags.split(",").map((tag: string) => tag.trim()).filter((tag: string) => tag),
       images: imageUrls,
       allows_bookings: formData.allows_bookings,
       max_capacity: formData.max_capacity ? parseInt(formData.max_capacity) : null,
@@ -129,23 +159,45 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
 
             <div className={styles.spaceY2}>
               <Label>Categorías *</Label>
-              <div className={styles.categoryGrid}>
-                {availableCategories.map((cat) => (
-                  <div key={cat.value} className={styles.categoryCheckbox}>
-                    <Checkbox
-                      id={`category-${cat.value}`}
-                      checked={formData.categories.includes(cat.value)}
-                      onCheckedChange={() => handleCategoryToggle(cat.value)}
-                    />
-                    <Label 
-                      htmlFor={`category-${cat.value}`}
-                      className="text-sm font-normal cursor-pointer"
-                    >
-                      {cat.label}
-                    </Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    className={`${styles.multiSelectTrigger} justify-between`}
+                  >
+                    <span className={styles.multiSelectText}>
+                      {formData.categories.length > 0
+                        ? formData.categories.length <= 2
+                          ? formData.categories.map((cat: string) => 
+                              availableCategories.find(c => c.value === cat)?.label
+                            ).join(", ")
+                          : `${formData.categories.length} categorías seleccionadas`
+                        : "Seleccionar categorías..."}
+                    </span>
+                    <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className={`${styles.multiSelectContent} w-full p-0`} align="start">
+                  <div className="p-2">
+                    {availableCategories.map((cat) => (
+                      <div key={cat.value} className={styles.multiSelectItem}>
+                        <Checkbox
+                          id={`category-${cat.value}`}
+                          checked={formData.categories.includes(cat.value)}
+                          onCheckedChange={() => handleCategoryToggle(cat.value)}
+                        />
+                        <Label 
+                          htmlFor={`category-${cat.value}`}
+                          className={`${styles.multiSelectLabel} text-sm font-normal cursor-pointer`}
+                        >
+                          {cat.label}
+                        </Label>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </PopoverContent>
+              </Popover>
               {formData.categories.length === 0 && (
                 <p className="text-sm text-red-500 mt-1">Selecciona al menos una categoría</p>
               )}
@@ -345,7 +397,7 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
           </div>
 
           <div className={styles.actions}>
-            <Button type="submit" disabled={isLoading}>
+            <Button type="submit" disabled={isLoading} className={styles.submitButton}>
               {isLoading ? "Guardando..." : initialData ? "Actualizar Negocio" : "Crear Negocio"}
             </Button>
           </div>

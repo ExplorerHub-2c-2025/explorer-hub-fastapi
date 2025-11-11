@@ -24,6 +24,7 @@ interface ActivityCardProps {
   description: string
   tags?: string[]
   onSaveToggle?: (id: string | number, isSaved: boolean) => void
+  badgeClassName?: string
 }
 
 export function ActivityCard({
@@ -40,12 +41,25 @@ export function ActivityCard({
   description,
   tags = [],
   onSaveToggle,
+  badgeClassName,
 }: ActivityCardProps) {
   // Use images array if available, otherwise fallback to single image
   const imageArray = images && images.length > 0 ? images : image ? [image] : []
   
   // Use categories array if available, otherwise fallback to category string
-  const displayCategory = categories && categories.length > 0 ? categories[0] : category || 'Sin categoría'
+  let categoryArray: string[] = []
+  
+  if (categories && Array.isArray(categories) && categories.length > 0) {
+    categoryArray = categories.filter((cat: any) => cat && typeof cat === 'string' && cat.trim().length > 0)
+  } else if (category && typeof category === 'string' && category.trim().length > 0) {
+    categoryArray = [category.trim()]
+  }
+  
+  const displayCategory = categoryArray.length === 0 
+    ? 'Sin categoría' 
+    : categoryArray.length <= 2 
+      ? categoryArray.join(', ') 
+      : `${categoryArray[0]} +${categoryArray.length - 1}`
 
   const [isSaved, setIsSaved] = useState(false)
   const [isCheckingFavorite, setIsCheckingFavorite] = useState(true)
@@ -132,19 +146,11 @@ export function ActivityCard({
   }
 
   return (
-    <Link href={`/activity/${id}`} className={`${styles.root} group relative`}>
+    <Link href={`/activity/${id}`} className={`${styles.root} group`}>
       <div className={styles.card}>
         <div className={styles.imageWrapper}>
           <ImageGallery images={imageArray} alt={name} />
-          <Badge className={styles.badge}>{displayCategory}</Badge>
-          <Button
-            onClick={handleSaveActivity}
-            variant="ghost"
-            size="icon"
-            className="absolute top-3 right-3 bg-white/90 hover:bg-white rounded-full shadow-md hover:shadow-lg transition-all"
-          >
-            <Heart className={`h-5 w-5 ${isSaved ? "fill-red-500 text-red-500" : "text-gray-600"}`} />
-          </Button>
+          <Badge className={`${styles.badge} ${badgeClassName || ''}`}>{displayCategory}</Badge>
         </div>
 
         <div className={styles.content}>
@@ -175,13 +181,16 @@ export function ActivityCard({
               ))}
             </div>
 
-            {tags.length > 0 && (
+            {tags && tags.length > 0 && (
               <div className={styles.tagsGroup}>
-                {tags.slice(0, 2).map((tag) => (
-                  <Badge key={tag} variant="secondary" className={styles.tagBadge}>
-                    {tag}
-                  </Badge>
-                ))}
+                <Badge variant="secondary" className={styles.tagBadge}>
+                  {(() => {
+                    const validTags = tags.filter((tag: any) => tag && typeof tag === 'string' && tag.trim().length > 0)
+                    return validTags.length <= 2 
+                      ? validTags.join(', ') 
+                      : `${validTags[0]} +${validTags.length - 1}`
+                  })()}
+                </Badge>
               </div>
             )}
           </div>

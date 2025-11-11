@@ -9,6 +9,7 @@ from utils import serialize_doc, serialize_docs
 from routes.notifications import (
     notify_booking_confirmed,
     notify_booking_cancelled,
+    notify_booking_self_cancelled,
     notify_booking_created
 )
 
@@ -186,6 +187,15 @@ async def cancel_booking(
     # Send notification to user if cancelled by business owner
     if is_owner and not is_booking_user:
         await notify_booking_cancelled(
+            booking_id=booking_id,
+            booking_date=str(booking["date"]),
+            user_id=int(booking["user_id"]),
+            business_name=business["name"],
+            db=db
+        )
+    # Send notification to user if they cancelled their own booking
+    elif is_booking_user and not is_owner:
+        await notify_booking_self_cancelled(
             booking_id=booking_id,
             booking_date=str(booking["date"]),
             user_id=int(booking["user_id"]),
