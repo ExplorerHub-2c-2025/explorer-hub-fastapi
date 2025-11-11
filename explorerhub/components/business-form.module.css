@@ -179,3 +179,9 @@
   flex: 1;
   min-width: 0;
 }
+
+/* Submit button styles */
+.submitButton:hover {
+  background-color: #d4a574 !important; /* Light brown color */
+  color: white !important;
+}

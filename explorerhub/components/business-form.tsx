@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -41,20 +41,43 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
   const [imageUrls, setImageUrls] = useState<string[]>(initialData?.images || [])
   const [newImageUrl, setNewImageUrl] = useState("")
 
+  // Update form data when initialData changes
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        name: initialData.name || "",
+        description: initialData.description || "",
+        categories: initialData.categories || [],
+        address: initialData.location?.address || "",
+        city: initialData.location?.city || "",
+        state: initialData.location?.state || "",
+        country: initialData.location?.country || "",
+        phone: initialData.phone || "",
+        website: initialData.website || "",
+        price_level: initialData.price_level || 2,
+        tags: initialData.tags ? initialData.tags.join(", ") : "",
+        images: initialData.images || [],
+        allows_bookings: initialData.allows_bookings !== undefined ? initialData.allows_bookings : true,
+        max_capacity: initialData.max_capacity || "",
+      })
+      setImageUrls(initialData.images || [])
+    }
+  }, [initialData])
+
   // Lista de categorías disponibles
   const availableCategories = [
-    { value: "Restaurant", label: "Restaurante" },
-    { value: "Activity", label: "Actividad" },
-    { value: "Attraction", label: "Atracción" },
-    { value: "Nature", label: "Naturaleza" },
+    { value: "Restaurante", label: "Restaurante" },
+    { value: "Actividad", label: "Actividad" },
+    { value: "Atracción", label: "Atracción" },
+    { value: "Naturaleza", label: "Naturaleza" },
     { value: "Cultural", label: "Cultural" },
-    { value: "Entertainment", label: "Entretenimiento" },
-    { value: "Shopping", label: "Compras" },
-    { value: "Nightlife", label: "Vida Nocturna" },
-    { value: "Accommodation", label: "Alojamiento" },
-    { value: "Wellness", label: "Bienestar" },
-    { value: "Historical", label: "Histórico" },
-    { value: "Family", label: "Familiar" },
+    { value: "Entretenimiento", label: "Entretenimiento" },
+    { value: "Compras", label: "Compras" },
+    { value: "Vida Nocturna", label: "Vida Nocturna" },
+    { value: "Alojamiento", label: "Alojamiento" },
+    { value: "Bienestar", label: "Bienestar" },
+    { value: "Histórico", label: "Histórico" },
+    { value: "Familiar", label: "Familiar" },
   ]
 
   const handleCategoryToggle = (categoryValue: string) => {
@@ -106,7 +129,9 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
         state: formData.state,
         country: formData.country,
       },
-      tags: formData.tags.split(",").map((tag: string) => tag.trim()).filter((tag: string) => tag),
+      tags: Array.isArray(formData.tags) 
+        ? formData.tags 
+        : formData.tags.split(",").map((tag: string) => tag.trim()).filter((tag: string) => tag),
       images: imageUrls,
       allows_bookings: formData.allows_bookings,
       max_capacity: formData.max_capacity ? parseInt(formData.max_capacity) : null,
@@ -372,7 +397,7 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
           </div>
 
           <div className={styles.actions}>
-            <Button type="submit" disabled={isLoading}>
+            <Button type="submit" disabled={isLoading} className={styles.submitButton}>
               {isLoading ? "Guardando..." : initialData ? "Actualizar Negocio" : "Crear Negocio"}
             </Button>
           </div>

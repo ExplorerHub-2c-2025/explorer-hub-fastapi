@@ -17,41 +17,26 @@ export function FilterSidebar({ onFilterChange }: FilterSidebarProps) {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [minRating, setMinRating] = useState(0)
 
-  // Mapeo de categorías español -> inglés para el backend
-  const categoryMap: Record<string, string> = {
-    "Restaurantes": "Restaurant",
-    "Actividades": "Activity",
-    "Atracciones": "Attraction",
-    "Naturaleza": "Nature",
-    "Cultural": "Cultural",
-    "Entretenimiento": "Entertainment",
-    "Compras": "Shopping",
-    "Vida Nocturna": "Nightlife",
-  }
-
-  // Mapeo inverso inglés -> español para mostrar
-  const categoryMapReverse: Record<string, string> = Object.fromEntries(
-    Object.entries(categoryMap).map(([key, value]) => [value, key])
-  )
-
   const categories = [
-    "Restaurantes",
-    "Actividades",
-    "Atracciones",
+    "Restaurante",
+    "Actividad",
+    "Atracción",
     "Naturaleza",
     "Cultural",
     "Entretenimiento",
     "Compras",
     "Vida Nocturna",
+    "Alojamiento",
+    "Bienestar",
+    "Histórico",
+    "Familiar",
   ]
 
   useEffect(() => {
     if (onFilterChange) {
-      // Convertir categorías seleccionadas (español) a inglés para el filtro
-      const categoriesInEnglish = selectedCategories.map(cat => categoryMap[cat] || cat)
       onFilterChange({
         priceRange,
-        categories: categoriesInEnglish,
+        categories: selectedCategories,
         minRating,
       })
     }
