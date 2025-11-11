@@ -1190,7 +1190,17 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
           {/* Contenido inferior (nombre, categoría, etc.) */}
           <div className={styles.heroContent}>
             <div className={styles.heroInner}>
-              <Badge className={styles.categoryBadge}>{activity.categories && activity.categories.length > 0 ? activity.categories[0] : 'Sin categoría'}</Badge>
+              <div className={styles.categoryBadges}>
+                {activity.categories && activity.categories.length > 0 ? (
+                  activity.categories.map((category, index) => (
+                    <Badge key={index} className={styles.categoryBadge}>
+                      {category}
+                    </Badge>
+                  ))
+                ) : (
+                  <Badge className={styles.categoryBadge}>Sin categoría</Badge>
+                )}
+              </div>
               <h1 className={styles.heroTitle}>{activity.name}</h1>
               <div className={styles.heroInfo}>
                 <div className={styles.ratingGroup}>
