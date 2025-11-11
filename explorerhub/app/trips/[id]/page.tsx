@@ -8,7 +8,10 @@ import { Card, CardContent } from "@/components/ui/card"
 import { ArrowLeft, MapPin, Calendar, Edit, Share2 } from "lucide-react"
 import Link from "next/link"
 import { format } from "date-fns"
-import ItineraryBuilder from "@/components/itinerary-builder" // Import ItineraryBuilder component
+import ItineraryBuilder from "@/components/itinerary-builder"
+import { WeatherCard } from "@/components/weather-card"
+import { NearbyEventsCard } from "@/components/nearby-events-card"
+import { TransportRecommendations } from "@/components/transport-recommendations"
 
 export default function TripDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params)
@@ -26,15 +29,29 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
         business_id: "1",
         business_name: "Colosseum Tour",
         category: "Attraction",
+        categories: ["Attraction"],
         scheduled_date: new Date("2025-07-16"),
         notes: "Book tickets in advance",
+        location: {
+          address: "Piazza del Colosseo, 1",
+          city: "Rome",
+          state: "Lazio",
+          country: "Italy",
+        },
       },
       {
         id: "2",
         business_id: "2",
         business_name: "Trattoria Roma",
         category: "Restaurant",
+        categories: ["Restaurant"],
         scheduled_date: new Date("2025-07-16"),
+        location: {
+          address: "Via Cavour, 5",
+          city: "Rome",
+          state: "Lazio",
+          country: "Italy",
+        },
       },
     ],
   })
@@ -58,6 +75,8 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
     })
   }
 
+  const nearestCity = trip.activities.length > 0 ? trip.activities[0].location?.city || "" : ""
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
@@ -66,7 +85,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
         <Link href="/trips">
           <Button variant="ghost" className="mb-6">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Trips
+            Volver a Viajes
           </Button>
         </Link>
 
@@ -94,11 +113,11 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm">
                     <Edit className="h-4 w-4 mr-2" />
-                    Edit
+                    Editar
                   </Button>
                   <Button variant="outline" size="sm">
                     <Share2 className="h-4 w-4 mr-2" />
-                    Share
+                    Compartir
                   </Button>
                 </div>
               </div>
@@ -116,22 +135,33 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
 
           {/* Sidebar */}
           <div className="space-y-6">
+            {nearestCity && <WeatherCard city={nearestCity} />}
+
+            {nearestCity && <NearbyEventsCard city={nearestCity} />}
+
+            {trip.activities.length >= 2 && (
+              <TransportRecommendations
+                fromCity={trip.activities[0].location?.city || ""}
+                toCity={trip.activities[1].location?.city || ""}
+              />
+            )}
+
             <Card>
               <CardContent className="pt-6">
-                <h3 className="font-semibold mb-4">Trip Summary</h3>
+                <h3 className="font-semibold mb-4">Resumen del Viaje</h3>
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Duration</span>
+                    <span className="text-muted-foreground">Duración</span>
                     <span className="font-medium">
-                      {Math.ceil((trip.endDate.getTime() - trip.startDate.getTime()) / (1000 * 60 * 60 * 24))} days
+                      {Math.ceil((trip.endDate.getTime() - trip.startDate.getTime()) / (1000 * 60 * 60 * 24))} días
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Activities</span>
+                    <span className="text-muted-foreground">Actividades</span>
                     <span className="font-medium">{trip.activities.length}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Destination</span>
+                    <span className="text-muted-foreground">Destino</span>
                     <span className="font-medium">{trip.destination}</span>
                   </div>
                 </div>
@@ -140,18 +170,18 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
 
             <Card>
               <CardContent className="pt-6">
-                <h3 className="font-semibold mb-4">Recommendations</h3>
+                <h3 className="font-semibold mb-4">Recomendaciones</h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Based on your itinerary, you might also enjoy these experiences:
+                  Basado en tu itinerario, también podrían gustarte estas experiencias:
                 </p>
                 <div className="space-y-3">
                   <div className="p-3 rounded-lg border border-gray-200 hover:bg-muted/50 cursor-pointer transition-colors">
-                    <h4 className="font-medium text-sm mb-1">Vatican Museums</h4>
-                    <p className="text-xs text-muted-foreground">Attraction • Rome</p>
+                    <h4 className="font-medium text-sm mb-1">Museos Vaticanos</h4>
+                    <p className="text-xs text-muted-foreground">Atracción • Rome</p>
                   </div>
                   <div className="p-3 rounded-lg border border-gray-200 hover:bg-muted/50 cursor-pointer transition-colors">
-                    <h4 className="font-medium text-sm mb-1">Gondola Ride</h4>
-                    <p className="text-xs text-muted-foreground">Activity • Venice</p>
+                    <h4 className="font-medium text-sm mb-1">Paseo en Góndola</h4>
+                    <p className="text-xs text-muted-foreground">Actividad • Venice</p>
                   </div>
                 </div>
               </CardContent>

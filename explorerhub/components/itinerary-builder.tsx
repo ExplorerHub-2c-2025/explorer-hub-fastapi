@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, Clock, X, Plus } from "lucide-react"
 import { format } from "date-fns"
+import { GoogleMapsLink } from "@/components/google-maps-link"
 import styles from "./itinerary-builder.module.css"
 
 interface Activity {
@@ -13,6 +14,10 @@ interface Activity {
   categories: string[]
   scheduled_date?: Date
   notes?: string
+  location?: {
+    address?: string
+    city?: string
+  }
 }
 
 interface ItineraryBuilderProps {
@@ -31,10 +36,10 @@ export function ItineraryBuilder({
   return (
     <div className={styles.rootContainer}>
       <div className={styles.headerRow}>
-        <h3 className={styles.title}>Itinerary</h3>
+        <h3 className={styles.title}>Itinerario</h3>
         <Button onClick={onAddActivity} size="sm">
           <Plus className={styles.addIcon} />
-          Add Activity
+          Agregar Actividad
         </Button>
       </div>
 
@@ -42,24 +47,28 @@ export function ItineraryBuilder({
         <Card>
           <CardContent className={styles.emptyState}>
             <Calendar className={styles.emptyIcon} />
-            <h4 className={styles.emptyTitle}>No activities yet</h4>
-            <p className={styles.emptyText}>Start building your itinerary by adding activities</p>
+            <h4 className={styles.emptyTitle}>Sin actividades aún</h4>
+            <p className={styles.emptyText}>Comienza a construir tu itinerario agregando actividades</p>
             <Button onClick={onAddActivity}>
               <Plus className={styles.addIcon} />
-              Add Your First Activity
+              Agregar tu primera actividad
             </Button>
           </CardContent>
         </Card>
       ) : (
         <div className={styles.spaceY3}>
-          {activities.map((activity) => (
+          {activities.map((activity, index) => (
             <Card key={activity.business_id}>
               <CardContent className={styles.activityCard}>
                 <div className={styles.activityContent}>
                   <div className={styles.activityMain}>
                     <div className={styles.activityHeader}>
                       <h4 className={styles.activityTitle}>{activity.business_name}</h4>
-                      <Badge variant="secondary">{activity.categories && activity.categories.length > 0 ? activity.categories[0] : 'Sin categoría'}</Badge>
+                      <Badge variant="secondary">
+                        {activity.categories && activity.categories.length > 0
+                          ? activity.categories[0]
+                          : "Sin categoría"}
+                      </Badge>
                     </div>
 
                     {activity.scheduled_date && (
@@ -70,6 +79,25 @@ export function ItineraryBuilder({
                     )}
 
                     {activity.notes && <p className={styles.activityNotes}>{activity.notes}</p>}
+
+                    {activity.location?.city && (
+                      <div className="mt-3 space-y-2">
+                        <p className="text-sm text-muted-foreground">
+                          📍 {activity.location.address}, {activity.location.city}
+                        </p>
+
+                        {/* Google Maps link to next activity or from previous activity */}
+                        {index > 0 && activities[index - 1].location?.city && (
+                          <GoogleMapsLink
+                            fromAddress={activities[index - 1].location?.address || ""}
+                            fromCity={activities[index - 1].location?.city || ""}
+                            toAddress={activity.location.address || ""}
+                            toCity={activity.location.city || ""}
+                            activityName={activity.business_name}
+                          />
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   <Button
