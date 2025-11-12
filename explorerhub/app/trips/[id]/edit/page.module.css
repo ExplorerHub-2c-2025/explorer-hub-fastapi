@@ -1,0 +1,31 @@
+/* Botones de acción */
+.buttonContainer {
+  display: flex;
+  gap: 1rem;
+}
+
+.cancelButton {
+  flex: 1;
+}
+
+.saveButton {
+  flex: 1;
+  background-color: #573F23;
+  color: #e8e8e8;
+  border: 1px solid #573F23;
+}
+
+.saveButton:hover {
+  background-color: #4a3520;
+  border-color: #4a3520;
+}
+
+.saveButton:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(87, 63, 35, 0.2);
+}
+
+.saveButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

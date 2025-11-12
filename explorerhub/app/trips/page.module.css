@@ -61,6 +61,28 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  background-color: #573F23 !important; /* Dark brown */
+  color: white !important;
+  border: none !important;
+  transition: background-color 0.2s ease;
+}
+
+.createButton:hover {
+  background-color: #3D2818 !important; /* Even darker brown */
+}
+
+.createFirstTripButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #573F23 !important; /* Dark brown */
+  color: white !important;
+  border: none !important;
+  transition: background-color 0.2s ease;
+}
+
+.createFirstTripButton:hover {
+  background-color: #3D2818 !important; /* Even darker brown */
 }
 
 .buttonIcon {
@@ -78,6 +100,9 @@
 .emptyStateContent {
   max-width: 28rem;
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .emptyIcon {
@@ -122,6 +147,8 @@
   overflow: hidden;
   transition: box-shadow 0.3s;
   cursor: pointer;
+  max-width: 250px;
+  margin: 0 auto;
 }
 
 .tripCard:hover {
@@ -129,7 +156,7 @@
 }
 
 .tripImage {
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 4 / 3;
   position: relative;
 }
 
@@ -165,4 +192,40 @@
 .activitiesText {
   font-size: 0.875rem;
   font-weight: 500;
+}
+
+/* Trip Card Container */
+.tripCardContainer {
+  position: relative;
+}
+
+/* Delete Button */
+.deleteButton {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 10;
+  padding: 0.25rem;
+  height: 2rem;
+  width: 2rem;
+  border-radius: 0.375rem;
+  opacity: 1;
+  transition: opacity 0.2s;
+}
+
+.deleteIcon {
+  height: 1rem;
+  width: 1rem;
+}
+
+/* Custom destructive button hover */
+.destructiveButton:hover {
+  background-color: #dc2626 !important;
+  border-color: #dc2626 !important;
+}
+
+/* More specific selector for destructive button */
+button.destructiveButton:hover {
+  background-color: #dc2626 !important;
+  border-color: #dc2626 !important;
 }

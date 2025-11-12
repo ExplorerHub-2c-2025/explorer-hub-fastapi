@@ -31,6 +31,14 @@
 
 .fullWidthBtn {
   width: 100%;
+  background-color: #3D2818 !important; /* Even darker brown */
+  color: white !important;
+  border: none !important;
+  transition: background-color 0.2s ease;
+}
+
+.fullWidthBtn:hover {
+  background-color: #2A1B10 !important; /* Even more darker brown for hover */
 }
 
 .cardTitle {

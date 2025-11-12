@@ -2,14 +2,15 @@ from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import Depends, HTTPException, status, Request
+from fastapi.security import OAuth2PasswordBearer, HTTPBearer, HTTPAuthorizationCredentials
 from config import settings
 from models.user import TokenData, UserInDB
 from database import get_database
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
+bearer_scheme = HTTPBearer(auto_error=False)  # auto_error=False makes it optional
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -68,3 +69,29 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db = Depends(get
 async def get_current_active_user(current_user: UserInDB = Depends(get_current_user)) -> UserInDB:
     """Get current active user"""
     return current_user
+
+
+async def get_optional_current_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
+    db = Depends(get_database)
+) -> Optional[UserInDB]:
+    """Get current user if authenticated, None otherwise (for optional authentication)"""
+    if credentials is None:
+        return None
+    
+    try:
+        payload = jwt.decode(credentials.credentials, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
+        email: str = payload.get("sub")
+        if email is None:
+            return None
+        
+        user = await db.users.find_one({"email": email})
+        if user is None:
+            return None
+        
+        from utils import serialize_doc
+        user = serialize_doc(user)
+        
+        return UserInDB(**user)
+    except (JWTError, Exception):
+        return None

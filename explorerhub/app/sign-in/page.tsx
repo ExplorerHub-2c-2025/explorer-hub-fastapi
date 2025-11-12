@@ -1,7 +1,6 @@
 "use client"
 
-import type React from "react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -9,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, LogIn, Eye, EyeOff } from "lucide-react"
+import { Loader2, LogIn, Eye, EyeOff, Info } from "lucide-react"
 import styles from "./page.module.css"
 
 export default function SignInPage() {
@@ -19,6 +18,17 @@ export default function SignInPage() {
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [sessionExpired, setSessionExpired] = useState(false)
+
+  useEffect(() => {
+    // Check if user was redirected due to expired session
+    const urlParams = new URLSearchParams(window.location.search)
+    if (urlParams.get('expired') === 'true') {
+      setSessionExpired(true)
+      // Clean up the URL
+      window.history.replaceState({}, document.title, window.location.pathname)
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -73,6 +83,14 @@ export default function SignInPage() {
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className={styles.content}>
+            {sessionExpired && (
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  Tu sesión ha expirado. Por favor, inicia sesión nuevamente.
+                </AlertDescription>
+              </Alert>
+            )}
             {error && (
               <Alert variant="destructive">
                 <AlertDescription>{error}</AlertDescription>

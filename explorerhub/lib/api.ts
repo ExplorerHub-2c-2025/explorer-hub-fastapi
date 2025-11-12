@@ -23,6 +23,20 @@ export async function authFetch(path: string, opts: RequestInit = {}) {
     const res = await fetch(path, { ...opts, headers })
 
     if (!res.ok) {
+      // Handle 401 Unauthorized - token expired or invalid
+      if (res.status === 401) {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('token')
+          localStorage.removeItem('user')
+          // Only redirect if not already on auth pages
+          if (!window.location.pathname.includes('/sign-in') && 
+              !window.location.pathname.includes('/signup') &&
+              !window.location.pathname.includes('/forgot-password')) {
+            window.location.href = '/sign-in?expired=true'
+          }
+        }
+      }
+
       const text = await res.text().catch(() => '')
       const err = new Error(`Request failed: ${res.status} ${res.statusText} ${text}`)
       // attach response for callers if needed
@@ -31,6 +45,10 @@ export async function authFetch(path: string, opts: RequestInit = {}) {
     }
 
     const contentType = res.headers.get('content-type') || ''
+    if (res.status === 204) {
+      // No Content response - return null
+      return null
+    }
     if (contentType.includes('application/json')) return res.json()
     return res.text()
   } catch (err) {

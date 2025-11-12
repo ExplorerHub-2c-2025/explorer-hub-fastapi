@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const response = await fetch(`${API_URL}/favorites`, {
+    const response = await fetch(`${API_URL}/api/favorites`, {
       headers: {
         'Authorization': token,
       },
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
 
-    const response = await fetch(`${API_URL}/favorites`, {
+    const response = await fetch(`${API_URL}/api/favorites`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

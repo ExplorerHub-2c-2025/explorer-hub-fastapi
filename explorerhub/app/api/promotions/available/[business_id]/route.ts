@@ -4,7 +4,7 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:800
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { business_id: string } }
+  { params }: { params: Promise<{ business_id: string }> }
 ) {
   try {
     const token = request.headers.get("authorization")
@@ -15,8 +15,9 @@ export async function GET(
       )
     }
 
+    const { business_id } = await params;
     const response = await fetch(
-      `${BACKEND_URL}/api/promotions/available/${params.business_id}`,
+      `${BACKEND_URL}/api/promotions/available/${business_id}`,
       {
         method: "GET",
         headers: {

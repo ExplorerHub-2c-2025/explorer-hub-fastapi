@@ -7,3 +7,4 @@ from .bookings import router as bookings
 from .notifications import router as notifications
 from .favorites import router as favorites
 from .profile import router as profile
+from .users import router as users

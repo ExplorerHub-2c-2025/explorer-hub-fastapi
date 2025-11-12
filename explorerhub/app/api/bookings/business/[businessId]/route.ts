@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { businessId: string } }
+  { params }: { params: Promise<{ businessId: string }> }
 ) {
   try {
     const token = req.headers.get("authorization")?.replace("Bearer ", "");
@@ -14,8 +14,9 @@ export async function GET(
       );
     }
 
+    const { businessId } = await params;
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/api/bookings/business/${params.businessId}`,
+      `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/api/bookings/business/${businessId}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,

@@ -4,7 +4,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { businessId: string } }
+  { params }: { params: Promise<{ businessId: string }> }
 ) {
   try {
     const token = req.headers.get('authorization');
@@ -13,7 +13,8 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const response = await fetch(`${API_URL}/api/favorites/check/${params.businessId}`, {
+    const { businessId } = await params;
+    const response = await fetch(`${API_URL}/api/favorites/check/${businessId}`, {
       headers: {
         'Authorization': token,
       },
