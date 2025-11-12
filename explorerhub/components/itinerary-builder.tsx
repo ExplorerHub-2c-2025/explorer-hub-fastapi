@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Calendar, Clock, X, Plus, Edit2, Save } from "lucide-react"
+import { Calendar, Clock, X, Plus, Edit2, Save, Image, Trash2 } from "lucide-react"
 import { format } from "date-fns"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -18,6 +18,7 @@ interface Activity {
   categories: string[]
   scheduled_date?: Date
   notes?: string
+  images?: Array<{url: string, notes?: string}>
 }
 
 interface ItineraryBuilderProps {
@@ -26,6 +27,9 @@ interface ItineraryBuilderProps {
   onRemoveActivity: (businessId: string) => void
   onUpdateSchedule: (businessId: string, date: Date) => void
   onUpdateNotes?: (businessId: string, notes: string) => void
+  onAddImage?: (businessId: string, imageUrl: string) => void
+  onUpdateImageNotes?: (businessId: string, imageIndex: number, notes: string) => void
+  onRemoveImage?: (businessId: string, imageIndex: number) => void
 }
 
 export function ItineraryBuilder({
@@ -34,9 +38,15 @@ export function ItineraryBuilder({
   onRemoveActivity,
   onUpdateSchedule,
   onUpdateNotes,
+  onAddImage,
+  onUpdateImageNotes,
+  onRemoveImage,
 }: ItineraryBuilderProps) {
   const [editingNotes, setEditingNotes] = useState<string | null>(null)
   const [tempNotes, setTempNotes] = useState("")
+  const [editingImageNotes, setEditingImageNotes] = useState<{businessId: string, imageIndex: number} | null>(null)
+  const [tempImageNotes, setTempImageNotes] = useState("")
+  const [imageInput, setImageInput] = useState<{[key: string]: string}>({})
 
   const handleEditNotes = (businessId: string, currentNotes?: string) => {
     setEditingNotes(businessId)
@@ -54,6 +64,38 @@ export function ItineraryBuilder({
   const handleCancelEdit = () => {
     setEditingNotes(null)
     setTempNotes("")
+  }
+
+  const handleEditImageNotes = (businessId: string, imageIndex: number, currentNotes?: string) => {
+    setEditingImageNotes({businessId, imageIndex})
+    setTempImageNotes(currentNotes || "")
+  }
+
+  const handleSaveImageNotes = (businessId: string, imageIndex: number) => {
+    if (onUpdateImageNotes) {
+      onUpdateImageNotes(businessId, imageIndex, tempImageNotes)
+    }
+    setEditingImageNotes(null)
+    setTempImageNotes("")
+  }
+
+  const handleCancelImageEdit = () => {
+    setEditingImageNotes(null)
+    setTempImageNotes("")
+  }
+
+  const handleAddImage = (businessId: string) => {
+    const imageUrl = imageInput[businessId]?.trim()
+    if (imageUrl && onAddImage) {
+      onAddImage(businessId, imageUrl)
+      setImageInput(prev => ({...prev, [businessId]: ""}))
+    }
+  }
+
+  const handleRemoveImage = (businessId: string, imageIndex: number) => {
+    if (onRemoveImage) {
+      onRemoveImage(businessId, imageIndex)
+    }
   }
 
   const sortedActivities = [...activities].sort((a, b) => {
@@ -154,6 +196,90 @@ export function ItineraryBuilder({
                           {activity.notes ? "Editar notas" : "Añadir notas"}
                         </Button>
                       </>
+                    )}
+
+                    {/* Images Section */}
+                    {onAddImage && (
+                      <div className="space-y-3 mt-4">
+                        <div className="flex gap-2">
+                          <Input
+                            type="url"
+                            placeholder="URL de la imagen..."
+                            value={imageInput[activity.business_id] || ""}
+                            onChange={(e) => setImageInput(prev => ({...prev, [activity.business_id]: e.target.value}))}
+                            className="flex-1"
+                          />
+                          <Button
+                            size="sm"
+                            onClick={() => handleAddImage(activity.business_id)}
+                            disabled={!imageInput[activity.business_id]?.trim()}
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            Añadir
+                          </Button>
+                        </div>
+
+                        {activity.images && activity.images.length > 0 && (
+                          <div className="space-y-2">
+                            {activity.images.map((image, imageIndex) => (
+                              <div key={imageIndex} className="border rounded-lg p-3 bg-gray-50">
+                                <div className="flex flex-col gap-3">
+                                  <img
+                                    src={image.url}
+                                    alt={`Imagen ${imageIndex + 1}`}
+                                    className="w-full max-w-xs h-48 object-cover rounded mx-auto"
+                                  />
+                                  <div className="flex-1">
+                                    {editingImageNotes?.businessId === activity.business_id && editingImageNotes.imageIndex === imageIndex ? (
+                                      <div className="space-y-2">
+                                        <Textarea
+                                          value={tempImageNotes}
+                                          onChange={(e) => setTempImageNotes(e.target.value)}
+                                          placeholder="Notas de la imagen..."
+                                          className="text-sm"
+                                          rows={2}
+                                        />
+                                        <div className="flex gap-2">
+                                          <Button size="sm" onClick={() => handleSaveImageNotes(activity.business_id, imageIndex)}>
+                                            <Save className="h-3 w-3 mr-1" />
+                                            Guardar
+                                          </Button>
+                                          <Button size="sm" variant="outline" onClick={handleCancelImageEdit}>
+                                            Cancelar
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <>
+                                        {image.notes && <p className="text-sm text-gray-700">{image.notes}</p>}
+                                        <div className="flex gap-2 mt-2">
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleEditImageNotes(activity.business_id, imageIndex, image.notes)}
+                                          >
+                                            <Edit2 className="h-3 w-3 mr-1" />
+                                            {image.notes ? "Editar" : "Añadir notas"}
+                                          </Button>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleRemoveImage(activity.business_id, imageIndex)}
+                                            className="text-red-600 hover:text-red-700"
+                                          >
+                                            <Trash2 className="h-3 w-3 mr-1" />
+                                            Eliminar
+                                          </Button>
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
 

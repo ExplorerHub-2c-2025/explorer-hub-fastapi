@@ -27,6 +27,7 @@ interface PublicTrip {
   start_date: string
   end_date: string
   description?: string
+  cover_image?: string
   user_id: string
   user_name: string
   user_profile_picture?: string
@@ -64,7 +65,26 @@ export default function CommunityPage() {
     } else {
       loadFollowingFeed()
     }
+    loadLikedTrips()
   }, [activeTab])
+
+  const loadLikedTrips = async () => {
+    const token = localStorage.getItem("token")
+    if (!token) return
+
+    try {
+      const response = await fetch("http://localhost:8000/api/trips/my-liked-trips", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setLikedTrips(new Set(data.liked_trip_ids.map((id: number) => String(id))))
+      }
+    } catch (error) {
+      console.error("Error loading liked trips:", error)
+    }
+  }
 
   const loadPublicTrips = async () => {
     setIsLoading(true)
@@ -240,10 +260,21 @@ export default function CommunityPage() {
     if (!newComment.trim()) return
 
     try {
-      await fetch(`http://localhost:8000/api/trips/${tripId}/comments?comment=${encodeURIComponent(newComment)}`, {
+      const response = await fetch(`http://localhost:8000/api/trips/${tripId}/comments`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ comment: newComment }),
       })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error("Error response:", errorData)
+        alert(`Error al comentar: ${errorData.detail || 'Error desconocido'}`)
+        return
+      }
 
       setNewComment("")
       if (activeTab === "explore") {
@@ -253,6 +284,7 @@ export default function CommunityPage() {
       }
     } catch (error) {
       console.error("Error adding comment:", error)
+      alert("Error al añadir el comentario")
     }
   }
 
@@ -339,8 +371,9 @@ export default function CommunityPage() {
                 ) : (
                   <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
                     {searchResults.map((user, index) => (
-                      <div
+                      <Link
                         key={user.id}
+                        href={`/profile/${user.id}`}
                         className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 border transition-colors"
                       >
                         <div className="flex items-center gap-3">
@@ -352,9 +385,11 @@ export default function CommunityPage() {
                                 className="w-full h-full rounded-full object-cover"
                               />
                             ) : (
-                              <span className="text-lg">
-                                {user.full_name.charAt(0).toUpperCase()}
-                              </span>
+                              <img
+                                src="/blank-profile.png"
+                                alt={user.full_name}
+                                className="w-full h-full rounded-full object-cover"
+                              />
                             )}
                           </div>
                           <div>
@@ -366,7 +401,11 @@ export default function CommunityPage() {
                         <Button
                           variant={user.is_following ? "outline" : "default"}
                           size="sm"
-                          onClick={() => toggleFollow(user.id, user.is_following)}
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            toggleFollow(user.id, user.is_following)
+                          }}
                         >
                           {user.is_following ? (
                             <>
@@ -380,7 +419,7 @@ export default function CommunityPage() {
                             </>
                           )}
                         </Button>
-                      </div>
+                      </Link>
                     ))}
                     {searchResults.length > 5 && (
                       <p className="text-xs text-center text-gray-500 py-2">
@@ -421,17 +460,32 @@ export default function CommunityPage() {
                 .filter(a => a.images && a.images.length > 0)
                 .flatMap(a => a.images)
               const hasImages = tripImages.length > 0
+              const hasCoverImage = trip.cover_image
 
               return (
-                <Card key={trip.id} className="overflow-hidden">
+                <Card key={trip.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                   {/* User Header */}
                   <div className="p-4 flex items-center gap-3 border-b">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold">
-                      {trip.user_name.charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="font-semibold">{trip.user_name}</p>
-                      <p className="text-xs text-muted-foreground">@{trip.user_name.toLowerCase().replace(' ', '_')}</p>
+                    <div className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold">
+                        {trip.user_profile_picture ? (
+                          <img
+                            src={trip.user_profile_picture}
+                            alt={trip.user_name}
+                            className="w-full h-full rounded-full object-cover"
+                          />
+                        ) : (
+                          <img
+                            src="/blank-profile.png"
+                            alt={trip.user_name}
+                            className="w-full h-full rounded-full object-cover"
+                          />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-semibold">{trip.user_name}</p>
+                        <p className="text-xs text-muted-foreground">@{trip.user_name.toLowerCase().replace(' ', '_')}</p>
+                      </div>
                     </div>
                   </div>
 
@@ -439,8 +493,16 @@ export default function CommunityPage() {
                   <div className="p-4">
                     <p className="mb-3">{trip.description || `¡Miren el increíble viaje que armé para recorrer ${trip.destination}! ${Math.ceil((new Date(trip.end_date).getTime() - new Date(trip.start_date).getTime()) / (1000 * 60 * 60 * 24))} días de paisajes de ensueño ⛰️✨`}</p>
                     
-                    {/* Image Gallery */}
-                    {hasImages && (
+                    {/* Cover Image or Image Gallery */}
+                    {hasCoverImage ? (
+                      <div className="relative mb-4 rounded-lg overflow-hidden" style={{ height: '400px' }}>
+                        <img
+                          src={trip.cover_image}
+                          alt={trip.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : hasImages ? (
                       <div className="relative mb-4 rounded-lg overflow-hidden" style={{ height: '400px' }}>
                         <img
                           src={tripImages[currentImageIndex] || "/placeholder.svg"}
@@ -451,13 +513,19 @@ export default function CommunityPage() {
                         {tripImages.length > 1 && (
                           <>
                             <button
-                              onClick={() => prevImage(trip.id, tripImages.length)}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                prevImage(trip.id, tripImages.length)
+                              }}
                               className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-lg"
                             >
                               <ChevronLeft className="h-5 w-5" />
                             </button>
                             <button
-                              onClick={() => nextImage(trip.id, tripImages.length)}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                nextImage(trip.id, tripImages.length)
+                              }}
                               className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-lg"
                             >
                               <ChevronRight className="h-5 w-5" />
@@ -468,29 +536,35 @@ export default function CommunityPage() {
                           </>
                         )}
                       </div>
-                    )}
+                    ) : null}
 
                     {/* Trip Info Card */}
-                    <div className="border rounded-lg p-4 bg-white">
-                      <h3 className="font-bold text-lg mb-2">{trip.name}</h3>
-                      <p className="text-sm text-muted-foreground mb-3">{trip.description}</p>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-4 w-4" />
-                          <span>{format(new Date(trip.start_date), "dd MMM", { locale: es })} - {format(new Date(trip.end_date), "dd MMM yyyy", { locale: es })}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-4 w-4" />
-                          <span>{trip.destination.split(',').length} destinos</span>
+                    <Link href={`/trips/${trip.id}/view`}>
+                      <div className="border rounded-lg p-4 bg-white cursor-pointer hover:bg-gray-50 transition-colors">
+                        <h3 className="font-bold text-lg mb-2">{trip.name}</h3>
+                        <p className="text-sm text-muted-foreground mb-3">{trip.description}</p>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-4 w-4" />
+                            <span>{format(new Date(trip.start_date), "dd MMM", { locale: es })} - {format(new Date(trip.end_date), "dd MMM yyyy", { locale: es })}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <MapPin className="h-4 w-4" />
+                            <span>{trip.destination.split(',').length} destinos</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    </Link>
                   </div>
 
                   {/* Actions */}
                   <div className="px-4 pb-4 flex items-center gap-4">
                     <button
-                      onClick={() => toggleLike(trip.id)}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        toggleLike(trip.id)
+                      }}
                       className="flex items-center gap-2 text-sm font-medium hover:text-red-500 transition-colors"
                     >
                       <Heart
@@ -500,7 +574,11 @@ export default function CommunityPage() {
                     </button>
                     
                     <button
-                      onClick={() => setShowComments(showComments === trip.id ? null : trip.id)}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setShowComments(showComments === trip.id ? null : trip.id)
+                      }}
                       className="flex items-center gap-2 text-sm font-medium hover:text-blue-500 transition-colors"
                     >
                       <MessageCircle className="h-5 w-5" />
@@ -510,13 +588,17 @@ export default function CommunityPage() {
 
                   {/* Comments Section */}
                   {showComments === trip.id && (
-                    <div className="border-t p-4 bg-gray-50">
+                    <div className="border-t p-4 bg-gray-50" onClick={(e) => e.stopPropagation()}>
                       <h4 className="font-semibold mb-3">Comentarios</h4>
                       
                       {trip.comments.map((comment, idx) => (
                         <div key={idx} className="mb-3 flex gap-2">
                           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-500 to-blue-500 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
-                            {comment.user_name.charAt(0)}
+                            <img
+                              src="/blank-profile.png"
+                              alt={comment.user_name}
+                              className="w-full h-full rounded-full object-cover"
+                            />
                           </div>
                           <div className="flex-1">
                             <p className="text-sm">
@@ -541,8 +623,15 @@ export default function CommunityPage() {
                           value={newComment}
                           onChange={(e) => setNewComment(e.target.value)}
                           onKeyPress={(e) => e.key === 'Enter' && handleComment(trip.id)}
+                          onClick={(e) => e.stopPropagation()}
                         />
-                        <Button onClick={() => handleComment(trip.id)} size="sm">
+                        <Button 
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleComment(trip.id)
+                          }} 
+                          size="sm"
+                        >
                           Enviar
                         </Button>
                       </div>

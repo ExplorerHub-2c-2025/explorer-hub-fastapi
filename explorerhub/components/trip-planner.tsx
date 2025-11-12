@@ -25,6 +25,7 @@ export function TripPlanner({ onCreateTrip }: TripPlannerProps) {
   const [startDate, setStartDate] = useState<Date>()
   const [endDate, setEndDate] = useState<Date>()
   const [description, setDescription] = useState("")
+  const [coverImage, setCoverImage] = useState("")
   const [visibility, setVisibility] = useState<"private" | "followers" | "public">("private")
   const [isStartDateOpen, setIsStartDateOpen] = useState(false)
   const [isEndDateOpen, setIsEndDateOpen] = useState(false)
@@ -47,6 +48,7 @@ export function TripPlanner({ onCreateTrip }: TripPlannerProps) {
       start_date: startDate ? startDate.toISOString() : null,
       end_date: endDate ? endDate.toISOString() : null,
       description,
+      cover_image: coverImage || null,
       visibility,
     })
   }
@@ -116,28 +118,51 @@ export function TripPlanner({ onCreateTrip }: TripPlannerProps) {
           </div>
 
           <div className={styles.fieldContainer}>
-            <Label htmlFor="description">Descripción (Opcional)</Label>
+            <Label htmlFor="description">
+              Descripción {visibility === "private" ? "(Opcional)" : "*"}
+            </Label>
             <Input
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Añade notas sobre tu viaje..."
+              placeholder={visibility === "private" ? "Añade notas sobre tu viaje..." : "Describe tu viaje para compartirlo con otros..."}
+              required={visibility !== "private"}
             />
           </div>
 
           <div className={styles.fieldContainer}>
+            <Label htmlFor="coverImage">Imagen de Portada (URL)</Label>
+            <Input
+              id="coverImage"
+              type="url"
+              value={coverImage}
+              onChange={(e) => setCoverImage(e.target.value)}
+              placeholder="https://ejemplo.com/imagen.jpg"
+            />
+            {coverImage && (
+              <div className="mt-2">
+                <img
+                  src={coverImage}
+                  alt="Vista previa de portada"
+                  className="w-full max-w-xs h-32 object-cover rounded border"
+                />
+              </div>
+            )}
+          </div>
+
+          <div className={styles.fieldContainer}>
             <Label>Visibilidad del itinerario</Label>
-            <div className="grid grid-cols-1 gap-2 mt-2">
+            <div className="flex flex-row gap-2 mt-2">
               <Button
                 type="button"
                 variant={visibility === "private" ? "default" : "outline"}
                 onClick={() => setVisibility("private")}
-                className="justify-start h-auto p-3"
+                className="flex flex-col items-center gap-1 h-auto p-3 flex-1"
               >
-                <Lock className="h-4 w-4 mr-2" />
-                <div className="text-left">
-                  <div className="font-medium">Privado</div>
-                  <div className="text-xs opacity-70">Solo tú puedes ver este itinerario</div>
+                <Lock className="h-5 w-5" />
+                <div className="text-center">
+                  <div className="font-medium text-sm">Privado</div>
+                  <div className="text-xs opacity-70">Solo tú</div>
                 </div>
               </Button>
               
@@ -145,12 +170,12 @@ export function TripPlanner({ onCreateTrip }: TripPlannerProps) {
                 type="button"
                 variant={visibility === "followers" ? "default" : "outline"}
                 onClick={() => setVisibility("followers")}
-                className="justify-start h-auto p-3"
+                className="flex flex-col items-center gap-1 h-auto p-3 flex-1"
               >
-                <Users className="h-4 w-4 mr-2" />
-                <div className="text-left">
-                  <div className="font-medium">Solo seguidores</div>
-                  <div className="text-xs opacity-70">Visible para ti y tus seguidores</div>
+                <Users className="h-5 w-5" />
+                <div className="text-center">
+                  <div className="font-medium text-sm">Seguidores</div>
+                  <div className="text-xs opacity-70">Tus seguidores</div>
                 </div>
               </Button>
               
@@ -158,18 +183,18 @@ export function TripPlanner({ onCreateTrip }: TripPlannerProps) {
                 type="button"
                 variant={visibility === "public" ? "default" : "outline"}
                 onClick={() => setVisibility("public")}
-                className="justify-start h-auto p-3"
+                className="flex flex-col items-center gap-1 h-auto p-3 flex-1"
               >
-                <Globe className="h-4 w-4 mr-2" />
-                <div className="text-left">
-                  <div className="font-medium">Público</div>
-                  <div className="text-xs opacity-70">Visible para todos los usuarios</div>
+                <Globe className="h-5 w-5" />
+                <div className="text-center">
+                  <div className="font-medium text-sm">Público</div>
+                  <div className="text-xs opacity-70">Todos</div>
                 </div>
               </Button>
             </div>
           </div>
 
-          <Button type="submit" className={styles.fullWidthBtn} disabled={!name || !destination || !startDate || !endDate}>
+          <Button type="submit" className={styles.fullWidthBtn} disabled={!name || !destination || !startDate || !endDate || (visibility !== "private" && !description.trim())}>
             Crear Viaje
           </Button>
         </form>
