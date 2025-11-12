@@ -178,3 +178,163 @@ async def get_favorite_count(
     count = await db.users.count_documents({"favorites": business_id})
     
     return {"count": count}
+
+
+# Trip favorites endpoints
+
+@router.post("/trips/{trip_id}", response_model=dict, status_code=status.HTTP_201_CREATED)
+async def add_trip_favorite(
+    trip_id: int,
+    current_user = Depends(get_current_user),
+    db = Depends(get_database)
+):
+    """
+    Agregar un viaje a los favoritos del usuario.
+    """
+    user_id = current_user.id
+    
+    # Verificar que el viaje existe
+    trip = await db.trips.find_one({"id": trip_id})
+    if not trip:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Viaje no encontrado"
+        )
+    
+    # Obtener el usuario actual
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuario no encontrado"
+        )
+    
+    # Verificar si ya está en favoritos
+    favorite_trips = user.get("favorite_trips", [])
+    if trip_id in favorite_trips:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Este viaje ya está en tus favoritos"
+        )
+    
+    # Agregar a favoritos
+    favorite_trips.append(trip_id)
+    await db.users.update_one(
+        {"id": user_id},
+        {"$set": {"favorite_trips": favorite_trips}}
+    )
+    
+    return {"message": "Viaje agregado a favoritos", "trip_id": trip_id}
+
+
+@router.delete("/trips/{trip_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_trip_favorite(
+    trip_id: int,
+    current_user = Depends(get_current_user),
+    db = Depends(get_database)
+):
+    """
+    Eliminar un viaje de los favoritos del usuario.
+    """
+    user_id = current_user.id
+    
+    # Obtener el usuario actual
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuario no encontrado"
+        )
+    
+    # Verificar si está en favoritos
+    favorite_trips = user.get("favorite_trips", [])
+    if trip_id not in favorite_trips:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Favorito no encontrado"
+        )
+    
+    # Remover de favoritos
+    favorite_trips.remove(trip_id)
+    await db.users.update_one(
+        {"id": user_id},
+        {"$set": {"favorite_trips": favorite_trips}}
+    )
+    
+    return None
+
+
+@router.get("/trips", response_model=List[dict])
+async def get_favorite_trips(
+    current_user = Depends(get_current_user),
+    db = Depends(get_database)
+):
+    """
+    Obtener todos los viajes favoritos del usuario.
+    """
+    user_id = current_user.id
+    print(f"DEBUG: Getting favorite trips for user {user_id}")
+    
+    # Obtener el usuario con sus viajes favoritos
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        print(f"DEBUG: User {user_id} not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuario no encontrado"
+        )
+    
+    favorite_trip_ids = user.get("favorite_trips", [])
+    print(f"DEBUG: User {user_id} has favorite_trip_ids: {favorite_trip_ids}")
+    
+    if not favorite_trip_ids:
+        print(f"DEBUG: No favorite trips for user {user_id}")
+        return []
+    
+    # Obtener los viajes favoritos
+    trips = await db.trips.find({"id": {"$in": favorite_trip_ids}}).to_list(None)
+    print(f"DEBUG: Found {len(trips)} trips in database")
+    
+    # Formatear respuesta
+    result = []
+    for trip in trips:
+        from utils import serialize_doc
+        trip_data = serialize_doc(trip)
+        
+        # Obtener información del usuario creador
+        trip_user = await db.users.find_one({"id": int(trip_data["user_id"])})
+        if trip_user:
+            trip_data["user_name"] = trip_user.get("full_name", "Usuario")
+            trip_data["user_profile_picture"] = trip_user.get("profile_picture")
+        else:
+            trip_data["user_name"] = "Usuario"
+            trip_data["user_profile_picture"] = None
+        
+        # Obtener likes count
+        likes_count = await db.trip_likes.count_documents({"trip_id": trip_data["id"]})
+        trip_data["likes_count"] = likes_count
+        
+        result.append(trip_data)
+    
+    print(f"DEBUG: Returning {len(result)} favorite trips for user {user_id}")
+    return result
+
+
+@router.get("/trips/check/{trip_id}", response_model=dict)
+async def check_trip_favorite(
+    trip_id: int,
+    current_user = Depends(get_current_user),
+    db = Depends(get_database)
+):
+    """
+    Verificar si un viaje está en los favoritos del usuario.
+    """
+    user_id = current_user.id
+    
+    # Obtener el usuario
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        return {"is_favorite": False}
+    
+    favorite_trips = user.get("favorite_trips", [])
+    return {"is_favorite": trip_id in favorite_trips}

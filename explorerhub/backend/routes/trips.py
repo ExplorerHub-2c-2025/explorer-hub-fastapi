@@ -4,7 +4,7 @@ from datetime import datetime
 from database import get_database
 from models.trip import TripCreate, Trip, TripInDB, TripActivity, TripWithUser, TripVisibility
 from models.counter import get_next_sequence_value
-from auth import get_current_active_user
+from auth import get_current_active_user, get_optional_current_user
 from models.user import UserInDB
 from utils import serialize_doc, serialize_docs
 
@@ -21,13 +21,18 @@ async def get_current_user_optional(request: Request, db = Depends(get_database)
 
 async def can_user_view_trip(trip_visibility: str, trip_user_id: str, current_user: UserInDB = None, db = None) -> bool:
     """Check if current user can view a trip based on its visibility"""
+    # Default to public if visibility is not set (for backward compatibility)
+    if not trip_visibility:
+        trip_visibility = TripVisibility.public
+    
     if trip_visibility == TripVisibility.public:
         return True
     
     if not current_user:
         return False
     
-    current_user_id = str(current_user.id)
+    # Get current user ID as string
+    current_user_id = str(current_user.id) if hasattr(current_user, 'id') else str(current_user._id)
     
     # User can always see their own trips
     if current_user_id == trip_user_id:
@@ -144,6 +149,7 @@ async def get_public_trips(
         if user:
             trip["user_name"] = user.get("full_name", "Usuario")
             trip["user_profile_picture"] = user.get("profile_picture")
+            print(f"DEBUG: Public trip user {trip['user_id']} profile_picture: {trip['user_profile_picture']}")
         else:
             trip["user_name"] = "Usuario"
             trip["user_profile_picture"] = None
@@ -220,6 +226,45 @@ async def get_trip(
     
     trip = serialize_doc(trip)
     return Trip(**trip)
+
+
+@router.get("/{trip_id}/public", response_model=TripWithUser)
+async def get_trip_public(
+    trip_id: int,
+    current_user: Optional[UserInDB] = Depends(get_optional_current_user),
+    db = Depends(get_database)
+):
+    """Get a specific trip for public viewing (respects visibility settings)"""
+    trip = await db.trips.find_one({"id": trip_id})
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    
+    trip_data = serialize_doc(trip)
+    trip_user_id = trip_data["user_id"]
+    trip_visibility = trip_data.get("visibility", TripVisibility.public.value)
+    
+    # Check if current user can view this trip
+    if not await can_user_view_trip(trip_visibility, trip_user_id, current_user, db):
+        raise HTTPException(status_code=403, detail="Not authorized to view this trip")
+    
+    # Get user info
+    user = await db.users.find_one({"id": int(trip_user_id)})
+    if user:
+        trip_data["user_name"] = user.get("full_name", "Usuario")
+        trip_data["user_profile_picture"] = user.get("profile_picture")
+    else:
+        trip_data["user_name"] = "Usuario"
+        trip_data["user_profile_picture"] = None
+    
+    # Get comments
+    comments = await db.trip_comments.find({"trip_id": trip_id}).sort("created_at", -1).to_list(length=100)
+    trip_data["comments"] = [serialize_doc(c) for c in comments]
+    
+    # Get likes count
+    likes_count = await db.trip_likes.count_documents({"trip_id": trip_id})
+    trip_data["likes_count"] = likes_count
+    
+    return TripWithUser(**trip_data)
 
 
 @router.put("/{trip_id}", response_model=Trip)
@@ -336,14 +381,68 @@ async def remove_activity_from_trip(
     return Trip(**updated_trip)
 
 
-@router.post("/{trip_id}/comments", response_model=Trip)
+@router.put("/{trip_id}/activities/{business_id}", response_model=Trip)
+async def update_activity_in_trip(
+    trip_id: int,
+    business_id: int,
+    activity_update: dict,
+    current_user: UserInDB = Depends(get_current_active_user),
+    db = Depends(get_database)
+):
+    """Update an activity in a trip (scheduled_date, notes)"""
+    trip = await db.trips.find_one({"id": trip_id})
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    
+    if trip["user_id"] != str(current_user.id):
+        raise HTTPException(status_code=403, detail="Not authorized to modify this trip")
+    
+    # Build update query for the specific activity
+    update_query = {}
+    if "scheduled_date" in activity_update:
+        # Convert string to datetime if needed
+        scheduled_date = activity_update["scheduled_date"]
+        if isinstance(scheduled_date, str):
+            scheduled_date = datetime.fromisoformat(scheduled_date.replace('Z', '+00:00'))
+        update_query["activities.$.scheduled_date"] = scheduled_date
+    
+    if "notes" in activity_update:
+        update_query["activities.$.notes"] = activity_update["notes"]
+    
+    if "images" in activity_update:
+        update_query["activities.$.images"] = activity_update["images"]
+    
+    if not update_query:
+        raise HTTPException(status_code=400, detail="No valid fields to update")
+    
+    update_query["updated_at"] = datetime.utcnow()
+    
+    # Update the specific activity in the array
+    result = await db.trips.update_one(
+        {"id": trip_id, "activities.business_id": business_id},
+        {"$set": update_query}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Activity not found in trip")
+    
+    updated_trip = await db.trips.find_one({"id": trip_id})
+    updated_trip = serialize_doc(updated_trip)
+    return Trip(**updated_trip)
+
+
+@router.post("/{trip_id}/comments", response_model=dict)
 async def add_comment_to_trip(
     trip_id: int,
-    comment: str,
+    comment_data: dict,
     current_user: UserInDB = Depends(get_current_active_user),
     db = Depends(get_database)
 ):
     """Add a comment to a trip"""
+    comment = comment_data.get("comment", "").strip()
+    if not comment:
+        raise HTTPException(status_code=400, detail="Comment cannot be empty")
+    
     trip = await db.trips.find_one({"id": trip_id})
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
@@ -365,9 +464,19 @@ async def add_comment_to_trip(
     
     await db.trip_comments.insert_one(comment_doc)
     
-    updated_trip = await db.trips.find_one({"id": trip_id})
-    updated_trip = serialize_doc(updated_trip)
-    return Trip(**updated_trip)
+    return {"message": "Comment added successfully", "comment": comment_doc}
+
+
+@router.get("/my-liked-trips", response_model=dict)
+async def get_my_liked_trips(
+    current_user: UserInDB = Depends(get_current_active_user),
+    db = Depends(get_database)
+):
+    """Get all trip IDs liked by current user"""
+    likes = await db.trip_likes.find({"user_id": str(current_user.id)}).to_list(None)
+    liked_trip_ids = [like["trip_id"] for like in likes]
+    
+    return {"liked_trip_ids": liked_trip_ids}
 
 
 @router.post("/{trip_id}/like", status_code=status.HTTP_201_CREATED)
@@ -376,7 +485,9 @@ async def like_trip(
     current_user: UserInDB = Depends(get_current_active_user),
     db = Depends(get_database)
 ):
-    """Like a public trip"""
+    """Like a public trip and add to favorites"""
+    print(f"DEBUG: Liking trip {trip_id} for user {current_user.id}")
+    
     trip = await db.trips.find_one({"id": trip_id})
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
@@ -395,31 +506,44 @@ async def like_trip(
     })
     
     if existing_like:
-        raise HTTPException(status_code=400, detail="Already liked")
+        # If already liked, just ensure it's in favorites too
+        print(f"DEBUG: Trip {trip_id} already liked, ensuring it's in favorites")
+        user = await db.users.find_one({"id": current_user.id})
+        if user:
+            favorite_trips = user.get("favorite_trips", [])
+            if trip_id not in favorite_trips:
+                favorite_trips.append(trip_id)
+                await db.users.update_one(
+                    {"id": current_user.id},
+                    {"$set": {"favorite_trips": favorite_trips}}
+                )
+                print(f"DEBUG: Added existing like {trip_id} to favorites for user {current_user.id}")
+        return {"message": "Trip already liked and added to favorites"}
     
+    # Add like
     await db.trip_likes.insert_one({
         "trip_id": trip_id,
         "user_id": str(current_user.id),
         "created_at": datetime.utcnow()
     })
     
-    return {"message": "Trip liked successfully"}
-
-
-@router.delete("/{trip_id}/like", status_code=status.HTTP_204_NO_CONTENT)
-async def unlike_trip(
-    trip_id: int,
-    current_user: UserInDB = Depends(get_current_active_user),
-    db = Depends(get_database)
-):
-    """Unlike a public trip"""
-    result = await db.trip_likes.delete_one({
-        "trip_id": trip_id,
-        "user_id": str(current_user.id)
-    })
+    # Also add to favorites
+    print(f"DEBUG: About to add trip {trip_id} to favorites for user {current_user.id}")
+    user = await db.users.find_one({"id": current_user.id})
+    print(f"DEBUG: Found user: {user is not None}")
+    if user:
+        favorite_trips = user.get("favorite_trips", [])
+        print(f"DEBUG: Current favorite_trips: {favorite_trips}")
+        if trip_id not in favorite_trips:
+            favorite_trips.append(trip_id)
+            print(f"DEBUG: Updating favorite_trips to: {favorite_trips}")
+            await db.users.update_one(
+                {"id": current_user.id},
+                {"$set": {"favorite_trips": favorite_trips}}
+            )
+            print(f"DEBUG: Added trip {trip_id} to favorites for user {current_user.id}")
+        else:
+            print(f"DEBUG: Trip {trip_id} already in favorites for user {current_user.id}")
     
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Like not found")
-    
-    return None
+    return {"message": "Trip liked and added to favorites successfully"}
 

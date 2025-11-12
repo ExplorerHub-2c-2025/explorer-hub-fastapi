@@ -21,6 +21,7 @@ interface TripActivity {
   business_name: string
   scheduled_date?: string
   notes?: string
+  images?: Array<{url: string, notes?: string}>
 }
 
 interface Trip {
@@ -30,6 +31,7 @@ interface Trip {
   start_date: string
   end_date: string
   description?: string
+  cover_image?: string
   activities: TripActivity[]
 }
 
@@ -59,11 +61,34 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
   const loadTrip = async () => {
     try {
       const data = await authFetch(`http://localhost:8000/api/trips/${resolvedParams.id}`)
+      
+      // Check if current user is the owner
+      const userData = localStorage.getItem("user")
+      if (userData) {
+        try {
+          const currentUser = JSON.parse(userData)
+          const currentUserId = String(currentUser.id)
+          
+          if (String(data.user_id) !== currentUserId) {
+            // User is not the owner, redirect to view mode
+            router.push(`/trips/${resolvedParams.id}/view`)
+            return
+          }
+        } catch (error) {
+          // User data parsing failed, redirect to view mode
+          router.push(`/trips/${resolvedParams.id}/view`)
+          return
+        }
+      } else {
+        // No user data, redirect to view mode
+        router.push(`/trips/${resolvedParams.id}/view`)
+        return
+      }
+      
       setTrip(data)
     } catch (error) {
       console.error("Error loading trip:", error)
-      showAlert('error', 'Error', 'Error al cargar el viaje')
-      router.push("/trips")
+      router.push("/community")
     } finally {
       setIsLoading(false)
     }
@@ -128,29 +153,113 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
     })
   }
 
-  const handleUpdateSchedule = (businessId: string, date: Date) => {
-    // This would require a backend endpoint to update individual activities
-    console.log("Update schedule:", businessId, date)
-    // For now, we'll just update locally
+  const handleUpdateSchedule = async (businessId: string, date: Date) => {
     if (!trip) return
     
-    setTrip({
-      ...trip,
-      activities: trip.activities.map((a) =>
-        a.business_id === businessId ? { ...a, scheduled_date: date.toISOString() } : a
-      ),
-    })
+    try {
+      await authFetch(`http://localhost:8000/api/trips/${trip.id}/activities/${businessId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scheduled_date: date.toISOString() }),
+      })
+      
+      // Reload trip data
+      loadTrip()
+    } catch (error) {
+      console.error("Error updating schedule:", error)
+      showAlert('error', 'Error', 'Error al actualizar la fecha programada')
+    }
   }
 
-  const handleUpdateNotes = (businessId: string, notes: string) => {
+  const handleUpdateNotes = async (businessId: string, notes: string) => {
     if (!trip) return
     
-    setTrip({
-      ...trip,
-      activities: trip.activities.map((a) =>
-        a.business_id === businessId ? { ...a, notes } : a
-      ),
-    })
+    try {
+      await authFetch(`http://localhost:8000/api/trips/${trip.id}/activities/${businessId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notes }),
+      })
+      
+      // Reload trip data
+      loadTrip()
+    } catch (error) {
+      console.error("Error updating notes:", error)
+      showAlert('error', 'Error', 'Error al actualizar las notas')
+    }
+  }
+
+  const handleAddImage = async (businessId: string, imageUrl: string) => {
+    if (!trip) return
+    
+    try {
+      // Get current activity to add the image
+      const currentActivity = trip.activities.find(a => a.business_id === businessId)
+      if (!currentActivity) return
+      
+      const currentImages = currentActivity.images || []
+      const updatedImages = [...currentImages, { url: imageUrl, notes: "" }]
+      
+      await authFetch(`http://localhost:8000/api/trips/${trip.id}/activities/${businessId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ images: updatedImages }),
+      })
+      
+      // Reload trip data
+      loadTrip()
+    } catch (error) {
+      console.error("Error adding image:", error)
+      showAlert('error', 'Error', 'Error al añadir la imagen')
+    }
+  }
+
+  const handleUpdateImageNotes = async (businessId: string, imageIndex: number, notes: string) => {
+    if (!trip) return
+    
+    try {
+      const currentActivity = trip.activities.find(a => a.business_id === businessId)
+      if (!currentActivity || !currentActivity.images) return
+      
+      const updatedImages = currentActivity.images.map((img, idx) => 
+        idx === imageIndex ? { ...img, notes } : img
+      )
+      
+      await authFetch(`http://localhost:8000/api/trips/${trip.id}/activities/${businessId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ images: updatedImages }),
+      })
+      
+      // Reload trip data
+      loadTrip()
+    } catch (error) {
+      console.error("Error updating image notes:", error)
+      showAlert('error', 'Error', 'Error al actualizar las notas de la imagen')
+    }
+  }
+
+  const handleRemoveImage = async (businessId: string, imageIndex: number) => {
+    if (!trip) return
+    
+    try {
+      const currentActivity = trip.activities.find(a => a.business_id === businessId)
+      if (!currentActivity || !currentActivity.images) return
+      
+      const updatedImages = currentActivity.images.filter((_, idx) => idx !== imageIndex)
+      
+      await authFetch(`http://localhost:8000/api/trips/${trip.id}/activities/${businessId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ images: updatedImages }),
+      })
+      
+      // Reload trip data
+      loadTrip()
+    } catch (error) {
+      console.error("Error removing image:", error)
+      showAlert('error', 'Error', 'Error al eliminar la imagen')
+    }
   }
 
   if (isLoading) {
@@ -172,6 +281,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
     categories: [], // Categories would come from business data
     scheduled_date: activity.scheduled_date ? new Date(activity.scheduled_date) : undefined,
     notes: activity.notes,
+    images: activity.images || [],
   }))
 
   return (
@@ -224,6 +334,16 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
               </div>
 
               {trip.description && <p className={styles.tripDescription}>{trip.description}</p>}
+
+              {trip.cover_image && (
+                <div className="mb-6">
+                  <img
+                    src={trip.cover_image}
+                    alt={`Portada de ${trip.name}`}
+                    className="w-full h-64 object-cover rounded-lg shadow-md"
+                  />
+                </div>
+              )}
             </div>
 
             <ItineraryBuilder
@@ -232,6 +352,9 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
               onRemoveActivity={handleRemoveActivity}
               onUpdateSchedule={handleUpdateSchedule}
               onUpdateNotes={handleUpdateNotes}
+              onAddImage={handleAddImage}
+              onUpdateImageNotes={handleUpdateImageNotes}
+              onRemoveImage={handleRemoveImage}
             />
           </div>
 

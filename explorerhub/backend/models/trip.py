@@ -11,11 +11,17 @@ class TripVisibility(str, Enum):
     public = "public"  # Todos pueden ver
 
 
+class ActivityImage(BaseModel):
+    url: str
+    notes: Optional[str] = None
+
+
 class TripActivity(BaseModel):
     business_id: int
     business_name: str
     scheduled_date: Optional[datetime] = None
     notes: Optional[str] = None
+    images: List[ActivityImage] = []
 
 
 class TripBase(BaseModel):
@@ -24,7 +30,8 @@ class TripBase(BaseModel):
     start_date: datetime
     end_date: datetime
     description: Optional[str] = None
-    visibility: TripVisibility = TripVisibility.private
+    cover_image: Optional[str] = None
+    visibility: TripVisibility = TripVisibility.public
 
 
 class TripCreate(TripBase):
