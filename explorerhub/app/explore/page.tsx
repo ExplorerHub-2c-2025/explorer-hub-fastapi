@@ -45,6 +45,8 @@ export default function ExplorePage() {
   const [favorites, setFavorites] = useState<Set<number>>(new Set())
   const [imageIndexes, setImageIndexes] = useState<Record<number, number>>({})
   const [favoriteCounts, setFavoriteCounts] = useState<Record<number, number>>({})
+  const [userTrips, setUserTrips] = useState<any[]>([])
+  const [showTripSelector, setShowTripSelector] = useState<number | null>(null)
 
   useEffect(() => {
     const userData = localStorage.getItem("user")
@@ -188,6 +190,85 @@ export default function ExplorePage() {
     } catch (error) {
       console.error('Error toggling favorite:', error)
     }
+  }
+
+  const loadUserTrips = async () => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+
+    try {
+      const response = await fetch('http://localhost:8000/api/trips/', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        }
+      })
+      
+      if (response.ok) {
+        const trips = await response.json()
+        setUserTrips(trips)
+      }
+    } catch (error) {
+      console.error('Error loading trips:', error)
+    }
+  }
+
+  const addToTrip = async (businessId: number, tripId: string) => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+
+    try {
+      const business = activities.find(a => a.id === businessId)
+      if (!business) return
+
+      const response = await fetch(`http://localhost:8000/api/trips/${tripId}/activities`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          business_id: String(businessId),
+          business_name: business.name,
+          scheduled_date: null,
+          notes: null
+        })
+      })
+
+      if (response.ok) {
+        alert('¡Actividad agregada al itinerario!')
+        setShowTripSelector(null)
+      } else {
+        alert('Error al agregar la actividad')
+      }
+    } catch (error) {
+      console.error('Error adding to trip:', error)
+      alert('Error al agregar la actividad')
+    }
+  }
+
+  const handleAddToItinerary = async (businessId: number) => {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      alert('Debes iniciar sesión para agregar actividades a un itinerario')
+      router.push('/sign-in')
+      return
+    }
+
+    // Load user trips if not loaded
+    if (userTrips.length === 0) {
+      await loadUserTrips()
+    }
+
+    // If user has no trips, redirect to create one
+    if (userTrips.length === 0) {
+      if (confirm('No tienes viajes. ¿Quieres crear uno?')) {
+        router.push('/trips/new')
+      }
+      return
+    }
+
+    // Show trip selector
+    setShowTripSelector(businessId)
   }
 
   const nextImage = (id: number, maxImages: number) => {
@@ -382,9 +463,9 @@ export default function ExplorePage() {
                             {/* Add to Itinerary Button */}
                             <button 
                               className={styles.itineraryButton}
-                              onClick={() => {
-                                // TODO: Implement add to itinerary functionality
-                                console.log(`Add to itinerary: ${activity.id}`)
+                              onClick={(e) => {
+                                e.preventDefault()
+                                handleAddToItinerary(activity.id)
                               }}
                               aria-label="Agregar a itinerario"
                             >
@@ -643,6 +724,51 @@ export default function ExplorePage() {
           )}
         </div>
       </main>
+
+      {/* Trip Selector Modal */}
+      {showTripSelector !== null && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={() => setShowTripSelector(null)}
+        >
+          <div 
+            className="bg-white rounded-lg p-6 max-w-md w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-xl font-bold mb-4">Selecciona un viaje</h3>
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {userTrips.map((trip) => (
+                <button
+                  key={trip.id}
+                  className="w-full p-3 text-left border rounded-lg hover:bg-gray-50 transition-colors"
+                  onClick={() => addToTrip(showTripSelector, trip.id)}
+                >
+                  <div className="font-medium">{trip.name}</div>
+                  <div className="text-sm text-gray-500">{trip.destination}</div>
+                </button>
+              ))}
+            </div>
+            <div className="mt-4 flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setShowTripSelector(null)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={() => {
+                  setShowTripSelector(null)
+                  router.push('/trips/new')
+                }}
+              >
+                Crear Nuevo Viaje
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>

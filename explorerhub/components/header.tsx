@@ -77,6 +77,9 @@ export function Header() {
                     <Link href="/trips" className={styles.navLink}>
                       Viajes
                     </Link>
+                    <Link href="/community" className={styles.navLink}>
+                      Comunidad
+                    </Link>
                     <Link href="/reviews" className={styles.navLink}>
                       Reseñas
                     </Link>

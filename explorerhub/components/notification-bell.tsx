@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Bell, Check, X, MapPin, DollarSign, Tag, Calendar, MessageSquare, AlertCircle } from "lucide-react"
+import { Bell, Check, X, MapPin, DollarSign, Tag, Calendar, MessageSquare, AlertCircle, UserPlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Popover,
@@ -31,6 +31,7 @@ export type NotificationType =
   | "review_response"
   | "new_booking"
   | "promo_expired"
+  | "new_follower"
 
 const getNotificationIcon = (type: string) => {
   switch (type) {
@@ -53,6 +54,8 @@ const getNotificationIcon = (type: string) => {
       return <Calendar className="h-5 w-5 text-indigo-500" />
     case "promo_expired":
       return <AlertCircle className="h-5 w-5 text-orange-500" />
+    case "new_follower":
+      return <UserPlus className="h-5 w-5 text-pink-500" />
     default:
       return <Bell className="h-5 w-5 text-gray-500" />
   }
