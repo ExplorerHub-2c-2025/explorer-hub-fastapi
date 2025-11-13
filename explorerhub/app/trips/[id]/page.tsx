@@ -12,6 +12,7 @@ import ItineraryBuilder from "@/components/itinerary-builder"
 import { WeatherCard } from "@/components/weather-card"
 import { NearbyEventsCard } from "@/components/nearby-events-card"
 import { TransportRecommendations } from "@/components/transport-recommendations"
+import { CurrentLocationMapLink } from "@/components/current-location-map-link"
 
 export default function TripDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params)
@@ -76,6 +77,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
   }
 
   const nearestCity = trip.activities.length > 0 ? trip.activities[0].location?.city || "" : ""
+  const firstActivity = trip.activities.length > 0 ? trip.activities[0] : null
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -130,6 +132,15 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
               onAddActivity={handleAddActivity}
               onRemoveActivity={handleRemoveActivity}
               onUpdateSchedule={handleUpdateSchedule}
+              firstActivityMapLink={
+                firstActivity ? (
+                  <CurrentLocationMapLink
+                    address={firstActivity.location?.address || ""}
+                    city={firstActivity.location?.city || ""}
+                    activityName={firstActivity.business_name}
+                  />
+                ) : undefined
+              }
             />
           </div>
 

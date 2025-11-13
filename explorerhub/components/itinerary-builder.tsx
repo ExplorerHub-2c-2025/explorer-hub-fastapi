@@ -1,5 +1,7 @@
 "use client"
 import { Card, CardContent } from "@/components/ui/card"
+import type React from "react"
+
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, Clock, X, Plus } from "lucide-react"
@@ -25,6 +27,7 @@ interface ItineraryBuilderProps {
   onAddActivity: () => void
   onRemoveActivity: (businessId: string) => void
   onUpdateSchedule: (businessId: string, date: Date) => void
+  firstActivityMapLink?: React.ReactNode
 }
 
 export function ItineraryBuilder({
@@ -32,6 +35,7 @@ export function ItineraryBuilder({
   onAddActivity,
   onRemoveActivity,
   onUpdateSchedule,
+  firstActivityMapLink,
 }: ItineraryBuilderProps) {
   return (
     <div className={styles.rootContainer}>
@@ -60,6 +64,8 @@ export function ItineraryBuilder({
           {activities.map((activity, index) => (
             <Card key={activity.business_id}>
               <CardContent className={styles.activityCard}>
+                {index === 0 && firstActivityMapLink && <div className="mb-3">{firstActivityMapLink}</div>}
+
                 <div className={styles.activityContent}>
                   <div className={styles.activityMain}>
                     <div className={styles.activityHeader}>
