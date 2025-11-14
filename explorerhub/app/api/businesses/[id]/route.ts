@@ -4,10 +4,11 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:800
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const response = await fetch(`${BACKEND_URL}/api/businesses/${params.id}`, {
+    const { id } = await params;
+    const response = await fetch(`${BACKEND_URL}/api/businesses/${id}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -32,7 +33,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const token = request.headers.get("authorization")
@@ -43,9 +44,10 @@ export async function PUT(
       )
     }
 
+    const { id } = await params;
     const body = await request.json()
 
-    const response = await fetch(`${BACKEND_URL}/api/businesses/${params.id}`, {
+    const response = await fetch(`${BACKEND_URL}/api/businesses/${id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -72,7 +74,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const token = request.headers.get("authorization")
@@ -83,7 +85,8 @@ export async function DELETE(
       )
     }
 
-    const response = await fetch(`${BACKEND_URL}/api/businesses/${params.id}`, {
+    const { id } = await params;
+    const response = await fetch(`${BACKEND_URL}/api/businesses/${id}`, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",

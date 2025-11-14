@@ -2,21 +2,36 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime, date
 from bson import ObjectId
+from enum import Enum
+
+
+class TripVisibility(str, Enum):
+    private = "private"  # Solo el propietario puede ver
+    followers = "followers"  # Solo el propietario y sus seguidores pueden ver
+    public = "public"  # Todos pueden ver
+
+
+class ActivityImage(BaseModel):
+    url: str
+    notes: Optional[str] = None
 
 
 class TripActivity(BaseModel):
-    business_id: str
+    business_id: int
     business_name: str
-    scheduled_date: Optional[date] = None
+    scheduled_date: Optional[datetime] = None
     notes: Optional[str] = None
+    images: List[ActivityImage] = []
 
 
 class TripBase(BaseModel):
     name: str
     destination: str
-    start_date: date
-    end_date: date
+    start_date: datetime
+    end_date: datetime
     description: Optional[str] = None
+    cover_image: Optional[str] = None
+    visibility: TripVisibility = TripVisibility.public
 
 
 class TripCreate(TripBase):
@@ -24,8 +39,8 @@ class TripCreate(TripBase):
 
 
 class TripInDB(TripBase):
-    id: Optional[str] = Field(alias="_id", default=None)
-    user_id: str
+    id: Optional[int] = Field(alias="id", default=None)
+    user_id: int
     activities: List[TripActivity] = []
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
@@ -36,7 +51,21 @@ class TripInDB(TripBase):
 
 
 class Trip(TripBase):
-    id: str
+    id: int
     user_id: str
     activities: List[TripActivity]
     created_at: datetime
+    
+    
+class TripComment(BaseModel):
+    user_id: int
+    user_name: str
+    comment: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class TripWithUser(Trip):
+    user_name: str
+    user_profile_picture: Optional[str] = None
+    comments: List[TripComment] = []
+    likes_count: int = 0

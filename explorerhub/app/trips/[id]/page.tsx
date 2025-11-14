@@ -1,134 +1,366 @@
 "use client"
 
-import { use, useState } from "react"
+import { use, useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { ArrowLeft, MapPin, Calendar, Edit, Share2 } from "lucide-react"
+import { ArrowLeft, MapPin, Calendar, Edit, Share2, Trash2 } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { CheckCircle2, AlertCircle, Info } from "lucide-react"
 import Link from "next/link"
 import { format } from "date-fns"
 import ItineraryBuilder from "@/components/itinerary-builder"
+import { ActivitySearchModal } from "@/components/activity-search-modal"
+import { authFetch } from "@/lib/api"
+import styles from "./page.module.css"
 import { WeatherCard } from "@/components/weather-card"
 import { NearbyEventsCard } from "@/components/nearby-events-card"
 import { TransportRecommendations } from "@/components/transport-recommendations"
 import { CurrentLocationMapLink } from "@/components/current-location-map-link"
 
+interface TripActivity {
+  business_id: string
+  business_name: string
+  scheduled_date?: string
+  notes?: string
+  images?: Array<{url: string, notes?: string}>
+  location?: {
+    address?: string
+    city?: string
+    lat?: number
+    lng?: number
+  }
+}
+
+interface Trip {
+  id: string
+  name: string
+  destination: string
+  start_date: string
+  end_date: string
+  description?: string
+  cover_image?: string
+  activities: TripActivity[]
+}
+
 export default function TripDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params)
-  // Mock data - would be fetched from API
-  const [trip, setTrip] = useState({
-    id: resolvedParams.id,
-    name: "Summer in Italy",
-    destination: "Rome, Florence, Venice",
-    startDate: new Date("2025-07-15"),
-    endDate: new Date("2025-07-25"),
-    description: "Exploring the best of Italian culture, cuisine, and history",
-    activities: [
-      {
-        id: "1",
-        business_id: "1",
-        business_name: "Colosseum Tour",
-        category: "Attraction",
-        categories: ["Attraction"],
-        scheduled_date: new Date("2025-07-16"),
-        notes: "Book tickets in advance",
-        location: {
-          address: "Piazza del Colosseo, 1",
-          city: "Rome",
-          state: "Lazio",
-          country: "Italy",
-        },
-      },
-      {
-        id: "2",
-        business_id: "2",
-        business_name: "Trattoria Roma",
-        category: "Restaurant",
-        categories: ["Restaurant"],
-        scheduled_date: new Date("2025-07-16"),
-        location: {
-          address: "Via Cavour, 5",
-          city: "Rome",
-          state: "Lazio",
-          country: "Italy",
-        },
-      },
-    ],
+  const router = useRouter()
+  const [trip, setTrip] = useState<Trip | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [showActivitySearch, setShowActivitySearch] = useState(false)
+  const [alertDialog, setAlertDialog] = useState<{
+    open: boolean
+    type: 'success' | 'error' | 'confirm' | 'info'
+    title: string
+    message: string
+    onConfirm?: () => void
+  }>({
+    open: false,
+    type: 'success',
+    title: '',
+    message: ''
   })
 
+  useEffect(() => {
+    loadTrip()
+  }, [resolvedParams.id])
+
+  const loadTrip = async () => {
+    try {
+      const data = await authFetch(`http://localhost:8000/api/trips/${resolvedParams.id}`)
+      
+      // Check if current user is the owner
+      const userData = localStorage.getItem("user")
+      if (userData) {
+        try {
+          const currentUser = JSON.parse(userData)
+          const currentUserId = String(currentUser.id)
+          
+          if (String(data.user_id) !== currentUserId) {
+            // User is not the owner, redirect to view mode
+            router.push(`/trips/${resolvedParams.id}/view`)
+            return
+          }
+        } catch (error) {
+          // User data parsing failed, redirect to view mode
+          router.push(`/trips/${resolvedParams.id}/view`)
+          return
+        }
+      } else {
+        // No user data, redirect to view mode
+        router.push(`/trips/${resolvedParams.id}/view`)
+        return
+      }
+      
+      setTrip(data)
+    } catch (error) {
+      console.error("Error loading trip:", error)
+      router.push("/community")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const showAlert = (type: 'success' | 'error' | 'info', title: string, message: string) => {
+    setAlertDialog({ open: true, type, title, message })
+  }
+
+  const closeAlert = () => {
+    setAlertDialog({ ...alertDialog, open: false })
+  }
+
   const handleAddActivity = () => {
-    console.log("Add activity")
-    // Would open a modal or navigate to activity selection
+    // Show activity search modal instead of navigating away
+    setShowActivitySearch(true)
   }
 
-  const handleRemoveActivity = (businessId: string) => {
-    setTrip({
-      ...trip,
-      activities: trip.activities.filter((a) => a.business_id !== businessId),
+  const handleActivityAdded = (business: any) => {
+    // Reload trip data
+    loadTrip()
+    setShowActivitySearch(false)
+  }
+
+  const handleRemoveActivity = async (businessId: string) => {
+    if (!trip) return
+    
+    try {
+      await authFetch(`http://localhost:8000/api/trips/${trip.id}/activities/${businessId}`, {
+        method: "DELETE",
+      })
+      
+      // Reload trip data
+      loadTrip()
+    } catch (error) {
+      console.error("Error removing activity:", error)
+      showAlert('error', 'Error', 'Error al eliminar la actividad')
+    }
+  }
+
+  const handleDeleteTrip = async () => {
+    if (!trip) return
+    
+    setAlertDialog({
+      open: true,
+      type: 'confirm',
+      title: 'Eliminar viaje',
+      message: '¿Estás seguro de que quieres eliminar este viaje? Esta acción no se puede deshacer.',
+      onConfirm: async () => {
+        try {
+          await authFetch(`http://localhost:8000/api/trips/${trip.id}`, {
+            method: "DELETE",
+          })
+          
+          showAlert('success', 'Viaje eliminado', 'El viaje ha sido eliminado exitosamente')
+          router.push("/trips")
+        } catch (error) {
+          console.error("Error deleting trip:", error)
+          showAlert('error', 'Error', 'No se pudo eliminar el viaje')
+        }
+      }
     })
   }
 
-  const handleUpdateSchedule = (businessId: string, date: Date) => {
-    setTrip({
-      ...trip,
-      activities: trip.activities.map((a) => (a.business_id === businessId ? { ...a, scheduled_date: date } : a)),
-    })
+  const handleUpdateSchedule = async (businessId: string, date: Date) => {
+    if (!trip) return
+    
+    try {
+      await authFetch(`http://localhost:8000/api/trips/${trip.id}/activities/${businessId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scheduled_date: date.toISOString() }),
+      })
+      
+      // Reload trip data
+      loadTrip()
+    } catch (error) {
+      console.error("Error updating schedule:", error)
+      showAlert('error', 'Error', 'Error al actualizar la fecha programada')
+    }
   }
 
   const nearestCity = trip.activities.length > 0 ? trip.activities[0].location?.city || "" : ""
   const firstActivity = trip.activities.length > 0 ? trip.activities[0] : null
 
+  const handleUpdateNotes = async (businessId: string, notes: string) => {
+    if (!trip) return
+    
+    try {
+      await authFetch(`http://localhost:8000/api/trips/${trip.id}/activities/${businessId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notes }),
+      })
+      
+      // Reload trip data
+      loadTrip()
+    } catch (error) {
+      console.error("Error updating notes:", error)
+      showAlert('error', 'Error', 'Error al actualizar las notas')
+    }
+  }
+
+  const handleAddImage = async (businessId: string, imageUrl: string) => {
+    if (!trip) return
+    
+    try {
+      // Get current activity to add the image
+      const currentActivity = trip.activities.find(a => a.business_id === businessId)
+      if (!currentActivity) return
+      
+      const currentImages = currentActivity.images || []
+      const updatedImages = [...currentImages, { url: imageUrl, notes: "" }]
+      
+      await authFetch(`http://localhost:8000/api/trips/${trip.id}/activities/${businessId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ images: updatedImages }),
+      })
+      
+      // Reload trip data
+      loadTrip()
+    } catch (error) {
+      console.error("Error adding image:", error)
+      showAlert('error', 'Error', 'Error al añadir la imagen')
+    }
+  }
+
+  const handleUpdateImageNotes = async (businessId: string, imageIndex: number, notes: string) => {
+    if (!trip) return
+    
+    try {
+      const currentActivity = trip.activities.find(a => a.business_id === businessId)
+      if (!currentActivity || !currentActivity.images) return
+      
+      const updatedImages = currentActivity.images.map((img, idx) => 
+        idx === imageIndex ? { ...img, notes } : img
+      )
+      
+      await authFetch(`http://localhost:8000/api/trips/${trip.id}/activities/${businessId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ images: updatedImages }),
+      })
+      
+      // Reload trip data
+      loadTrip()
+    } catch (error) {
+      console.error("Error updating image notes:", error)
+      showAlert('error', 'Error', 'Error al actualizar las notas de la imagen')
+    }
+  }
+
+  const handleRemoveImage = async (businessId: string, imageIndex: number) => {
+    if (!trip) return
+    
+    try {
+      const currentActivity = trip.activities.find(a => a.business_id === businessId)
+      if (!currentActivity || !currentActivity.images) return
+      
+      const updatedImages = currentActivity.images.filter((_, idx) => idx !== imageIndex)
+      
+      await authFetch(`http://localhost:8000/api/trips/${trip.id}/activities/${businessId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ images: updatedImages }),
+      })
+      
+      // Reload trip data
+      loadTrip()
+    } catch (error) {
+      console.error("Error removing image:", error)
+      showAlert('error', 'Error', 'Error al eliminar la imagen')
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className={styles.loadingContainer}>
+        <div className={styles.loadingSpinner}></div>
+      </div>
+    )
+  }
+
+  if (!trip) {
+    return null
+  }
+
+  const formattedActivities = trip.activities.map((activity) => ({
+    id: activity.business_id,
+    business_id: activity.business_id,
+    business_name: activity.business_name,
+    categories: [], // Categories would come from business data
+    scheduled_date: activity.scheduled_date ? new Date(activity.scheduled_date) : undefined,
+    notes: activity.notes,
+    images: activity.images || [],
+  }))
+
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className={styles.pageContainer}>
       <Header />
 
-      <main className="flex-1 container mx-auto px-4 py-8">
+      <main className={styles.mainContent}>
         <Link href="/trips">
-          <Button variant="ghost" className="mb-6">
+          <Button variant="ghost" className={styles.backButton}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Volver a Viajes
           </Button>
         </Link>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className={styles.contentGrid}>
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className={styles.mainSection}>
             <div>
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h1 className="text-3xl font-bold mb-2">{trip.name}</h1>
-                  <div className="flex flex-col gap-2 text-muted-foreground">
-                    <div className="flex items-center gap-2">
+              <div className={styles.tripHeader}>
+                <div className={styles.tripInfo}>
+                  <h1 className={styles.tripTitle}>{trip.name}</h1>
+                  <div className={styles.tripMeta}>
+                    <div className={styles.tripMetaItem}>
                       <MapPin className="h-4 w-4" />
                       <span>{trip.destination}</span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className={styles.tripMetaItem}>
                       <Calendar className="h-4 w-4" />
                       <span>
-                        {format(trip.startDate, "MMM d")} - {format(trip.endDate, "MMM d, yyyy")}
+                        {format(new Date(trip.start_date), "MMM d")} - {format(new Date(trip.end_date), "MMM d, yyyy")}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
+                <div className={styles.actionButtons}>
+                  <Button variant="outline" size="sm" onClick={() => router.push(`/trips/${trip.id}/edit`)}>
                     <Edit className="h-4 w-4 mr-2" />
                     Editar
                   </Button>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={() => showAlert('info', 'Próximamente', 'Función de compartir próximamente')}>
                     <Share2 className="h-4 w-4 mr-2" />
                     Compartir
+                  </Button>
+                  <Button variant="destructive" size="sm" onClick={handleDeleteTrip} className="hover:bg-red-700">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Eliminar
                   </Button>
                 </div>
               </div>
 
-              {trip.description && <p className="text-muted-foreground">{trip.description}</p>}
+              {trip.description && <p className={styles.tripDescription}>{trip.description}</p>}
+
+              {trip.cover_image && (
+                <div className="mb-6">
+                  <img
+                    src={trip.cover_image}
+                    alt={`Portada de ${trip.name}`}
+                    className="w-full h-64 object-cover rounded-lg shadow-md"
+                  />
+                </div>
+              )}
             </div>
 
             <ItineraryBuilder
-              activities={trip.activities}
+              activities={formattedActivities}
               onAddActivity={handleAddActivity}
               onRemoveActivity={handleRemoveActivity}
               onUpdateSchedule={handleUpdateSchedule}
@@ -141,6 +373,10 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                   />
                 ) : undefined
               }
+              onUpdateNotes={handleUpdateNotes}
+              onAddImage={handleAddImage}
+              onUpdateImageNotes={handleUpdateImageNotes}
+              onRemoveImage={handleRemoveImage}
             />
           </div>
 
@@ -157,49 +393,143 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
               />
             )}
 
+          <div className={styles.sidebar}>
             <Card>
-              <CardContent className="pt-6">
-                <h3 className="font-semibold mb-4">Resumen del Viaje</h3>
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Duración</span>
-                    <span className="font-medium">
-                      {Math.ceil((trip.endDate.getTime() - trip.startDate.getTime()) / (1000 * 60 * 60 * 24))} días
+              <CardContent className={styles.cardContent}>
+                <h3 className={styles.sectionTitle}>Resumen del Viaje</h3>
+                <div className={styles.tripSummary}>
+                  <div className={styles.summaryRow}>
+                    <span className={styles.summaryLabel}>Duración</span>
+                    <span className={styles.summaryValue}>
+                      {Math.ceil(
+                        (new Date(trip.end_date).getTime() - new Date(trip.start_date).getTime()) /
+                          (1000 * 60 * 60 * 24)
+                      )}{" "}
+                      días
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Actividades</span>
-                    <span className="font-medium">{trip.activities.length}</span>
+                  <div className={styles.summaryRow}>
+                    <span className={styles.summaryLabel}>Actividades</span>
+                    <span className={styles.summaryValue}>{trip.activities.length}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Destino</span>
-                    <span className="font-medium">{trip.destination}</span>
+                  <div className={styles.summaryRow}>
+                    <span className={styles.summaryLabel}>Destino</span>
+                    <span className={styles.summaryValue}>{trip.destination}</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             <Card>
-              <CardContent className="pt-6">
-                <h3 className="font-semibold mb-4">Recomendaciones</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Basado en tu itinerario, también podrían gustarte estas experiencias:
+              <CardContent className={styles.cardContent}>
+                <h3 className={styles.sectionTitle}>Recomendaciones</h3>
+                <p className={styles.recommendationsText}>
+                  Basado en tu itinerario, también te podrían gustar estas experiencias:
                 </p>
-                <div className="space-y-3">
-                  <div className="p-3 rounded-lg border border-gray-200 hover:bg-muted/50 cursor-pointer transition-colors">
-                    <h4 className="font-medium text-sm mb-1">Museos Vaticanos</h4>
-                    <p className="text-xs text-muted-foreground">Atracción • Rome</p>
+                <div className={styles.recommendationsList}>
+                  <Link href="/explore">
+                    <div className={styles.recommendationItem}>
+                      <h4 className={styles.recommendationTitle}>Explorar más actividades</h4>
+                      <p className={styles.recommendationDescription}>Descubre nuevas experiencias</p>
+                    </div>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+            <Card>
+              <CardContent className={styles.cardContent}>
+                <h3 className={styles.sectionTitle}>Resumen del Viaje</h3>
+                <div className={styles.tripSummary}>
+                  <div className={styles.summaryRow}>
+                    <span className={styles.summaryLabel}>Duración</span>
+                    <span className={styles.summaryValue}>
+                      {Math.ceil(
+                        (new Date(trip.end_date).getTime() - new Date(trip.start_date).getTime()) /
+                          (1000 * 60 * 60 * 24)
+                      )}{" "}
+                      días
+                    </span>
                   </div>
-                  <div className="p-3 rounded-lg border border-gray-200 hover:bg-muted/50 cursor-pointer transition-colors">
-                    <h4 className="font-medium text-sm mb-1">Paseo en Góndola</h4>
-                    <p className="text-xs text-muted-foreground">Actividad • Venice</p>
+                  <div className={styles.summaryRow}>
+                    <span className={styles.summaryLabel}>Actividades</span>
+                    <span className={styles.summaryValue}>{trip.activities.length}</span>
                   </div>
+                  <div className={styles.summaryRow}>
+                    <span className={styles.summaryLabel}>Destino</span>
+                    <span className={styles.summaryValue}>{trip.destination}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className={styles.cardContent}>
+                <h3 className={styles.sectionTitle}>Recomendaciones</h3>
+                <p className={styles.recommendationsText}>
+                  Basado en tu itinerario, también te podrían gustar estas experiencias:
+                </p>
+                <div className={styles.recommendationsList}>
+                  <Link href="/explore">
+                    <div className={styles.recommendationItem}>
+                      <h4 className={styles.recommendationTitle}>Explorar más actividades</h4>
+                      <p className={styles.recommendationDescription}>Descubre nuevas experiencias</p>
+                    </div>
+                  </Link>
                 </div>
               </CardContent>
             </Card>
           </div>
         </div>
       </main>
+
+      {/* Activity Search Modal */}
+      <ActivitySearchModal
+        isOpen={showActivitySearch}
+        onClose={() => setShowActivitySearch(false)}
+        onAddActivity={handleActivityAdded}
+        tripId={trip?.id || ""}
+      />
+
+      {/* Alert Dialog */}
+      <Dialog open={alertDialog.open} onOpenChange={(open) => setAlertDialog(prev => ({ ...prev, open }))}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {alertDialog.type === 'success' && <CheckCircle2 className="h-5 w-5 text-green-500" />}
+              {alertDialog.type === 'error' && <AlertCircle className="h-5 w-5 text-red-500" />}
+              {alertDialog.type === 'info' && <Info className="h-5 w-5 text-blue-500" />}
+              {alertDialog.title}
+            </DialogTitle>
+            <DialogDescription>
+              {alertDialog.message}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            {alertDialog.type === 'confirm' ? (
+              <>
+                <Button variant="outline" onClick={() => setAlertDialog(prev => ({ ...prev, open: false }))}>
+                  Cancelar
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  className="destructiveButton hover:!bg-[#dc2626] hover:!border-[#dc2626]"
+                  onClick={() => {
+                    alertDialog.onConfirm?.()
+                    setAlertDialog(prev => ({ ...prev, open: false }))
+                  }}
+                >
+                  Confirmar
+                </Button>
+              </>
+            ) : (
+              <Button onClick={() => setAlertDialog(prev => ({ ...prev, open: false }))}>
+                Aceptar
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Footer />
     </div>

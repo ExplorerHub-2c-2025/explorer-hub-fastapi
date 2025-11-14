@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 from database import Database
 from config import settings
-from routes import auth, businesses, reviews, trips, promotions, bookings, notifications, favorites, profile
+from routes import auth, businesses, reviews, trips, promotions, bookings, notifications, favorites, profile, users
 from pathlib import Path
 
 @asynccontextmanager
@@ -56,6 +56,7 @@ app.include_router(bookings)
 app.include_router(notifications)
 app.include_router(favorites)
 app.include_router(profile)
+app.include_router(users)
 
 # Mount uploads directory
 uploads_dir = Path("uploads")

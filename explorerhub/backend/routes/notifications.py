@@ -397,3 +397,21 @@ async def notify_capacity_released(
             context_id=0  # No specific context
         )
         await create_notification(notification, db)
+
+
+async def notify_new_follower(
+    follower_id: int,
+    follower_name: str,
+    followed_user_id: int,
+    db
+):
+    """Create notification when someone starts following a user."""
+    notification = NotificationCreate(
+        user_id=followed_user_id,
+        type=NotificationType.new_follower,
+        title="Nuevo seguidor",
+        description=f"{follower_name} comenzó a seguirte.",
+        link=f"/profile/{follower_id}",
+        context_id=follower_id
+    )
+    await create_notification(notification, db)

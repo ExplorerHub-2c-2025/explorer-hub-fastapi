@@ -1,0 +1,189 @@
+/* Custom destructive button hover */
+.destructiveButton:hover {
+  background-color: #dc2626 !important;
+  border-color: #dc2626 !important;
+}
+
+/* More specific selector for destructive button */
+button.destructiveButton:hover {
+  background-color: #dc2626 !important;
+  border-color: #dc2626 !important;
+}
+
+/* Layout principal */
+.pageContainer {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.mainContent {
+  flex: 1;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+/* Botón de navegación */
+.backButton {
+  margin-bottom: 1.5rem;
+}
+
+/* Grid layout */
+.contentGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+}
+
+@media (min-width: 1024px) {
+  .contentGrid {
+    grid-template-columns: 2fr 1fr;
+  }
+}
+
+/* Contenido principal */
+.mainSection {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Header del viaje */
+.tripHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.tripInfo {
+  flex: 1;
+}
+
+.tripTitle {
+  font-size: 1.875rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.tripMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.tripMetaItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tripDescription {
+  color: hsl(var(--muted-foreground));
+}
+
+/* Botones de acción */
+.actionButtons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Sidebar */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.cardContent {
+  padding-top: 1.5rem;
+}
+
+.sectionTitle {
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+/* Resumen del viaje */
+.tripSummary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.summaryRow {
+  display: flex;
+  justify-content: space-between;
+}
+
+.summaryLabel {
+  color: hsl(var(--muted-foreground));
+}
+
+.summaryValue {
+  font-weight: 500;
+}
+
+/* Recomendaciones */
+.recommendationsText {
+  font-size: 0.875rem;
+  color: hsl(var(--muted-foreground));
+  margin-bottom: 1rem;
+}
+
+.recommendationsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.recommendationItem {
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgb(229 231 235);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.recommendationItem:hover {
+  background-color: hsl(var(--muted) / 0.5);
+}
+
+.recommendationTitle {
+  font-weight: 500;
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
+}
+
+.recommendationDescription {
+  font-size: 0.75rem;
+  color: hsl(var(--muted-foreground));
+}
+
+/* Loading spinner */
+.loadingContainer {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loadingSpinner {
+  height: 3rem;
+  width: 3rem;
+  border-radius: 9999px;
+  border-bottom: 2px solid rgb(17 24 39);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
