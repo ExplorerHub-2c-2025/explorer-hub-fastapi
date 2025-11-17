@@ -14,6 +14,8 @@ import styles from "./page.module.css"
 import { authFetch } from "@/lib/api"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 interface Trip {
   id: string
@@ -42,6 +44,14 @@ export default function TripsPage() {
     title: '',
     message: ''
   })
+
+  const [generatorOpen, setGeneratorOpen] = useState(false)
+  const [genTitle, setGenTitle] = useState("")
+  const [genBudget, setGenBudget] = useState<'bajo'|'medio'|'alto'>('medio')
+  const [genActivitiesPerDay, setGenActivitiesPerDay] = useState<1|2>(1)
+  const [genCities, setGenCities] = useState<Array<{city: string; start_date: string; end_date: string}>>([
+    { city: "", start_date: "", end_date: "" }
+  ])
 
   useEffect(() => {
     const userData = localStorage.getItem("user")
@@ -75,6 +85,82 @@ export default function TripsPage() {
 
   const closeAlert = () => {
     setAlertDialog({ ...alertDialog, open: false })
+  }
+
+  const addCity = () => {
+    setGenCities(prev => [...prev, { city: "", start_date: "", end_date: "" }])
+  }
+
+  const removeCity = (idx: number) => {
+    setGenCities(prev => {
+      const next = prev.filter((_, i) => i !== idx)
+      return next.length > 0 ? next : [{ city: "", start_date: "", end_date: "" }]
+    })
+  }
+
+  const updateCity = (idx: number, key: 'city'|'start_date'|'end_date', value: string) => {
+    setGenCities(prev => prev.map((c, i) => i === idx ? { ...c, [key]: value } : c))
+  }
+
+  const submitGenerate = async () => {
+    if (!genTitle.trim()) {
+      showAlert('error', 'Falta el título', 'Ingresa un título para el viaje')
+      return
+    }
+    const norm = genCities.filter(c => c.city && c.start_date && c.end_date)
+    if (norm.length === 0) {
+      showAlert('error', 'Faltan ciudades', 'Ingresa al menos una ciudad con fechas')
+      return
+    }
+    const overallStart = new Date(Math.min(...norm.map(c => new Date(c.start_date).getTime())))
+    const overallEnd = new Date(Math.max(...norm.map(c => new Date(c.end_date).getTime())))
+    const payload = {
+      name: genTitle.trim(),
+      budget: genBudget,
+      activities_per_day: genActivitiesPerDay,
+      cities: norm.map(c => ({
+        city: c.city,
+        start_date: new Date(c.start_date).toISOString(),
+        end_date: new Date(c.end_date).toISOString()
+      }))
+    }
+    try {
+      const trip = await authFetch('http://localhost:8000/api/trips/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      setGeneratorOpen(false)
+      setGenTitle("")
+      setGenBudget('medio')
+      setGenActivitiesPerDay(1)
+      setGenCities([{ city: "", start_date: "", end_date: "" }])
+      if (trip && trip.id) {
+        router.push(`/trips/${trip.id}`)
+        return
+      }
+      // Fallback: fetch trips and try to locate the one we just created
+      const list = await authFetch('http://localhost:8000/api/trips/')
+      if (Array.isArray(list) && list.length > 0) {
+        const found = list.find((t: any) => {
+          try {
+            const sd = new Date(t.start_date)
+            const ed = new Date(t.end_date)
+            return t.name === payload.name && sd.getTime() === overallStart.getTime() && ed.getTime() === overallEnd.getTime()
+          } catch {
+            return false
+          }
+        }) || list[0]
+        if (found && found.id) {
+          router.push(`/trips/${found.id}`)
+          return
+        }
+      }
+      // As a last resort, just reload list
+      router.push('/trips')
+    } catch (e) {
+      showAlert('error', 'No se pudo generar', 'Intenta nuevamente más tarde')
+    }
   }
 
   const handleDeleteTrip = async (tripId: string, event: React.MouseEvent) => {
@@ -120,12 +206,17 @@ export default function TripsPage() {
             <h1>Viajes</h1>
             <p>Planifica y organiza tus aventuras de viaje</p>
           </div>
-          <Link href="/trips/new">
-            <Button className={styles.createButton}>
-              <Plus className={styles.buttonIcon} />
-              Crear Viaje
+          <div className="flex gap-2">
+            <Link href="/trips/new">
+              <Button className={styles.createButton}>
+                <Plus className={styles.buttonIcon} />
+                Crear Viaje
+              </Button>
+            </Link>
+            <Button variant="outline" onClick={() => setGeneratorOpen(true)}>
+              Generar viaje automático
             </Button>
-          </Link>
+          </div>
         </div>
 
         {isLoading ? (
@@ -205,6 +296,79 @@ export default function TripsPage() {
         )}
       </main>
 
+      {/* Generator Dialog */}
+      <Dialog open={generatorOpen} onOpenChange={setGeneratorOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Generar viaje automático</DialogTitle>
+            <DialogDescription>Completa los datos para crear un itinerario</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Título del viaje</Label>
+              <Input value={genTitle} onChange={e => setGenTitle(e.target.value)} placeholder="Ej: Europa en 10 días" />
+            </div>
+            <div className="space-y-2">
+              <Label>Preferencia de presupuesto</Label>
+              <select
+                className="w-full border rounded h-10 px-3"
+                value={genBudget}
+                onChange={e => setGenBudget(e.target.value as any)}
+              >
+                <option value="bajo">Económico</option>
+                <option value="medio">Estándar</option>
+                <option value="alto">Premium</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label>Actividades por día</Label>
+              <select
+                className="w-full border rounded h-10 px-3"
+                value={genActivitiesPerDay}
+                onChange={e => setGenActivitiesPerDay(Number(e.target.value) as 1|2)}
+              >
+                <option value="1">1 actividad</option>
+                <option value="2">2 actividades</option>
+              </select>
+            </div>
+            <div className="space-y-3">
+              <Label>Ciudades</Label>
+              {genCities.map((c, idx) => (
+                <div key={idx} className="flex gap-2 items-end">
+                  <div className="md:col-span-2">
+                    <Label className="text-xs">Ciudad</Label>
+                    <Input value={c.city} onChange={e => updateCity(idx, 'city', e.target.value)} placeholder="Ciudad" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Inicio</Label>
+                    <Input type="date" value={c.start_date} onChange={e => updateCity(idx, 'start_date', e.target.value)} />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Fin</Label>
+                    <Input type="date" value={c.end_date} onChange={e => updateCity(idx, 'end_date', e.target.value)} />
+                  </div>
+                  <Button
+                    variant="destructive"
+                    title="Eliminar ciudad"
+                    onClick={() => removeCity(idx)}
+                    disabled={genCities.length === 1}
+                    className={genCities.length === 1 ? 'opacity-50 cursor-not-allowed' : ''}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="md:col-span-1 flex md:justify-end">
+            <Button variant="outline" className="w-auto" onClick={addCity}>Agregar ciudad</Button>
+          </div>
+          <DialogFooter>
+            <Button variant="secondary" onClick={submitGenerate}>Generar viaje</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Alert Dialog */}
       <Dialog open={alertDialog.open} onOpenChange={closeAlert}>
         <DialogContent>
@@ -227,7 +391,7 @@ export default function TripsPage() {
                 </Button>
                 <Button 
                   variant="destructive" 
-                  className="destructiveButton hover:!bg-[#dc2626] hover:!border-[#dc2626]"
+                  className="destructiveButton hover:bg-[#dc2626]! hover:border-[#dc2626]!"
                   onClick={() => {
                     alertDialog.onConfirm?.()
                     closeAlert()

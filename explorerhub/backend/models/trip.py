@@ -69,3 +69,23 @@ class TripWithUser(Trip):
     user_profile_picture: Optional[str] = None
     comments: List[TripComment] = []
     likes_count: int = 0
+
+
+class BudgetLevel(str, Enum):
+    bajo = "bajo"
+    medio = "medio"
+    alto = "alto"
+
+
+class CityInput(BaseModel):
+    city: str
+    start_date: datetime
+    end_date: datetime
+
+
+class TripAutoGenerateRequest(BaseModel):
+    name: str
+    budget: BudgetLevel
+    activities_per_day: int = 1
+    cities: List[CityInput]
+    visibility: TripVisibility = TripVisibility.public
