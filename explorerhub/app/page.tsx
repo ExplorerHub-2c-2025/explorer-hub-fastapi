@@ -1,13 +1,14 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { Loader2, Search, Home, Utensils, Compass, Plane, Building2 } from "lucide-react"
+import { useRouter } from 'next/navigation'
+import { Loader2, Search, Home, Utensils, Compass, Plane, Building2, Sparkles } from 'lucide-react'
 import styles from "./page.module.css"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
+import { PersonalizedRecommendations } from "@/components/personalized-recommendations"
 
 // Same category mapping used in FilterSidebar (Spanish -> English)
 const categoryMap: Record<string, string> = {
@@ -30,6 +31,7 @@ const mainCategories = [
   { icon: Utensils, label: "Restaurantes", href: "/explore?category=Restaurant" },
   { icon: Compass, label: "Cosas que hacer", href: "/explore?category=Activity&category=Cultural&category=Entertainment" },
   { icon: Plane, label: "Viajes", href: "/trips" },
+  { icon: Sparkles, label: "Recomendaciones personalizadas", href: "#personalized" },
 ]
 
 // Interest-based categories
@@ -46,6 +48,11 @@ export default function HomePage() {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
   const [isCheckingUser, setIsCheckingUser] = useState(true)
+  const [showRecommendations, setShowRecommendations] = useState(false)
+
+  useEffect(() => {
+    console.log("[v0] showRecommendations state changed:", showRecommendations)
+  }, [showRecommendations])
 
   useEffect(() => {
     const userData = localStorage.getItem("user")
@@ -64,6 +71,15 @@ export default function HomePage() {
     const params = new URLSearchParams()
     if (searchQuery) params.set("search", searchQuery)
     router.push(`/explore?${params.toString()}`)
+  }
+
+  const handleCategoryClick = (e: React.MouseEvent, href: string) => {
+    console.log("[v0] Category clicked:", href)
+    if (href === "#personalized") {
+      e.preventDefault()
+      console.log("[v0] Opening personalized recommendations modal")
+      setShowRecommendations(true)
+    }
   }
 
   if (isCheckingUser) {
@@ -89,7 +105,12 @@ export default function HomePage() {
           {/* Main Categories */}
           <div className={styles.categoryTabs}>
             {mainCategories.map((cat) => (
-              <Link key={cat.label} href={cat.href} className={styles.categoryTab}>
+              <Link 
+                key={cat.label} 
+                href={cat.href} 
+                className={styles.categoryTab}
+                onClick={(e) => handleCategoryClick(e, cat.href)}
+              >
                 <cat.icon className={styles.categoryIcon} />
                 <span>{cat.label}</span>
               </Link>
@@ -128,7 +149,7 @@ export default function HomePage() {
               >
                 <div className={styles.interestImageWrapper}>
                   <img
-                    src={interest.image}
+                    src={interest.image || "/placeholder.svg"}
                     alt={interest.name}
                     className={styles.interestImage}
                   />
@@ -141,6 +162,18 @@ export default function HomePage() {
           </div>
         </section>
       </main>
+
+      {showRecommendations && (
+        <>
+          {console.log("[v0] Rendering PersonalizedRecommendations component")}
+          <PersonalizedRecommendations 
+            onClose={() => {
+              console.log("[v0] Closing personalized recommendations modal")
+              setShowRecommendations(false)
+            }} 
+          />
+        </>
+      )}
     </div>
   )
 }
