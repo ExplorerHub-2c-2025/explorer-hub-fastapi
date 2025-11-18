@@ -1,14 +1,18 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
+import random
+import re
+import logging
 from database import get_database
-from models.trip import TripCreate, Trip, TripInDB, TripActivity, TripWithUser, TripVisibility
+from models.trip import TripCreate, Trip, TripInDB, TripActivity, TripWithUser, TripVisibility, TripAutoGenerateRequest, BudgetLevel
 from models.counter import get_next_sequence_value
 from auth import get_current_active_user, get_optional_current_user
 from models.user import UserInDB
 from utils import serialize_doc, serialize_docs
 
 router = APIRouter(prefix="/api/trips", tags=["trips"])
+logger = logging.getLogger("uvicorn.error")
 
 
 async def get_current_user_optional(request: Request, db = Depends(get_database)) -> Optional[UserInDB]:
@@ -546,4 +550,208 @@ async def like_trip(
             print(f"DEBUG: Trip {trip_id} already in favorites for user {current_user.id}")
     
     return {"message": "Trip liked and added to favorites successfully"}
+
+
+@router.post("/generate", response_model=Trip, status_code=status.HTTP_201_CREATED)
+async def generate_trip(
+    req: TripAutoGenerateRequest,
+    current_user: UserInDB = Depends(get_current_active_user),
+    db = Depends(get_database)
+):
+    logger.info(f"[GENERATE] Starting with name={req.name}, budget={req.budget}, activities_per_day={req.activities_per_day}, cities={len(req.cities)}")
+    if not req.cities:
+        raise HTTPException(status_code=400, detail="Debe ingresar al menos una ciudad")
+
+    def budget_range(b: BudgetLevel):
+        if b == BudgetLevel.bajo:
+            return 1, 2
+        if b == BudgetLevel.medio:
+            return 2, 3
+        return 3, 4
+
+    min_pl, max_pl = budget_range(req.budget)
+    logger.info(f"[GENERATE] Budget {req.budget} -> price_level {min_pl}-{max_pl}")
+
+    overall_start = min(c.start_date for c in req.cities)
+    overall_end = max(c.end_date for c in req.cities)
+
+    destination = req.cities[0].city if len(req.cities) == 1 else "Multi-ciudad"
+
+    # Build automatic description from city names (ordered, no duplicates)
+    city_names_ordered = []
+    seen_city_keys = set()
+    for c in req.cities:
+        name = (c.city or "").strip()
+        key = name.lower()
+        if name and key not in seen_city_keys:
+            seen_city_keys.add(key)
+            city_names_ordered.append(name)
+    cities_label = ", ".join(city_names_ordered) if city_names_ordered else destination
+    auto_description = f"Viaje a {cities_label} generado por explorerhub"
+
+    activities: List[TripActivity] = []
+    used_activity_ids = set()
+    used_restaurant_ids = set()
+
+    def city_regex(name: str):
+        return {"$regex": f"^{re.escape(name)}$", "$options": "i"}
+
+    async def pick_one_hotels(city: str):
+        cursor = db.businesses.find({
+            "categories": {"$in": ["Alojamiento", "Accommodation", "Hotel"]},
+            "location.city": city_regex(city),
+            "price_level": {"$gte": min_pl, "$lte": max_pl}
+        }).sort("rating", -1).limit(10)
+        hotels = await cursor.to_list(length=10)
+        return random.choice(hotels) if hotels else None
+
+    async def list_by_categories(city: str, cats: List[str], limit: int = 200):
+        # Trae TODAS las opciones de categorías sin filtrar por precio.
+        cursor = db.businesses.find({
+            "categories": {"$in": cats},
+            "location.city": city_regex(city),
+        }).limit(limit)
+        return await cursor.to_list(length=limit)
+
+    activity_cats = [
+        "Actividad", "Atracción", "Entretenimiento", "Cultural", "Naturaleza", "Histórico", "Familiar", "Compras", "Vida Nocturna", "Bienestar"
+    ]
+
+    for city_block in req.cities:
+        city_name = city_block.city
+        start_date = city_block.start_date
+        end_date = city_block.end_date
+        logger.info(f"[GENERATE] Processing city {city_name} from {start_date.date()} to {end_date.date()}")
+        if end_date < start_date:
+            raise HTTPException(status_code=400, detail=f"Rango de fechas inválido para {city_name}")
+
+        hotel = await pick_one_hotels(city_name)
+        if hotel:
+            logger.info(f"[GENERATE] Found hotel: {hotel.get('name')} (id={hotel.get('id')})")
+            activities.append(TripActivity(
+                business_id=hotel.get("id"),
+                business_name=hotel.get("name"),
+                scheduled_date=start_date,
+                notes="Alojamiento"
+            ))
+        else:
+            logger.warning(f"[GENERATE] No hotels found for {city_name}")
+
+        candidates_acts = await list_by_categories(city_name, activity_cats, 200)
+        candidates_rest = await list_by_categories(city_name, ["Restaurante", "Restaurant"], 200)
+        logger.info(f"[GENERATE] Found {len(candidates_acts)} total activities and {len(candidates_rest)} total restaurants for {city_name}")
+
+        # Particionar según rango de presupuesto para priorizar (in-range primero, luego más caro, luego más barato)
+        def partition(items):
+            in_range = []
+            higher = []
+            lower = []
+            for it in items:
+                pl = it.get("price_level")
+                if pl is None:
+                    # Sin price_level -> tratar como in_range (neutral)
+                    in_range.append(it)
+                elif min_pl <= pl <= max_pl:
+                    in_range.append(it)
+                elif pl > max_pl:
+                    higher.append(it)
+                else:
+                    lower.append(it)
+            return in_range, higher, lower
+
+        in_range_acts, higher_acts, lower_acts = partition(candidates_acts)
+        in_range_rests, higher_rests, lower_rests = partition(candidates_rest)
+
+        day = start_date
+        while day.date() <= end_date.date():
+            # Construir pools disponibles (únicos) cada día - filtrar por lo ya usado
+            avail_in_range_acts = [a for a in in_range_acts if a.get("id") not in used_activity_ids]
+            avail_higher_acts = [a for a in higher_acts if a.get("id") not in used_activity_ids]
+            avail_lower_acts = [a for a in lower_acts if a.get("id") not in used_activity_ids]
+
+            random.shuffle(avail_in_range_acts)
+            random.shuffle(avail_higher_acts)
+            random.shuffle(avail_lower_acts)
+
+            # Combinar todas las opciones disponibles en orden de prioridad
+            all_available = avail_in_range_acts + avail_higher_acts + avail_lower_acts
+            
+            selected_count = 0
+            for a in all_available:
+                if selected_count >= req.activities_per_day:
+                    break
+                # Verificar nuevamente que no se haya usado (por si acaso)
+                if a.get("id") not in used_activity_ids:
+                    activities.append(TripActivity(
+                        business_id=a.get("id"),
+                        business_name=a.get("name"),
+                        scheduled_date=day,
+                    ))
+                    used_activity_ids.add(a.get("id"))
+                    selected_count += 1
+                    
+                    # Log cuando escalamos fuera del rango
+                    pl = a.get("price_level")
+                    if pl is not None and pl > max_pl and selected_count == 1:
+                        logger.info(f"[GENERATE] Using higher price activity in {city_name} for day {day.date()}")
+                    elif pl is not None and pl < min_pl and selected_count == 1:
+                        logger.info(f"[GENERATE] Using lower price activity in {city_name} for day {day.date()}")
+
+            # Restaurantes: prioridad in-range, luego más caro, luego más barato (sin repetir)
+            avail_in_range_rests = [r for r in in_range_rests if r.get("id") not in used_restaurant_ids]
+            avail_higher_rests = [r for r in higher_rests if r.get("id") not in used_restaurant_ids]
+            avail_lower_rests = [r for r in lower_rests if r.get("id") not in used_restaurant_ids]
+
+            random.shuffle(avail_in_range_rests)
+            random.shuffle(avail_higher_rests)
+            random.shuffle(avail_lower_rests)
+
+            # Combinar todas las opciones en orden de prioridad
+            all_available_rests = avail_in_range_rests + avail_higher_rests + avail_lower_rests
+            
+            if all_available_rests:
+                chosen_rest = all_available_rests[0]
+                pl = chosen_rest.get("price_level")
+                
+                # Log cuando escalamos fuera del rango
+                if pl is not None and pl > max_pl:
+                    logger.info(f"[GENERATE] Using higher price restaurant in {city_name} for day {day.date()}")
+                elif pl is not None and pl < min_pl:
+                    logger.info(f"[GENERATE] Using lower price restaurant in {city_name} for day {day.date()}")
+                
+                activities.append(TripActivity(
+                    business_id=chosen_rest.get("id"),
+                    business_name=chosen_rest.get("name"),
+                    scheduled_date=day,
+                    notes="Restaurante"
+                ))
+                used_restaurant_ids.add(chosen_rest.get("id"))
+
+            day = day + timedelta(days=1)
+
+    trip_dict = {
+        "name": req.name,
+        "destination": destination,
+        "start_date": overall_start,
+        "end_date": overall_end,
+        "description": auto_description,
+        "visibility": req.visibility,
+        "user_id": str(current_user.id),
+        "activities": [a.model_dump() for a in activities],
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow(),
+    }
+
+    next_id = await get_next_sequence_value("trips", db)
+    trip_dict["id"] = next_id
+    
+    logger.info(f"[GENERATE] Creating trip id={next_id}, name={trip_dict['name']}, {len(activities)} activities")
+    await db.trips.insert_one(trip_dict)
+    created = await db.trips.find_one({"id": next_id})
+    if not created:
+        logger.error(f"[GENERATE] ERROR: Trip id={next_id} not found after insertion!")
+        raise HTTPException(status_code=500, detail="Error al crear el viaje")
+    created = serialize_doc(created)
+    logger.info(f"[GENERATE] SUCCESS: Trip created with id={created.get('id')}")
+    return Trip(**created)
 
