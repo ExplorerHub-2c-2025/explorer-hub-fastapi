@@ -1,12 +1,15 @@
 "use client"
 import { useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
+import type React from "react"
+
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Calendar, Clock, X, Plus, Edit2, Save, Image, Trash2 } from "lucide-react"
 import { format } from "date-fns"
+import { GoogleMapsLink } from "@/components/google-maps-link"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import styles from "./itinerary-builder.module.css"
@@ -18,6 +21,10 @@ interface Activity {
   categories: string[]
   scheduled_date?: Date
   notes?: string
+  location?: {
+    address?: string
+    city?: string
+  }
   images?: Array<{url: string, notes?: string}>
 }
 
@@ -26,6 +33,7 @@ interface ItineraryBuilderProps {
   onAddActivity: () => void
   onRemoveActivity: (businessId: string) => void
   onUpdateSchedule: (businessId: string, date: Date) => void
+  firstActivityMapLink?: React.ReactNode
   onUpdateNotes?: (businessId: string, notes: string) => void
   onAddImage?: (businessId: string, imageUrl: string) => void
   onUpdateImageNotes?: (businessId: string, imageIndex: number, notes: string) => void
@@ -37,6 +45,7 @@ export function ItineraryBuilder({
   onAddActivity,
   onRemoveActivity,
   onUpdateSchedule,
+  firstActivityMapLink,
   onUpdateNotes,
   onAddImage,
   onUpdateImageNotes,
@@ -132,9 +141,11 @@ export function ItineraryBuilder({
         </Card>
       ) : (
         <div className={styles.spaceY3}>
-          {sortedActivities.map((activity) => (
+          {sortedActivities.map((activity, index) => (
             <Card key={activity.business_id}>
               <CardContent className={styles.activityCard}>
+                {index === 0 && firstActivityMapLink && <div className="mb-3">{firstActivityMapLink}</div>}
+
                 <div className={styles.activityContent}>
                   <div className={styles.activityMain}>
                     <div className={styles.activityHeader}>
@@ -198,99 +209,139 @@ export function ItineraryBuilder({
                       </>
                     )}
 
-                    {/* Images Section */}
-                    {onAddImage && (
-                      <div className="space-y-3 mt-4">
-                        <div className="flex gap-2">
-                          <Input
-                            type="url"
-                            placeholder="URL de la imagen..."
-                            value={imageInput[activity.business_id] || ""}
-                            onChange={(e) => setImageInput(prev => ({...prev, [activity.business_id]: e.target.value}))}
-                            className="flex-1"
-                          />
-                          <Button
-                            size="sm"
-                            onClick={() => handleAddImage(activity.business_id)}
-                            disabled={!imageInput[activity.business_id]?.trim()}
-                          >
-                            <Plus className="h-3 w-3 mr-1" />
-                            Añadir
-                          </Button>
-                        </div>
+                    {activity.location?.city && (
+                      <div className="mt-3 space-y-2">
+                        <p className="text-sm text-muted-foreground">
+                          📍 {activity.location.address}, {activity.location.city}
+                        </p>
 
-                        {activity.images && activity.images.length > 0 && (
-                          <div className="space-y-2">
-                            {activity.images.map((image, imageIndex) => (
-                              <div key={imageIndex} className="border rounded-lg p-3 bg-gray-50">
-                                <div className="flex flex-col gap-3">
-                                  <img
-                                    src={image.url}
-                                    alt={`Imagen ${imageIndex + 1}`}
-                                    className="w-full max-w-xs h-48 object-cover rounded mx-auto"
+                        {/* Google Maps link to next activity or from previous activity */}
+                        {index > 0 && sortedActivities[index - 1].location?.city && (
+                          <>
+                            <GoogleMapsLink
+                              fromAddress={sortedActivities[index - 1].location?.address || ""}
+                              fromCity={sortedActivities[index - 1].location?.city || ""}
+                              toAddress={activity.location.address || ""}
+                              toCity={activity.location.city || ""}
+                              activityName={activity.business_name}
+                            />
+
+                            {/* Images Section */}
+                            {onAddImage && (
+                              <div className="space-y-3 mt-4">
+                                <div className="flex gap-2">
+                                  <Input
+                                    type="url"
+                                    placeholder="URL de la imagen..."
+                                    value={imageInput[activity.business_id] || ""}
+                                    onChange={(e) =>
+                                      setImageInput((prev) => ({
+                                        ...prev,
+                                        [activity.business_id]: e.target.value,
+                                      }))
+                                    }
+                                    className="flex-1"
                                   />
-                                  <div className="flex-1">
-                                    {editingImageNotes?.businessId === activity.business_id && editingImageNotes.imageIndex === imageIndex ? (
-                                      <div className="space-y-2">
-                                        <Textarea
-                                          value={tempImageNotes}
-                                          onChange={(e) => setTempImageNotes(e.target.value)}
-                                          placeholder="Notas de la imagen..."
-                                          className="text-sm"
-                                          rows={2}
-                                        />
-                                        <div className="flex gap-2">
-                                          <Button size="sm" onClick={() => handleSaveImageNotes(activity.business_id, imageIndex)}>
-                                            <Save className="h-3 w-3 mr-1" />
-                                            Guardar
-                                          </Button>
-                                          <Button size="sm" variant="outline" onClick={handleCancelImageEdit}>
-                                            Cancelar
-                                          </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleAddImage(activity.business_id)}
+                                    disabled={!imageInput[activity.business_id]?.trim()}
+                                  >
+                                    <Plus className="h-3 w-3 mr-1" />
+                                    Añadir
+                                  </Button>
+                                </div>
+
+                                {activity.images && activity.images.length > 0 && (
+                                  <div className="space-y-2">
+                                    {activity.images.map((image, imageIndex) => (
+                                      <div
+                                        key={imageIndex}
+                                        className="border rounded-lg p-3 bg-gray-50"
+                                      >
+                                        <div className="flex flex-col gap-3">
+                                          <img
+                                            src={image.url}
+                                            alt={`Imagen ${imageIndex + 1}`}
+                                            className="w-full max-w-xs h-48 object-cover rounded mx-auto"
+                                          />
+                                          <div className="flex-1">
+                                            {editingImageNotes?.businessId === activity.business_id &&
+                                            editingImageNotes.imageIndex === imageIndex ? (
+                                              <div className="space-y-2">
+                                                <Textarea
+                                                  value={tempImageNotes}
+                                                  onChange={(e) => setTempImageNotes(e.target.value)}
+                                                  placeholder="Notas de la imagen..."
+                                                  className="text-sm"
+                                                  rows={2}
+                                                />
+                                                <div className="flex gap-2">
+                                                  <Button
+                                                    size="sm"
+                                                    onClick={() =>
+                                                      handleSaveImageNotes(activity.business_id, imageIndex)
+                                                    }
+                                                  >
+                                                    <Save className="h-3 w-3 mr-1" />
+                                                    Guardar
+                                                  </Button>
+                                                  <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={handleCancelImageEdit}
+                                                  >
+                                                    Cancelar
+                                                  </Button>
+                                                </div>
+                                              </div>
+                                            ) : (
+                                              <>
+                                                {image.notes && (
+                                                  <p className="text-sm text-gray-700">{image.notes}</p>
+                                                )}
+                                                <div className="flex gap-2 mt-2">
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() =>
+                                                      handleEditImageNotes(
+                                                        activity.business_id,
+                                                        imageIndex,
+                                                        image.notes
+                                                      )
+                                                    }
+                                                  >
+                                                    <Edit2 className="h-3 w-3 mr-1" />
+                                                    {image.notes ? "Editar" : "Añadir notas"}
+                                                  </Button>
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() =>
+                                                      handleRemoveImage(activity.business_id, imageIndex)
+                                                    }
+                                                    className="text-red-600 hover:text-red-700"
+                                                  >
+                                                    <Trash2 className="h-3 w-3 mr-1" />
+                                                    Eliminar
+                                                  </Button>
+                                                </div>
+                                              </>
+                                            )}
+                                          </div>
                                         </div>
                                       </div>
-                                    ) : (
-                                      <>
-                                        {image.notes && <p className="text-sm text-gray-700">{image.notes}</p>}
-                                        <div className="flex gap-2 mt-2">
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleEditImageNotes(activity.business_id, imageIndex, image.notes)}
-                                          >
-                                            <Edit2 className="h-3 w-3 mr-1" />
-                                            {image.notes ? "Editar" : "Añadir notas"}
-                                          </Button>
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleRemoveImage(activity.business_id, imageIndex)}
-                                            className="text-red-600 hover:text-red-700"
-                                          >
-                                            <Trash2 className="h-3 w-3 mr-1" />
-                                            Eliminar
-                                          </Button>
-                                        </div>
-                                      </>
-                                    )}
+                                    ))}
                                   </div>
-                                </div>
+                                )}
                               </div>
-                            ))}
-                          </div>
+                            )}
+                          </>
                         )}
                       </div>
                     )}
                   </div>
-
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => onRemoveActivity(activity.business_id)}
-                    className={styles.removeButton}
-                  >
-                    <X className={styles.removeIcon} />
-                  </Button>
                 </div>
               </CardContent>
             </Card>

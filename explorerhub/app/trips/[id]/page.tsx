@@ -15,6 +15,10 @@ import ItineraryBuilder from "@/components/itinerary-builder"
 import { ActivitySearchModal } from "@/components/activity-search-modal"
 import { authFetch } from "@/lib/api"
 import styles from "./page.module.css"
+import { WeatherCard } from "@/components/weather-card"
+import { NearbyEventsCard } from "@/components/nearby-events-card"
+import { TransportRecommendations } from "@/components/transport-recommendations"
+import { CurrentLocationMapLink } from "@/components/current-location-map-link"
 
 interface TripActivity {
   business_id: string
@@ -22,6 +26,12 @@ interface TripActivity {
   scheduled_date?: string
   notes?: string
   images?: Array<{url: string, notes?: string}>
+  location?: {
+    address?: string
+    city?: string
+    lat?: number
+    lng?: number
+  }
 }
 
 interface Trip {
@@ -170,6 +180,9 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
       showAlert('error', 'Error', 'Error al actualizar la fecha programada')
     }
   }
+
+  const nearestCity = trip.activities.length > 0 ? trip.activities[0].location?.city || "" : ""
+  const firstActivity = trip.activities.length > 0 ? trip.activities[0] : null
 
   const handleUpdateNotes = async (businessId: string, notes: string) => {
     if (!trip) return
@@ -351,6 +364,15 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
               onAddActivity={handleAddActivity}
               onRemoveActivity={handleRemoveActivity}
               onUpdateSchedule={handleUpdateSchedule}
+              firstActivityMapLink={
+                firstActivity ? (
+                  <CurrentLocationMapLink
+                    address={firstActivity.location?.address || ""}
+                    city={firstActivity.location?.city || ""}
+                    activityName={firstActivity.business_name}
+                  />
+                ) : undefined
+              }
               onUpdateNotes={handleUpdateNotes}
               onAddImage={handleAddImage}
               onUpdateImageNotes={handleUpdateImageNotes}
@@ -359,7 +381,62 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
           </div>
 
           {/* Sidebar */}
+          <div className="space-y-6">
+            {nearestCity && <WeatherCard city={nearestCity} />}
+
+            {nearestCity && <NearbyEventsCard city={nearestCity} />}
+
+            {trip.activities.length >= 2 && (
+              <TransportRecommendations
+                fromCity={trip.activities[0].location?.city || ""}
+                toCity={trip.activities[1].location?.city || ""}
+              />
+            )}
+
           <div className={styles.sidebar}>
+            <Card>
+              <CardContent className={styles.cardContent}>
+                <h3 className={styles.sectionTitle}>Resumen del Viaje</h3>
+                <div className={styles.tripSummary}>
+                  <div className={styles.summaryRow}>
+                    <span className={styles.summaryLabel}>Duración</span>
+                    <span className={styles.summaryValue}>
+                      {Math.ceil(
+                        (new Date(trip.end_date).getTime() - new Date(trip.start_date).getTime()) /
+                          (1000 * 60 * 60 * 24)
+                      )}{" "}
+                      días
+                    </span>
+                  </div>
+                  <div className={styles.summaryRow}>
+                    <span className={styles.summaryLabel}>Actividades</span>
+                    <span className={styles.summaryValue}>{trip.activities.length}</span>
+                  </div>
+                  <div className={styles.summaryRow}>
+                    <span className={styles.summaryLabel}>Destino</span>
+                    <span className={styles.summaryValue}>{trip.destination}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className={styles.cardContent}>
+                <h3 className={styles.sectionTitle}>Recomendaciones</h3>
+                <p className={styles.recommendationsText}>
+                  Basado en tu itinerario, también te podrían gustar estas experiencias:
+                </p>
+                <div className={styles.recommendationsList}>
+                  <Link href="/explore">
+                    <div className={styles.recommendationItem}>
+                      <h4 className={styles.recommendationTitle}>Explorar más actividades</h4>
+                      <p className={styles.recommendationDescription}>Descubre nuevas experiencias</p>
+                    </div>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
             <Card>
               <CardContent className={styles.cardContent}>
                 <h3 className={styles.sectionTitle}>Resumen del Viaje</h3>
