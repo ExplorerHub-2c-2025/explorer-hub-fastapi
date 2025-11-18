@@ -32,6 +32,7 @@ class TripBase(BaseModel):
     description: Optional[str] = None
     cover_image: Optional[str] = None
     visibility: TripVisibility = TripVisibility.public
+    collaborators: List[str] = []  # List of user IDs who can edit
 
 
 class TripCreate(TripBase):
@@ -55,6 +56,7 @@ class Trip(TripBase):
     user_id: str
     activities: List[TripActivity]
     created_at: datetime
+    collaborators: List[str] = []
     
     
 class TripComment(BaseModel):

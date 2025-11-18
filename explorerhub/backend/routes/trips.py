@@ -71,6 +71,7 @@ async def create_trip(
     
     trip_dict["user_id"] = str(current_user.id)
     trip_dict["activities"] = []
+    trip_dict["collaborators"] = []
     trip_dict["created_at"] = datetime.utcnow()
     trip_dict["updated_at"] = datetime.utcnow()
     
@@ -90,9 +91,18 @@ async def get_my_trips(
     current_user: UserInDB = Depends(get_current_active_user),
     db = Depends(get_database)
 ):
-    """Get all trips for current user"""
+    """Get all trips for current user (owned + collaborating)"""
     user_id = str(current_user.id) if hasattr(current_user, 'id') else str(current_user._id)
-    cursor = db.trips.find({"user_id": user_id}).sort("start_date", -1)
+    
+    # Get trips where user is owner OR collaborator
+    query = {
+        "$or": [
+            {"user_id": user_id},  # Trips owned by user
+            {"collaborators": user_id}  # Trips where user is collaborator
+        ]
+    }
+    
+    cursor = db.trips.find(query).sort("start_date", -1)
     trips = await cursor.to_list(length=100)
     trips = serialize_docs(trips)
     
@@ -225,7 +235,8 @@ async def get_trip(
         raise HTTPException(status_code=404, detail="Trip not found")
     
     user_id = str(current_user.id) if hasattr(current_user, 'id') else str(current_user._id)
-    if trip["user_id"] != user_id:
+    collaborators = trip.get("collaborators", [])
+    if trip["user_id"] != user_id and user_id not in collaborators:
         raise HTTPException(status_code=403, detail="Not authorized to view this trip")
     
     trip = serialize_doc(trip)
@@ -283,7 +294,9 @@ async def update_trip(
     if not existing_trip:
         raise HTTPException(status_code=404, detail="Trip not found")
     
-    if existing_trip["user_id"] != str(current_user.id):
+    user_id = str(current_user.id)
+    collaborators = existing_trip.get("collaborators", [])
+    if existing_trip["user_id"] != user_id and user_id not in collaborators:
         raise HTTPException(status_code=403, detail="Not authorized to update this trip")
     
     update_data = trip_update.model_dump()
@@ -336,7 +349,9 @@ async def add_activity_to_trip(
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
     
-    if trip["user_id"] != str(current_user.id):
+    user_id = str(current_user.id)
+    collaborators = trip.get("collaborators", [])
+    if trip["user_id"] != user_id and user_id not in collaborators:
         raise HTTPException(status_code=403, detail="Not authorized to modify this trip")
     
     # Verify business exists
@@ -369,7 +384,9 @@ async def remove_activity_from_trip(
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
     
-    if trip["user_id"] != str(current_user.id):
+    user_id = str(current_user.id)
+    collaborators = trip.get("collaborators", [])
+    if trip["user_id"] != user_id and user_id not in collaborators:
         raise HTTPException(status_code=403, detail="Not authorized to modify this trip")
     
     await db.trips.update_one(
@@ -398,7 +415,9 @@ async def update_activity_in_trip(
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
     
-    if trip["user_id"] != str(current_user.id):
+    user_id = str(current_user.id)
+    collaborators = trip.get("collaborators", [])
+    if trip["user_id"] != user_id and user_id not in collaborators:
         raise HTTPException(status_code=403, detail="Not authorized to modify this trip")
     
     # Build update query for the specific activity
@@ -738,6 +757,7 @@ async def generate_trip(
         "visibility": req.visibility,
         "user_id": str(current_user.id),
         "activities": [a.model_dump() for a in activities],
+        "collaborators": [],
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow(),
     }
@@ -754,4 +774,113 @@ async def generate_trip(
     created = serialize_doc(created)
     logger.info(f"[GENERATE] SUCCESS: Trip created with id={created.get('id')}")
     return Trip(**created)
+
+
+@router.post("/{trip_id}/collaborators", response_model=dict)
+async def add_collaborator(
+    trip_id: int,
+    collaborator_data: dict,
+    current_user: UserInDB = Depends(get_current_active_user),
+    db = Depends(get_database)
+):
+    """Add a collaborator to a trip (only owner can do this)"""
+    trip = await db.trips.find_one({"id": trip_id})
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    
+    user_id = str(current_user.id)
+    if trip["user_id"] != user_id:
+        raise HTTPException(status_code=403, detail="Only the trip owner can add collaborators")
+    
+    collaborator_id = collaborator_data.get("user_id")
+    if not collaborator_id:
+        raise HTTPException(status_code=400, detail="user_id is required")
+    
+    # Verify collaborator user exists
+    collaborator = await db.users.find_one({"id": int(collaborator_id)})
+    if not collaborator:
+        raise HTTPException(status_code=404, detail="Collaborator user not found")
+    
+    # Get current collaborators list
+    collaborators = trip.get("collaborators", [])
+    
+    # Check if already a collaborator
+    if collaborator_id in collaborators:
+        return {"message": "User is already a collaborator"}
+    
+    # Add collaborator
+    collaborators.append(collaborator_id)
+    await db.trips.update_one(
+        {"id": trip_id},
+        {"$set": {"collaborators": collaborators, "updated_at": datetime.utcnow()}}
+    )
+    
+    return {"message": "Collaborator added successfully", "collaborator_id": collaborator_id}
+
+
+@router.delete("/{trip_id}/collaborators/{collaborator_id}", response_model=dict)
+async def remove_collaborator(
+    trip_id: int,
+    collaborator_id: str,
+    current_user: UserInDB = Depends(get_current_active_user),
+    db = Depends(get_database)
+):
+    """Remove a collaborator from a trip (only owner can do this)"""
+    trip = await db.trips.find_one({"id": trip_id})
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    
+    user_id = str(current_user.id)
+    if trip["user_id"] != user_id:
+        raise HTTPException(status_code=403, detail="Only the trip owner can remove collaborators")
+    
+    # Get current collaborators list
+    collaborators = trip.get("collaborators", [])
+    
+    # Check if user is a collaborator
+    if collaborator_id not in collaborators:
+        raise HTTPException(status_code=404, detail="User is not a collaborator")
+    
+    # Remove collaborator
+    collaborators.remove(collaborator_id)
+    await db.trips.update_one(
+        {"id": trip_id},
+        {"$set": {"collaborators": collaborators, "updated_at": datetime.utcnow()}}
+    )
+    
+    return {"message": "Collaborator removed successfully"}
+
+
+@router.get("/{trip_id}/collaborators", response_model=List[dict])
+async def get_collaborators(
+    trip_id: int,
+    current_user: UserInDB = Depends(get_current_active_user),
+    db = Depends(get_database)
+):
+    """Get list of collaborators for a trip"""
+    trip = await db.trips.find_one({"id": trip_id})
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    
+    user_id = str(current_user.id)
+    collaborators_ids = trip.get("collaborators", [])
+    
+    # Only owner and collaborators can see the collaborators list
+    if trip["user_id"] != user_id and user_id not in collaborators_ids:
+        raise HTTPException(status_code=403, detail="Not authorized to view collaborators")
+    
+    # Get collaborator details
+    collaborators = []
+    for collab_id in collaborators_ids:
+        user = await db.users.find_one({"id": int(collab_id)})
+        if user:
+            user = serialize_doc(user)
+            collaborators.append({
+                "id": collab_id,
+                "username": user.get("username", ""),
+                "full_name": user.get("full_name", "Usuario"),
+                "profile_picture": user.get("profile_picture")
+            })
+    
+    return collaborators
 
