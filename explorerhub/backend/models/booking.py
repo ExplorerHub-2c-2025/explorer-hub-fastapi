@@ -10,12 +10,20 @@ class BookingStatus(str, Enum):
     cancelled = "cancelled"
 
 
+class TicketSelection(BaseModel):
+    """Selección de entradas por tipo"""
+    adult_count: int = Field(default=0, ge=0)
+    senior_count: int = Field(default=0, ge=0)
+    child_count: int = Field(default=0, ge=0)
+
+
 class BookingCreate(BaseModel):
     name: str
-    amount: int
+    amount: int  # Total de personas (para compatibilidad)
     date: date
     time: time
     promotion_code: Optional[str] = None
+    ticket_selection: Optional[TicketSelection] = None  # Nueva selección detallada
 
 
 class Booking(BookingCreate):
@@ -28,6 +36,8 @@ class Booking(BookingCreate):
     original_price: Optional[float] = None
     final_price: Optional[float] = None
     status: BookingStatus = BookingStatus.pending
+    ticket_selection: Optional[TicketSelection] = None
+    applied_promotion_id: Optional[int] = None  # ID de la promoción aplicada
 
 
 class BookingWithBusiness(Booking):

@@ -7,11 +7,23 @@ from database import Database
 from config import settings
 from routes import auth, businesses, reviews, trips, promotions, bookings, notifications, favorites, profile, users
 from pathlib import Path
+from flash_sale_checker import check_and_update_flash_sales
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
     await Database.connect_db()
+    
+    # Verificar y actualizar ofertas flash al iniciar
+    logger = logging.getLogger('uvicorn.error')
+    logger.info("🔍 Verificando ofertas flash al iniciar el servidor...")
+    try:
+        db = Database.get_db()
+        updated = await check_and_update_flash_sales(db)
+        logger.info(f"✅ Verificación de flash sales completada ({updated} actualizadas)")
+    except Exception as e:
+        logger.error(f"❌ Error al verificar flash sales: {e}")
+    
     yield
     # Shutdown
     await Database.close_db()

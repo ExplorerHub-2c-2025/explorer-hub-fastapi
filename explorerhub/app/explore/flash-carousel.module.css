@@ -1,0 +1,530 @@
+/* Carousel Container */
+.carouselContainer {
+  width: 100%;
+  max-width: 1400px; /* Mismo ancho máximo que el resto del contenido */
+  margin: 2rem auto; /* Centrado automático */
+  padding: 2rem;
+  background: linear-gradient(135deg, #fff5e6 0%, #ffe5cc 100%);
+  border-radius: 20px;
+  box-shadow: 0 8px 24px rgba(255, 145, 0, 0.15);
+  border: 2px solid #ff9100;
+}
+
+/* Header */
+.carouselHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.headerIcon {
+  display: none; /* Ocultar el ícono de Zap */
+}
+
+.carouselTitle {
+  font-size: 1.75rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #ff6b00 0%, #ff3d00 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0;
+  text-align: left; /* Alinear a la izquierda */
+}
+
+.headerBadge {
+  padding: 0.25rem 0.75rem;
+  background: linear-gradient(135deg, #ff6b00 0%, #ff3d00 100%);
+  color: white;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Controls */
+.carouselControls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.controlButton {
+  background: white;
+  border: 2px solid #ff9100;
+  color: #ff6b00;
+  transition: all 0.3s ease;
+}
+
+.controlButton:hover:not(:disabled) {
+  background: #ff6b00;
+  color: white;
+  transform: scale(1.1);
+}
+
+.controlButton:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Carousel Wrapper */
+.carouselWrapper {
+  overflow: hidden;
+  position: relative;
+  border-radius: 16px;
+}
+
+.carouselTrack {
+  display: flex;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  gap: 1.5rem;
+}
+
+/* Flash Card */
+.flashCard {
+  flex: 0 0 calc(33.333% - 1rem);
+  min-width: 220px;
+  max-width: 280px;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  position: relative;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.flashCard:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 24px rgba(255, 107, 0, 0.25);
+}
+
+/* Flash Badge tipo Mercado Libre */
+.mlBadge {
+  position: absolute;
+  top: 0.625rem;
+  left: 0.625rem;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+
+.mlBadgeText {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  background: #ffe600;
+  color: #000000;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  border-radius: 3px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.mlTimer {
+  display: inline-block;
+  padding: 0.3rem 0.5rem;
+  background: rgba(0, 0, 0, 0.85);
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-family: monospace;
+  letter-spacing: 1px;
+  border-radius: 3px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Flash Badge */
+.flashBadge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 10;
+}
+
+/* Card Image */
+.cardImage {
+  position: relative;
+  width: 100%;
+  height: 140px;
+  overflow: hidden;
+}
+
+.cardImage img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.flashCard:hover .cardImage img {
+  transform: scale(1.1);
+}
+
+.imageOverlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.6), transparent);
+}
+
+/* Card Content */
+.cardContent {
+  padding: 0.875rem;
+}
+
+.businessName {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 0.5rem 0;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.discount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem 0.75rem;
+  background: linear-gradient(135deg, #ff6b00 0%, #ff3d00 100%);
+  color: white;
+  border-radius: 10px;
+  margin-bottom: 0.5rem;
+}
+
+.discountValue {
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+}
+
+/* Precio y descuento estilo Mercado Libre */
+.priceSection {
+  margin: 0.75rem 0;
+}
+
+.mlDiscount {
+  display: inline-block;
+  padding: 0.35rem 0.65rem;
+  background: #00a650;
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border-radius: 4px;
+  letter-spacing: 0.3px;
+}
+
+/* Stock warnings estilo ML */
+.mlStockCritical {
+  padding: 0.4rem 0.6rem;
+  background: #ff3d00;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 4px;
+  margin-top: 0.5rem;
+  animation: pulse 1.5s infinite;
+}
+
+.mlStockLow {
+  padding: 0.4rem 0.6rem;
+  background: #ff9100;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 4px;
+  margin-top: 0.5rem;
+}
+
+.mlStockNormal {
+  padding: 0.4rem 0.6rem;
+  background: rgba(0, 0, 0, 0.05);
+  color: #666;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 4px;
+  margin-top: 0.5rem;
+}
+
+.promoTitle {
+  font-size: 0.8rem;
+  color: #666;
+  margin: 0 0 0.5rem 0;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Duration Badge - "POR X HS" */
+.durationBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  background: linear-gradient(135deg, #ff6b00 0%, #ff3d00 100%);
+  color: white;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+  width: 100%;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.durationBadge svg {
+  flex-shrink: 0;
+}
+
+/* Countdown - "Quedan X" */
+.countdown {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+  color: #ffffff;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+  width: 100%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  letter-spacing: 0.5px;
+  animation: countdownPulse 2s infinite;
+}
+
+.countdown svg {
+  flex-shrink: 0;
+  animation: tickTock 1s infinite;
+}
+
+@keyframes countdownPulse {
+  0%, 100% {
+    box-shadow: 0 2px 8px rgba(255, 107, 0, 0.2);
+  }
+  50% {
+    box-shadow: 0 4px 12px rgba(255, 107, 0, 0.4);
+  }
+}
+
+@keyframes tickTock {
+  0%, 100% {
+    transform: rotate(-5deg);
+  }
+  50% {
+    transform: rotate(5deg);
+  }
+}
+
+/* Stock */
+.stock {
+  margin-bottom: 0.5rem;
+}
+
+.stockUrgent {
+  display: inline-block;
+  padding: 0.3rem 0.6rem;
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  color: white;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  animation: pulse 1.5s infinite;
+}
+
+.stockLow {
+  display: inline-block;
+  padding: 0.3rem 0.6rem;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.stockNormal {
+  display: inline-block;
+  padding: 0.3rem 0.6rem;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+/* Card Footer */
+.cardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.5rem;
+  border-top: 1px solid #e5e5e5;
+}
+
+.rating {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.location {
+  font-size: 0.7rem;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100px;
+}
+
+/* Indicators */
+.indicators {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}
+
+.indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255, 107, 0, 0.3);
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 0;
+}
+
+.indicator:hover {
+  background: rgba(255, 107, 0, 0.6);
+  transform: scale(1.2);
+}
+
+.indicatorActive {
+  background: #ff6b00;
+  width: 24px;
+  border-radius: 5px;
+}
+
+/* Loading State */
+.loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  gap: 1rem;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255, 107, 0, 0.2);
+  border-top-color: #ff6b00;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .flashCard {
+    flex: 0 0 calc(50% - 0.75rem);
+    min-width: 200px;
+  }
+}
+
+@media (max-width: 768px) {
+  .carouselContainer {
+    padding: 1.5rem;
+  }
+
+  .carouselTitle {
+    font-size: 1.25rem;
+  }
+
+  .headerBadge {
+    font-size: 0.625rem;
+    padding: 0.2rem 0.5rem;
+  }
+
+  .flashCard {
+    flex: 0 0 100%;
+    min-width: auto;
+  }
+
+  .carouselTrack {
+    gap: 1rem;
+  }
+
+  .cardImage {
+    height: 140px;
+  }
+  
+  .businessName {
+    font-size: 0.9rem;
+  }
+  
+  .mlBadgeText {
+    font-size: 0.6rem;
+    padding: 0.2rem 0.4rem;
+  }
+  
+  .mlTimer {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.4rem;
+  }
+  
+  .mlDiscount {
+    font-size: 0.75rem;
+  }
+  
+  .durationBadge {
+    font-size: 0.65rem;
+    padding: 0.35rem 0.65rem;
+  }
+  
+  .countdown {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.7rem;
+  }
+}

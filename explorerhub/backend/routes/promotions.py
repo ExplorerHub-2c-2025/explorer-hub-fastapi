@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from typing import List, Optional
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from database import get_database
 from models.promotion import PromotionCreate, Promotion, PromotionUpdate, PromotionClaim
 from models.counter import get_next_sequence_value
@@ -8,6 +8,7 @@ from auth import get_current_active_user
 from models.user import UserInDB
 from utils import serialize_doc, serialize_docs
 from routes.notifications import notify_new_promotion
+from flash_sale_checker import check_promotion_after_use
 
 router = APIRouter(prefix="/api/promotions", tags=["promotions"])
 
@@ -57,6 +58,20 @@ async def create_promotion(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Promotion must have either discount_percentage or discount_amount"
+        )
+    
+    # Validate promotion type
+    if promotion.promotion_type not in ["code", "automatic"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Promotion type must be either 'code' or 'automatic'"
+        )
+    
+    # If promotion type is "code", a code must be provided
+    if promotion.promotion_type == "code" and not promotion.code:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Code-based promotions must have a promotional code"
         )
     
     promotion_dict = promotion.model_dump()
@@ -124,6 +139,114 @@ async def get_promotions(
     promotions = serialize_docs(promotions)
     
     return [Promotion(**p) for p in promotions]
+
+
+@router.get("/flash-sales", response_model=List[dict])
+async def get_flash_sales(
+    db = Depends(get_database)
+):
+    """Get all promotions marked as flash sales (is_flash_sale=True)"""
+    now = datetime.now()
+    today = date.today()
+    
+    # Find all flash sale promotions that are:
+    # 1. Active
+    # 2. is_flash_sale = True
+    # 3. Within the valid date range
+    
+    cursor = db.promotions.find({
+        "is_flash_sale": True,
+        "is_active": True
+    })
+    
+    promotions = await cursor.to_list(length=100)
+    flash_sales = []
+    
+    for promo in promotions:
+        try:
+            # Parse dates
+            start_date_str = promo.get("start_date")
+            end_date_str = promo.get("end_date")
+            
+            if isinstance(start_date_str, str):
+                start_date = date.fromisoformat(start_date_str)
+            else:
+                start_date = start_date_str
+                
+            if isinstance(end_date_str, str):
+                end_date = date.fromisoformat(end_date_str)
+            else:
+                end_date = end_date_str
+            
+            # Check if within date range
+            if today < start_date or today > end_date:
+                continue
+            
+            # Calculate flash sale end time
+            flash_duration_hours = promo.get("flash_duration_hours", 24)
+            
+            # Get the creation time of the promotion (when flash started)
+            created_at_str = promo.get("created_at")
+            
+            if created_at_str:
+                # If we have created_at, use it as flash start time
+                if isinstance(created_at_str, str):
+                    try:
+                        # Try parsing as datetime first
+                        flash_start = datetime.fromisoformat(created_at_str.replace('Z', '+00:00'))
+                    except:
+                        # If it's just a date, use start of that day
+                        flash_start = datetime.combine(date.fromisoformat(created_at_str), datetime.min.time())
+                else:
+                    flash_start = created_at_str
+            else:
+                # Fallback to start_date at beginning of day
+                flash_start = datetime.combine(start_date, datetime.min.time())
+            
+            flash_end = flash_start + timedelta(hours=flash_duration_hours)
+            
+            # Check if flash sale is still active (not expired)
+            if now > flash_end:
+                continue
+            
+            # Get business information
+            business_id = promo.get("business_id")
+            business = await db.businesses.find_one({"id": business_id})
+            
+            if not business:
+                continue
+            
+            # Prepare flash sale data
+            flash_sale = {
+                "id": promo.get("id"),
+                "business_id": business_id,
+                "business_name": business.get("name", ""),
+                "business_image": business.get("images", [None])[0] if business.get("images") else None,
+                "business_rating": business.get("rating", 0),
+                "business_location": business.get("location", {}).get("city", ""),
+                "title": promo.get("title", ""),
+                "discount_percentage": promo.get("discount_percentage"),
+                "discount_amount": promo.get("discount_amount"),
+                "start_date": flash_start.isoformat(),  # Send the actual flash start time
+                "flash_duration_hours": flash_duration_hours,
+                "current_uses": promo.get("current_uses", 0),
+                "max_uses": promo.get("max_uses"),
+                "min_purchase": promo.get("min_purchase")
+            }
+            
+            flash_sales.append(flash_sale)
+            
+        except (ValueError, AttributeError, TypeError) as e:
+            # Skip promotions with errors
+            print(f"Error processing flash sale: {e}")
+            continue
+    
+    # Sort by remaining stock (urgency)
+    flash_sales.sort(key=lambda x: (
+        (x["max_uses"] - x["current_uses"]) if x.get("max_uses") else 9999
+    ))
+    
+    return flash_sales
 
 
 @router.get("/{promotion_id}", response_model=Promotion)
@@ -286,6 +409,9 @@ async def claim_promotion(
         {"$inc": {"current_uses": 1}}
     )
     
+    # Verificar si debe convertirse en flash sale por stock bajo
+    await check_promotion_after_use(db, promotion_id)
+    
     return {"message": "Promotion claimed successfully", "claim_id": next_id}
 
 
@@ -306,6 +432,37 @@ async def get_my_claims(
             claim["promotion"] = serialize_doc(promotion)
     
     return claims
+
+
+@router.get("/automatic/{business_id}")
+async def get_automatic_promotions(
+    business_id: int,
+    db = Depends(get_database)
+):
+    """Get active automatic promotions for a business (public endpoint)"""
+    from datetime import date as date_type
+    
+    today = date_type.today().isoformat()
+    
+    cursor = db.promotions.find({
+        "business_id": business_id,
+        "is_active": True,
+        "promotion_type": "automatic",
+        "start_date": {"$lte": today},
+        "end_date": {"$gte": today}
+    }).sort("created_at", -1)
+    
+    promotions = await cursor.to_list(length=10)
+    promotions = serialize_docs(promotions)
+    
+    # Filter out promotions that have reached max uses
+    active_promotions = []
+    for p in promotions:
+        max_uses = p.get("max_uses")
+        if max_uses is None or p.get("current_uses", 0) < max_uses:
+            active_promotions.append(Promotion(**p))
+    
+    return active_promotions
 
 
 @router.get("/available/{business_id}")

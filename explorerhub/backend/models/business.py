@@ -13,6 +13,34 @@ class Location(BaseModel):
     longitude: Optional[float] = None
 
 
+class TicketPricing(BaseModel):
+    """Precios de entradas por tipo de visitante"""
+    adult_price: Optional[float] = Field(None, ge=0)
+    senior_price: Optional[float] = Field(None, ge=0)  # Adultos mayores
+    child_price: Optional[float] = Field(None, ge=0)  # Niños
+
+
+class HotelPricing(BaseModel):
+    """Precios de alojamiento"""
+    price_per_night: Optional[float] = Field(None, ge=0)
+    min_nights: Optional[int] = Field(1, ge=1)  # Mínimo de noches
+    max_nights: Optional[int] = Field(None, ge=1)  # Máximo de noches
+
+
+class RestaurantPricing(BaseModel):
+    """Precios de restaurante"""
+    reservation_fee: Optional[float] = Field(None, ge=0)  # Cargo por reserva (opcional)
+    average_price_per_person: Optional[float] = Field(None, ge=0)  # Precio promedio por persona
+    min_consumption: Optional[float] = Field(None, ge=0)  # Consumo mínimo
+
+
+class WellnessPricing(BaseModel):
+    """Precios para centros de bienestar (spa, gimnasio, etc.)"""
+    session_price: Optional[float] = Field(None, ge=0)  # Precio por sesión
+    package_price: Optional[float] = Field(None, ge=0)  # Precio por paquete
+    sessions_in_package: Optional[int] = Field(None, ge=1)  # Sesiones incluidas en paquete
+
+
 class BusinessBase(BaseModel):
     name: str
     description: str
@@ -25,6 +53,12 @@ class BusinessBase(BaseModel):
     tags: List[str] = []
     allows_bookings: bool = True
     max_capacity: Optional[int] = None  # Cupo máximo de personas
+    
+    # Diferentes modelos de precios según el tipo de negocio
+    ticket_pricing: Optional[TicketPricing] = None  # Para museos, atracciones, actividades, entretenimiento
+    hotel_pricing: Optional[HotelPricing] = None  # Para hoteles, hostels
+    restaurant_pricing: Optional[RestaurantPricing] = None  # Para restaurantes, cafés
+    wellness_pricing: Optional[WellnessPricing] = None  # Para spas, gimnasios
 
 
 class BusinessCreate(BusinessBase):
@@ -56,6 +90,12 @@ class Business(BusinessBase):
     is_active: bool
     allows_bookings: bool
     max_capacity: Optional[int] = None
+    
+    # Diferentes modelos de precios
+    ticket_pricing: Optional[TicketPricing] = None
+    hotel_pricing: Optional[HotelPricing] = None
+    restaurant_pricing: Optional[RestaurantPricing] = None
+    wellness_pricing: Optional[WellnessPricing] = None
 
     class Config:
         json_encoders = {

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Search, X, Plus, MapPin, Star } from "lucide-react"
+import { CachedImage } from "@/components/cached-image"
 import { authFetch } from "@/lib/api"
 
 interface Business {
@@ -210,10 +211,11 @@ export function ActivitySearchModal({ isOpen, onClose, onAddActivity, tripId }: 
                     <div className="flex gap-4">
                       {/* Image */}
                       <div className="flex-shrink-0">
-                        <img
+                        <CachedImage
                           src={business.images?.[0] || "/placeholder.svg"}
                           alt={business.name}
                           className="w-12 h-12 object-cover rounded-lg"
+                          fallback="/placeholder.svg"
                         />
                       </div>
 

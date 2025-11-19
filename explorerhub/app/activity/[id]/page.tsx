@@ -12,7 +12,7 @@ import { Star, MapPin, Phone, Globe, DollarSign, Calendar, Heart, Loader2, Arrow
 import { AuthRequiredDialog } from "@/components/auth-required-dialog"
 import { ReviewForm } from "@/components/review-form"
 import { PromotionCard } from "@/components/promotion-card"
-import { useAuthRequired } from "@/lib/hooks/use-auth-required"
+import { useAuthRequired } from "@/lib/hook/use-auth-required"
 import styles from "./page.module.css"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -23,7 +23,7 @@ interface Business {
   id: number
   name: string
   description: string
-  categories: string[]  // Cambiado de category: string a categories: string[]
+  categories: string[]
   location: {
     address: string
     city: string
@@ -38,6 +38,26 @@ interface Business {
   phone?: string
   website?: string
   allows_bookings: boolean
+  ticket_pricing?: {
+    adult_price?: number
+    senior_price?: number
+    child_price?: number
+  }
+  hotel_pricing?: {
+    price_per_night?: number
+    min_nights?: number
+    max_nights?: number
+  }
+  restaurant_pricing?: {
+    reservation_fee?: number
+    average_price_per_person?: number
+    min_consumption?: number
+  }
+  wellness_pricing?: {
+    session_price?: number
+    package_price?: number
+    sessions_in_package?: number
+  }
 }
 
 interface Reply {
@@ -70,6 +90,7 @@ interface Promotion {
   discount_percentage?: number
   discount_amount?: number
   code?: string
+  promotion_type: string  // "code" | "automatic"
   start_date: string
   end_date: string
   terms_conditions?: string
@@ -78,6 +99,7 @@ interface Promotion {
   min_purchase?: number
   is_active: boolean
   business_id: number
+  applies_to_ticket_types?: string[]
 }
 
 // Componente recursivo para renderizar respuestas (fuera del componente principal)
@@ -248,6 +270,20 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
   const [availablePromoCodes, setAvailablePromoCodes] = useState<any[]>([])
   const [isLoadingPromoCodes, setIsLoadingPromoCodes] = useState(false)
   
+  // Ticket selection states
+  const [adultCount, setAdultCount] = useState(1)
+  const [seniorCount, setSeniorCount] = useState(0)
+  const [childCount, setChildCount] = useState(0)
+  const [priceCalculation, setPriceCalculation] = useState<any>(null)
+  const [isCalculatingPrice, setIsCalculatingPrice] = useState(false)
+  const [automaticPromotions, setAutomaticPromotions] = useState<Promotion[]>([])
+  const [isLoadingAutomaticPromotions, setIsLoadingAutomaticPromotions] = useState(false)
+  const [allAvailablePromotions, setAllAvailablePromotions] = useState<any[]>([])
+  const [selectedPromotionId, setSelectedPromotionId] = useState<string>("")
+  
+  // Hotel booking states
+  const [nightsCount, setNightsCount] = useState(1)
+  
   // Save to Trip dialog
   const [openSaveToTripDialog, setOpenSaveToTripDialog] = useState(false)
   const [userTrips, setUserTrips] = useState<any[]>([])
@@ -267,9 +303,14 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
   const [isCreatingPromotion, setIsCreatingPromotion] = useState(false)
   const [isOwner, setIsOwner] = useState(false)
   const [isBusinessUser, setIsBusinessUser] = useState(false)
+  
+  // All promotions modal
+  const [openAllPromotionsDialog, setOpenAllPromotionsDialog] = useState(false)
+  
   const [promotionForm, setPromotionForm] = useState({
     title: "",
     description: "",
+    promotionType: "code",  // "code" or "automatic"
     discountType: "percentage",
     discountValue: "",
     code: "",
@@ -463,11 +504,200 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
   const handleBook = () => {
     console.log("handleBook clicked")
     requireAuth(async () => {
-      // Load available promo codes when opening booking dialog
-      await fetchAvailablePromoCodes()
-      setOpenBookingDialog(true);
+      // Reset ticket counts
+      setAdultCount(1)
+      setSeniorCount(0)
+      setChildCount(0)
+      setPriceCalculation(null)
+      setSelectedPromotionId("")
+      setBookingPromoCode("")
+      
+      // Initialize nights count for hotels
+      if (activity?.hotel_pricing) {
+        const minNights = activity.hotel_pricing.min_nights || 1
+        setNightsCount(minNights)
+      } else {
+        setNightsCount(1)
+      }
+      
+      // Load available promo codes and automatic promotions
+      await loadAllAvailablePromotions()
+      setOpenBookingDialog(true)
     })
   }
+
+  const loadAllAvailablePromotions = async () => {
+    try {
+      setIsLoadingPromoCodes(true)
+      setIsLoadingAutomaticPromotions(true)
+      
+      const token = localStorage.getItem("token")
+      
+      // Fetch automatic promotions
+      const automaticResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/promotions/automatic/${id}`)
+      let automaticPromos: any[] = []
+      if (automaticResponse.ok) {
+        automaticPromos = await automaticResponse.json()
+        console.log("Automatic promotions loaded:", automaticPromos)
+      } else {
+        console.log("No automatic promotions found or error:", automaticResponse.status)
+      }
+      
+      // Fetch code-based promotions (user's claimed promotions)
+      let codePromos: any[] = []
+      if (token) {
+        const codeResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/promotions/available/${id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        if (codeResponse.ok) {
+          codePromos = await codeResponse.json()
+          console.log("Code promotions loaded:", codePromos)
+        }
+      }
+      
+      // Combine all promotions
+      const allPromos = [
+        ...automaticPromos.map(p => ({ ...p, promotion_type: 'automatic' })),
+        ...codePromos.map(p => ({ ...p, promotion_type: 'code' }))
+      ]
+      
+      console.log("Total promotions available:", allPromos.length)
+      
+      setAllAvailablePromotions(allPromos)
+      setAutomaticPromotions(automaticPromos)
+      setAvailablePromoCodes(codePromos)
+      
+      // Set default selection to first automatic promotion if available
+      if (automaticPromos.length > 0) {
+        setSelectedPromotionId(`auto-${automaticPromos[0].id}`)
+        console.log("Default promotion selected:", `auto-${automaticPromos[0].id}`)
+      }
+      
+    } catch (err) {
+      console.error("Error loading promotions:", err)
+      setAllAvailablePromotions([])
+      setAutomaticPromotions([])
+      setAvailablePromoCodes([])
+    } finally {
+      setIsLoadingPromoCodes(false)
+      setIsLoadingAutomaticPromotions(false)
+    }
+  }
+
+  const fetchAutomaticPromotions = async () => {
+    try {
+      setIsLoadingAutomaticPromotions(true)
+      const response = await fetch(`/api/promotions/automatic/${id}`)
+      
+      if (response.ok) {
+        const data = await response.json()
+        console.log("Automatic promotions fetched:", data.length, "promotions")
+        setAutomaticPromotions(data)
+      } else {
+        setAutomaticPromotions([])
+      }
+    } catch (err) {
+      console.error("Error fetching automatic promotions:", err)
+      setAutomaticPromotions([])
+    } finally {
+      setIsLoadingAutomaticPromotions(false)
+    }
+  }
+
+  const calculatePrice = useCallback(async () => {
+    // Check if we have any pricing configured
+    if (!activity?.ticket_pricing && !activity?.hotel_pricing) {
+      setPriceCalculation(null)
+      return
+    }
+
+    // For ticket pricing, check if at least one ticket is selected
+    if (activity?.ticket_pricing) {
+      const totalTickets = adultCount + seniorCount + childCount
+      if (totalTickets === 0) {
+        setPriceCalculation(null)
+        return
+      }
+    }
+
+    // For hotel pricing, we always need at least 1 night
+    if (activity?.hotel_pricing && nightsCount < (activity.hotel_pricing.min_nights || 1)) {
+      setPriceCalculation(null)
+      return
+    }
+
+    try {
+      setIsCalculatingPrice(true)
+      const token = localStorage.getItem("token")
+      
+      // Determine which promotion code to use based on selection
+      let promotionCode = undefined
+      if (selectedPromotionId && selectedPromotionId.startsWith("code-")) {
+        const selectedPromo = allAvailablePromotions.find(p => `code-${p.id}` === selectedPromotionId)
+        if (selectedPromo) {
+          promotionCode = selectedPromo.code
+        }
+      }
+      
+      const requestBody: any = {
+        promotion_code: promotionCode,
+      }
+
+      // Add ticket selection if applicable
+      if (activity?.ticket_pricing) {
+        requestBody.ticket_selection = {
+          adult_count: adultCount,
+          senior_count: seniorCount,
+          child_count: childCount,
+        }
+      }
+
+      // Add hotel booking details if applicable
+      if (activity?.hotel_pricing) {
+        requestBody.nights = nightsCount
+      }
+      
+      console.log("Calculating price with:", requestBody)
+      
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/businesses/${id}/calculate-price`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(requestBody),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        console.log("Price calculation result:", data)
+        setPriceCalculation(data)
+      } else {
+        console.error("Price calculation failed:", response.status)
+        setPriceCalculation(null)
+      }
+    } catch (err) {
+      console.error("Error calculating price:", err)
+      setPriceCalculation(null)
+    } finally {
+      setIsCalculatingPrice(false)
+    }
+  }, [activity, adultCount, seniorCount, childCount, nightsCount, selectedPromotionId, allAvailablePromotions, id])
+
+  // Recalculate price when ticket counts, nights, or selected promotion change
+  useEffect(() => {
+    if (openBookingDialog && activity && (activity?.ticket_pricing || activity?.hotel_pricing)) {
+      console.log("Triggering price calculation - nights:", nightsCount, "promotion:", selectedPromotionId)
+      // Add a small delay to avoid too many rapid calls
+      const timer = setTimeout(() => {
+        calculatePrice()
+      }, 100)
+      
+      return () => clearTimeout(timer)
+    }
+  }, [adultCount, seniorCount, childCount, nightsCount, selectedPromotionId, openBookingDialog, activity, calculatePrice])
 
   const fetchAvailablePromoCodes = async () => {
     try {
@@ -509,6 +739,12 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
   const closeReserve = () => {
     setOpenBookingDialog(false)
     setBookingPromoCode("")
+    setSelectedPromotionId("")
+    setAdultCount(1)
+    setSeniorCount(0)
+    setChildCount(0)
+    setNightsCount(1)
+    setPriceCalculation(null)
   }
 
   const handleSaveToTrip = () => {
@@ -668,10 +904,11 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
       const promotionData: any = {
         title: promotionForm.title,
         description: promotionForm.description || undefined,
+        promotion_type: promotionForm.promotionType,
         start_date: promotionForm.startDate,
         end_date: promotionForm.endDate,
         terms_conditions: promotionForm.termsConditions || undefined,
-        code: promotionForm.code || undefined,
+        code: promotionForm.promotionType === "code" ? promotionForm.code : undefined,
         max_uses: promotionForm.maxUses ? parseInt(promotionForm.maxUses) : undefined,
         min_purchase: promotionForm.minPurchase ? parseFloat(promotionForm.minPurchase) : undefined,
       }
@@ -709,6 +946,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
         setPromotionForm({
           title: "",
           description: "",
+          promotionType: "code",
           discountType: "percentage",
           discountValue: "",
           code: "",
@@ -1076,14 +1314,32 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
         return
       }
 
-      const bookingPayload = {
+      const totalPeople = adultCount + seniorCount + childCount
+      
+      const bookingPayload: any = {
         name: bookingName,
-        amount: parseInt(bookingAmount) || 1, // Default to 1 if empty
+        amount: totalPeople || 1,
         date: bookingDate,
         time: bookingTime.includes(':') && bookingTime.split(':').length === 2 
           ? `${bookingTime}:00` 
-          : bookingTime, // Add seconds if not present
-        ...(bookingPromoCode && { promotion_code: bookingPromoCode })
+          : bookingTime,
+      }
+
+      // Add ticket selection if business has pricing
+      if (activity?.ticket_pricing && totalPeople > 0) {
+        bookingPayload.ticket_selection = {
+          adult_count: adultCount,
+          senior_count: seniorCount,
+          child_count: childCount,
+        }
+      }
+
+      // Add promotion code if code-based promotion is selected
+      if (selectedPromotionId && selectedPromotionId.startsWith("code-")) {
+        const selectedPromo = allAvailablePromotions.find(p => `code-${p.id}` === selectedPromotionId)
+        if (selectedPromo) {
+          bookingPayload.promotion_code = selectedPromo.code
+        }
       }
 
       console.log('Booking payload:', JSON.stringify(bookingPayload, null, 2))
@@ -1257,6 +1513,89 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* Pricing Section */}
+              {(activity.ticket_pricing || activity.hotel_pricing || activity.restaurant_pricing || activity.wellness_pricing) && (
+                <div className={styles.section}>
+                  <h2 className={styles.sectionTitle}>Precios</h2>
+                  <Card>
+                    <CardContent className="p-6">
+                      {activity.ticket_pricing && (
+                        <div className="space-y-3">
+                          <h3 className="font-semibold text-lg mb-4">Entradas</h3>
+                          {activity.ticket_pricing.adult_price != null && (
+                            <div className="flex justify-between items-center py-2 border-b">
+                              <span className="text-muted-foreground">Adultos</span>
+                              <span className="font-semibold text-lg">${activity.ticket_pricing.adult_price.toFixed(2)}</span>
+                            </div>
+                          )}
+                          {activity.ticket_pricing.senior_price != null && (
+                            <div className="flex justify-between items-center py-2 border-b">
+                              <span className="text-muted-foreground">Adultos Mayores</span>
+                              <span className="font-semibold text-lg">${activity.ticket_pricing.senior_price.toFixed(2)}</span>
+                            </div>
+                          )}
+                          {activity.ticket_pricing.child_price != null && (
+                            <div className="flex justify-between items-center py-2 border-b">
+                              <span className="text-muted-foreground">Niños</span>
+                              <span className="font-semibold text-lg">${activity.ticket_pricing.child_price.toFixed(2)}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {activity.hotel_pricing && (
+                        <div className="space-y-3">
+                          <h3 className="font-semibold text-lg mb-4">Alojamiento</h3>
+                          <div className="flex justify-between items-center py-2 border-b">
+                            <span className="text-muted-foreground">Precio por noche</span>
+                            <span className="font-semibold text-lg">${activity.hotel_pricing.price_per_night?.toFixed(2)}</span>
+                          </div>
+                          {activity.hotel_pricing.min_nights && (
+                            <div className="flex justify-between items-center py-2">
+                              <span className="text-muted-foreground">Mínimo de noches</span>
+                              <span className="font-semibold">{activity.hotel_pricing.min_nights}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {activity.restaurant_pricing && (
+                        <div className="space-y-3">
+                          <h3 className="font-semibold text-lg mb-4">Restaurante</h3>
+                          {activity.restaurant_pricing.reservation_fee != null && activity.restaurant_pricing.reservation_fee > 0 && (
+                            <div className="flex justify-between items-center py-2 border-b">
+                              <span className="text-muted-foreground">Cargo por reserva</span>
+                              <span className="font-semibold text-lg">${activity.restaurant_pricing.reservation_fee.toFixed(2)}</span>
+                            </div>
+                          )}
+                          {activity.restaurant_pricing.average_price_per_person != null && (
+                            <div className="flex justify-between items-center py-2 border-b">
+                              <span className="text-muted-foreground">Precio promedio por persona</span>
+                              <span className="font-semibold text-lg">${activity.restaurant_pricing.average_price_per_person.toFixed(2)}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {activity.wellness_pricing && (
+                        <div className="space-y-3">
+                          <h3 className="font-semibold text-lg mb-4">Bienestar</h3>
+                          {activity.wellness_pricing.session_price != null && (
+                            <div className="flex justify-between items-center py-2 border-b">
+                              <span className="text-muted-foreground">Precio por sesión</span>
+                              <span className="font-semibold text-lg">${activity.wellness_pricing.session_price.toFixed(2)}</span>
+                            </div>
+                          )}
+                          {activity.wellness_pricing.package_price != null && (
+                            <div className="flex justify-between items-center py-2 border-b">
+                              <span className="text-muted-foreground">Paquete ({activity.wellness_pricing.sessions_in_package} sesiones)</span>
+                              <span className="font-semibold text-lg">${activity.wellness_pricing.package_price.toFixed(2)}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
                 </div>
               )}
 
@@ -1492,16 +1831,27 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
                         Promociones ({promotions.length})
                       </h3>
                     </div>
-                    {isOwner && (
-                      <Button onClick={() => setOpenPromotionDialog(true)} size="sm">
-                        <Plus className="h-4 w-4 mr-1" />
-                        Crear
-                      </Button>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {promotions.length >= 3 && (
+                        <Button 
+                          onClick={() => setOpenAllPromotionsDialog(true)} 
+                          variant="outline"
+                          size="sm"
+                        >
+                          Ver todas
+                        </Button>
+                      )}
+                      {isOwner && (
+                        <Button onClick={() => setOpenPromotionDialog(true)} size="sm">
+                          <Plus className="h-4 w-4 mr-1" />
+                          Crear
+                        </Button>
+                      )}
+                    </div>
                   </div>
                   {promotions.length > 0 ? (
-                    <div className="space-y-4">
-                      {promotions.map((promotion) => (
+                    <div className="space-y-3">
+                      {promotions.slice(0, 2).map((promotion) => (
                         <PromotionCard
                           key={promotion.id}
                           id={promotion.id}
@@ -1510,6 +1860,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
                           discountPercentage={promotion.discount_percentage}
                           discountAmount={promotion.discount_amount}
                           code={promotion.code}
+                          promotionType={promotion.promotion_type}
                           startDate={promotion.start_date}
                           endDate={promotion.end_date}
                           termsConditions={promotion.terms_conditions}
@@ -1517,7 +1868,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
                           maxUses={promotion.max_uses}
                           minPurchase={promotion.min_purchase}
                           isActive={promotion.is_active}
-                          onClaim={isBusinessUser ? undefined : handleClaimPromotion}
+                          onClaim={isBusinessUser || promotion.promotion_type === "automatic" ? undefined : handleClaimPromotion}
                           showActions={true}
                           compact={true}
                         />
@@ -1592,6 +1943,27 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
               />
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="promo-type">Tipo de Promoción *</Label>
+              <Select
+                value={promotionForm.promotionType}
+                onValueChange={(value) => setPromotionForm({ ...promotionForm, promotionType: value, code: value === "automatic" ? "" : promotionForm.code })}
+              >
+                <SelectTrigger id="promo-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="code">Código Promocional</SelectItem>
+                  <SelectItem value="automatic">Descuento Automático</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {promotionForm.promotionType === "code" 
+                  ? "Los usuarios deben reclamar y usar un código" 
+                  : "Se aplica automáticamente al precio en la reserva"}
+              </p>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="promo-discountType">Tipo de Descuento *</Label>
@@ -1626,13 +1998,22 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="promo-code">Código Promocional (opcional)</Label>
+              <Label htmlFor="promo-code">
+                Código Promocional {promotionForm.promotionType === "code" && "*"}
+              </Label>
               <Input
                 id="promo-code"
                 value={promotionForm.code}
                 onChange={(e) => setPromotionForm({ ...promotionForm, code: e.target.value.toUpperCase() })}
                 placeholder="VERANO2025"
+                disabled={promotionForm.promotionType === "automatic"}
+                required={promotionForm.promotionType === "code"}
               />
+              {promotionForm.promotionType === "automatic" && (
+                <p className="text-xs text-muted-foreground">
+                  No se requiere código para descuentos automáticos
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -1704,7 +2085,8 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
                 !promotionForm.title || 
                 !promotionForm.discountValue || 
                 !promotionForm.startDate || 
-                !promotionForm.endDate
+                !promotionForm.endDate ||
+                (promotionForm.promotionType === "code" && !promotionForm.code)
               } 
               className="w-full"
             >
@@ -1760,9 +2142,9 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
       </Dialog>
 
       <Dialog open={openBookingDialog} onOpenChange={closeReserve}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Reservar en {activity.name}</DialogTitle>
+            <DialogTitle>Reservar en {activity?.name}</DialogTitle>
             <DialogDescription>Ingrese los datos para realizar la reserva</DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-4">
@@ -1771,27 +2153,325 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
               <Input
                 id="name"
                 type="text"
-                placeholder="Juan"
+                placeholder="Juan Pérez"
                 value={bookingName}
                 onChange={(e) => setBookingName(e.target.value)}
                 required
                 disabled={isLoading}
               />
             </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="amount">Cantidad de Personas</Label>
-              <Input
-                id="amount"
-                type="number"
-                placeholder="2"
-                value={bookingAmount}
-                onChange={(e) => setBookingAmount(e.target.value)}
-                required
-                min={1}
-                max={12}
-                disabled={isLoading}
-              />
-            </div>
+
+            {/* Hotel Night Selection - Only if business has hotel pricing */}
+            {activity?.hotel_pricing && (
+              <div className="flex flex-col gap-3 p-4 border rounded-lg bg-muted/50">
+                <h3 className="font-semibold text-sm">Reserva de Alojamiento</h3>
+                
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <Label htmlFor="nights-count">Noches</Label>
+                    <p className="text-xs text-muted-foreground">
+                      ${activity.hotel_pricing.price_per_night?.toFixed(2)} por noche
+                    </p>
+                    {activity.hotel_pricing.min_nights && (
+                      <p className="text-xs text-amber-600">
+                        Mínimo: {activity.hotel_pricing.min_nights} noche(s)
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setNightsCount(Math.max(activity.hotel_pricing?.min_nights || 1, nightsCount - 1))}
+                      disabled={isLoading || nightsCount <= (activity.hotel_pricing?.min_nights || 1)}
+                    >
+                      -
+                    </Button>
+                    <span className="w-12 text-center font-medium">{nightsCount}</span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const maxNights = activity.hotel_pricing?.max_nights
+                        if (!maxNights || nightsCount < maxNights) {
+                          setNightsCount(nightsCount + 1)
+                        }
+                      }}
+                      disabled={isLoading || (activity.hotel_pricing?.max_nights != null && nightsCount >= activity.hotel_pricing.max_nights)}
+                    >
+                      +
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t">
+                  <p className="text-sm font-medium">
+                    Total de noches: {nightsCount}
+                  </p>
+                  {activity.hotel_pricing.max_nights && (
+                    <p className="text-xs text-muted-foreground">
+                      Máximo: {activity.hotel_pricing.max_nights} noche(s)
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Ticket Selection - Only if business has pricing */}
+            {activity?.ticket_pricing && (
+              <div className="flex flex-col gap-3 p-4 border rounded-lg bg-muted/50">
+                <h3 className="font-semibold text-sm">Selecciona tus entradas</h3>
+                
+                {activity.ticket_pricing.adult_price != null && (
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex-1">
+                      <Label htmlFor="adult-count">Adultos</Label>
+                      <p className="text-xs text-muted-foreground">
+                        ${activity.ticket_pricing.adult_price.toFixed(2)} por persona
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAdultCount(Math.max(0, adultCount - 1))}
+                        disabled={isLoading || adultCount === 0}
+                      >
+                        -
+                      </Button>
+                      <span className="w-12 text-center font-medium">{adultCount}</span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAdultCount(adultCount + 1)}
+                        disabled={isLoading}
+                      >
+                        +
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {activity.ticket_pricing.senior_price != null && (
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex-1">
+                      <Label htmlFor="senior-count">Adultos Mayores</Label>
+                      <p className="text-xs text-muted-foreground">
+                        ${activity.ticket_pricing.senior_price.toFixed(2)} por persona
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSeniorCount(Math.max(0, seniorCount - 1))}
+                        disabled={isLoading || seniorCount === 0}
+                      >
+                        -
+                      </Button>
+                      <span className="w-12 text-center font-medium">{seniorCount}</span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSeniorCount(seniorCount + 1)}
+                        disabled={isLoading}
+                      >
+                        +
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {activity.ticket_pricing.child_price != null && (
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex-1">
+                      <Label htmlFor="child-count">Niños</Label>
+                      <p className="text-xs text-muted-foreground">
+                        ${activity.ticket_pricing.child_price.toFixed(2)} por persona
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setChildCount(Math.max(0, childCount - 1))}
+                        disabled={isLoading || childCount === 0}
+                      >
+                        -
+                      </Button>
+                      <span className="w-12 text-center font-medium">{childCount}</span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setChildCount(childCount + 1)}
+                        disabled={isLoading}
+                      >
+                        +
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="pt-2 border-t">
+                  <p className="text-sm font-medium">
+                    Total de personas: {adultCount + seniorCount + childCount}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Unified Promotion Selector */}
+            {(isLoadingPromoCodes || isLoadingAutomaticPromotions) ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                <span className="text-sm text-muted-foreground">Cargando promociones...</span>
+              </div>
+            ) : allAvailablePromotions.length > 0 ? (
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="promotion-select">Promociones Disponibles</Label>
+                <Select
+                  value={selectedPromotionId || "NONE"}
+                  onValueChange={(value) => setSelectedPromotionId(value === "NONE" ? "" : value)}
+                  disabled={isLoading}
+                >
+                  <SelectTrigger id="promotion-select" className="w-full">
+                    <SelectValue placeholder="Selecciona una promoción" />
+                  </SelectTrigger>
+                  <SelectContent position="popper" align="start" sideOffset={5} className="w-full">
+                    <SelectItem value="NONE">Sin promoción</SelectItem>
+                    
+                    {/* Automatic Promotions */}
+                    {automaticPromotions.length > 0 && (
+                      <>
+                        {automaticPromotions.map((promo) => (
+                          <SelectItem key={`auto-${promo.id}`} value={`auto-${promo.id}`}>
+                            🎁 {promo.title} - {promo.discount_percentage 
+                              ? `${promo.discount_percentage}% OFF` 
+                              : `$${promo.discount_amount} OFF`}
+                            {promo.min_purchase && ` (Min: $${promo.min_purchase})`}
+                          </SelectItem>
+                        ))}
+                      </>
+                    )}
+                    
+                    {/* Code-based Promotions */}
+                    {availablePromoCodes.length > 0 && automaticPromotions.length > 0 && (
+                      <SelectItem value="SEPARATOR" disabled>──────────</SelectItem>
+                    )}
+                    {availablePromoCodes.length > 0 && (
+                      <>
+                        {availablePromoCodes.map((promo) => (
+                          <SelectItem key={`code-${promo.id}`} value={`code-${promo.id}`}>
+                            🎟️ {promo.code} - {promo.discount_percentage 
+                              ? `${promo.discount_percentage}% OFF` 
+                              : `$${promo.discount_amount} OFF`}
+                            {promo.title && ` (${promo.title})`}
+                          </SelectItem>
+                        ))}
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+                
+                {selectedPromotionId && selectedPromotionId !== "NONE" && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {selectedPromotionId.startsWith("auto-") ? (
+                      <p className="text-green-600">✓ Descuento automático aplicado</p>
+                    ) : (
+                      <p className="text-blue-600">✓ Código promocional seleccionado</p>
+                    )}
+                  </div>
+                )}
+                
+                {allAvailablePromotions.length > 0 && !selectedPromotionId && (
+                  <p className="text-xs text-amber-600">
+                    💡 Selecciona una promoción para aplicar un descuento
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="p-4 border rounded-lg bg-muted/30">
+                <p className="text-sm text-muted-foreground text-center">
+                  No hay promociones disponibles actualmente.
+                  {promotions.filter(p => p.promotion_type === "code").length > 0 && (
+                    <span className="block mt-1">
+                      Reclama códigos en la sección de promociones.
+                    </span>
+                  )}
+                </p>
+              </div>
+            )}
+
+            {/* Price Calculation Summary */}
+            {priceCalculation && ((adultCount + seniorCount + childCount) > 0 || nightsCount > 0) && (
+              <div className="p-4 border rounded-lg bg-blue-50 dark:bg-blue-950/20">
+                <h3 className="font-semibold text-sm mb-3">Resumen de Precio</h3>
+                
+                {/* Ticket breakdown */}
+                {priceCalculation.breakdown?.adult && (
+                  <div className="flex justify-between text-sm mb-1">
+                    <span>{priceCalculation.breakdown.adult.count} Adulto(s)</span>
+                    <span>${priceCalculation.breakdown.adult.subtotal.toFixed(2)}</span>
+                  </div>
+                )}
+                
+                {priceCalculation.breakdown?.senior && (
+                  <div className="flex justify-between text-sm mb-1">
+                    <span>{priceCalculation.breakdown.senior.count} Adulto(s) Mayor(es)</span>
+                    <span>${priceCalculation.breakdown.senior.subtotal.toFixed(2)}</span>
+                  </div>
+                )}
+                
+                {priceCalculation.breakdown?.child && (
+                  <div className="flex justify-between text-sm mb-1">
+                    <span>{priceCalculation.breakdown.child.count} Niño(s)</span>
+                    <span>${priceCalculation.breakdown.child.subtotal.toFixed(2)}</span>
+                  </div>
+                )}
+
+                {/* Hotel breakdown */}
+                {priceCalculation.breakdown?.nights != null && (
+                  <div className="flex justify-between text-sm mb-1">
+                    <span>{priceCalculation.breakdown.nights} noche(s) × ${priceCalculation.breakdown.price_per_night?.toFixed(2)}/noche</span>
+                    <span>${priceCalculation.breakdown.total?.toFixed(2)}</span>
+                  </div>
+                )}
+                
+                <div className="border-t pt-2 mt-2">
+                  <div className="flex justify-between text-sm mb-1">
+                    <span>Subtotal:</span>
+                    <span>${priceCalculation.original_price.toFixed(2)}</span>
+                  </div>
+                  
+                  {priceCalculation.discount_amount > 0 && (
+                    <div className="flex justify-between text-sm mb-1 text-green-600">
+                      <span>Descuento ({priceCalculation.discount_percentage.toFixed(0)}%):</span>
+                      <span>-${priceCalculation.discount_amount.toFixed(2)}</span>
+                    </div>
+                  )}
+                  
+                  <div className="flex justify-between font-bold text-lg mt-2">
+                    <span>Total:</span>
+                    <span>${priceCalculation.final_price.toFixed(2)}</span>
+                  </div>
+                </div>
+
+                {priceCalculation.promotion_applied && (
+                  <div className="mt-2 text-xs text-green-600">
+                    ✓ Promoción aplicada: {priceCalculation.promotion_applied.title}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="flex flex-col gap-2">
               <Label htmlFor="date">Fecha</Label>
               <Input
@@ -1799,11 +2479,12 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
                 type="date"
                 value={bookingDate}
                 onChange={(e) => setBookingDate(e.target.value)}
-                min={minBookingDate} // fecha mínima hoy
+                min={minBookingDate}
                 required
                 disabled={isLoading}
               />
             </div>
+            
             <div className="flex flex-col gap-2">
               <Label htmlFor="time">Hora</Label>
               <Input
@@ -1811,57 +2492,32 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
                 type="time"
                 value={bookingTime}
                 onChange={(e) => setBookingTime(e.target.value)}
-                min="09:00" // fecha mínima hoy (zona horaria local)
+                min="09:00"
                 max="21:00"
                 required
                 disabled={isLoading}
               />
             </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="promoCode">Código Promocional (opcional)</Label>
-              {isLoadingPromoCodes ? (
-                <div className="flex items-center justify-center py-2">
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  <span className="text-sm text-muted-foreground">Cargando códigos...</span>
-                </div>
-              ) : availablePromoCodes.length > 0 ? (
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeReserve} disabled={isLoading}>
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              onClick={handleBookingSubmit}
+              disabled={isLoading || !bookingName || !bookingDate || !bookingTime || (activity?.ticket_pricing && (adultCount + seniorCount + childCount) === 0)}
+            >
+              {isLoading ? (
                 <>
-                  <Select
-                    value={bookingPromoCode || "NONE"}
-                    onValueChange={(value) => setBookingPromoCode(value === "NONE" ? "" : value)}
-                    disabled={isLoading}
-                  >
-                    <SelectTrigger id="promoCode" className="w-full">
-                      <SelectValue placeholder="Selecciona un código promocional" />
-                    </SelectTrigger>
-                    <SelectContent position="popper" align="start" sideOffset={5} className="w-full">
-                      <SelectItem value="NONE">Sin código promocional</SelectItem>
-                      {availablePromoCodes.map((promo) => (
-                        <SelectItem key={promo.id} value={promo.code}>
-                          {promo.code} - {promo.discount_percentage}% OFF
-                          {promo.title && ` (${promo.title})`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Selecciona uno de tus códigos promocionales disponibles
-                  </p>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Reservando...
                 </>
               ) : (
-                <p className="text-sm text-muted-foreground py-2">
-                  No tienes códigos promocionales disponibles para este negocio.
-                  {promotions.length > 0 && " Reclama uno en la sección de promociones."}
-                </p>
+                "Confirmar Reserva"
               )}
-            </div>
-          </div>
-          <Button
-            type="submit"
-            onClick={handleBookingSubmit}
-          >
-            Reservar
-          </Button>
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -1968,6 +2624,60 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
               </Button>
             </DialogFooter>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* All Promotions Modal */}
+      <Dialog open={openAllPromotionsDialog} onOpenChange={setOpenAllPromotionsDialog}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Tag className="h-6 w-6 text-primary" />
+              Todas las Promociones ({promotions.length})
+            </DialogTitle>
+            <DialogDescription>
+              Explora todas las promociones disponibles para {activity?.name}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {promotions.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {promotions.map((promotion) => (
+                  <PromotionCard
+                    key={promotion.id}
+                    id={promotion.id}
+                    title={promotion.title}
+                    description={promotion.description}
+                    discountPercentage={promotion.discount_percentage}
+                    discountAmount={promotion.discount_amount}
+                    code={promotion.code}
+                    promotionType={promotion.promotion_type}
+                    startDate={promotion.start_date}
+                    endDate={promotion.end_date}
+                    termsConditions={promotion.terms_conditions}
+                    currentUses={promotion.current_uses}
+                    maxUses={promotion.max_uses}
+                    minPurchase={promotion.min_purchase}
+                    isActive={promotion.is_active}
+                    onClaim={isBusinessUser || promotion.promotion_type === "automatic" ? undefined : handleClaimPromotion}
+                    showActions={true}
+                    compact={false}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                No hay promociones disponibles
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpenAllPromotionsDialog(false)}>
+              Cerrar
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
