@@ -1,12 +1,12 @@
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { FlashSaleCarousel } from "./FlashSaleCarousel"
 import { Button } from "@/components/ui/button"
-import { Search, Loader2, MapPin, Grid3x3, Heart, ChevronLeft, ChevronRight, Star, Plus, MessageCircle, ChevronDown } from "lucide-react"
+import { Search, Loader2, MapPin, Grid3x3, Heart, ChevronLeft, ChevronRight, Star, Plus, MessageCircle, ChevronDown } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Checkbox } from "@/components/ui/checkbox"
 import dynamic from 'next/dynamic'
@@ -61,11 +61,24 @@ export default function ExplorePage() {
     // If the home page sent a category/search via query params, prefill local filters
     const categoryParam = searchParams?.get("category")
     const searchParam = searchParams?.get("search")
+    const tagsParam = searchParams?.get("tags")
+    const minPriceParam = searchParams?.get("minPrice")
+    const maxPriceParam = searchParams?.get("maxPrice")
+    
     if (categoryParam) {
       setFilters((prev) => ({ ...prev, categories: [categoryParam] }))
     }
     if (searchParam) {
       setSearchQuery(searchParam)
+    }
+    if (tagsParam) {
+      setSearchQuery(tagsParam.split(",").join(" "))
+    }
+    if (minPriceParam && maxPriceParam) {
+      setFilters((prev) => ({ 
+        ...prev, 
+        priceRange: [parseInt(minPriceParam), parseInt(maxPriceParam)] 
+      }))
     }
 
     fetchBusinesses()
@@ -330,16 +343,22 @@ export default function ExplorePage() {
   const filteredActivities = useMemo(() => {
     let filtered = activities.filter(activity => activity.is_active)
 
-    // Apply search filter
     if (searchQuery) {
-      filtered = filtered.filter(
-        (activity) =>
-          activity.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          activity.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          activity.location.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          activity.location.state.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          activity.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())),
-      )
+      const searchTerms = searchQuery.toLowerCase().split(" ").filter(term => term.length > 0)
+      
+      filtered = filtered.filter((activity) => {
+        const matchesName = activity.name.toLowerCase().includes(searchQuery.toLowerCase())
+        const matchesDescription = activity.description.toLowerCase().includes(searchQuery.toLowerCase())
+        const matchesLocation = activity.location.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                               activity.location.state.toLowerCase().includes(searchQuery.toLowerCase())
+        
+        // Check if any search term matches any tag
+        const matchesTags = searchTerms.some(term => 
+          activity.tags.some(tag => tag.toLowerCase().includes(term))
+        )
+        
+        return matchesName || matchesDescription || matchesLocation || matchesTags
+      })
     }
 
     // Apply category filter
