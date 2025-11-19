@@ -12,7 +12,7 @@ import { Star, MapPin, Phone, Globe, DollarSign, Calendar, Heart, Loader2, Arrow
 import { AuthRequiredDialog } from "@/components/auth-required-dialog"
 import { ReviewForm } from "@/components/review-form"
 import { PromotionCard } from "@/components/promotion-card"
-import { useAuthRequired } from "@/lib/hooks/use-auth-required"
+import { useAuthRequired } from "@/lib/hook/use-auth-required"
 import styles from "./page.module.css"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
