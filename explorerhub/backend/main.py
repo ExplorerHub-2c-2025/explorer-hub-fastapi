@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+import logging
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
@@ -41,11 +42,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Log configured CORS origins on startup for diagnostics
+def _configure_logging():
+    # Ensure our app and uvicorn loggers are set to INFO (or inherit from env/CLI if higher)
+    root = logging.getLogger()
+    if not root.handlers:
+        logging.basicConfig(level=logging.INFO, format='%(levelname)s:%(name)s:%(message)s')
+    for name in ["uvicorn", "uvicorn.error", "uvicorn.access"]:
+        logging.getLogger(name).setLevel(logging.INFO)
+    logging.getLogger("explorerhub").setLevel(logging.INFO)
+
+
+# Log configured CORS origins on startup for diagnostics and ensure logging is configured
 @app.on_event('startup')
 def log_cors_origins():
-    import logging
-    logging.getLogger('uvicorn.info').info(f"CORS origins configured: {origins}")
+    _configure_logging()
+    logger = logging.getLogger('uvicorn.error')
+    logger.info(f"CORS origins configured: {origins}")
+    logger.info("ExplorerHub API started and logging configured")
 
 app.include_router(auth)
 app.include_router(businesses)

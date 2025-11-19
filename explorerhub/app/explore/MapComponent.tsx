@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+
+//npm install react-leaflet leaflet --legacy-peer-deps
 import { MapContainer, TileLayer, Marker, Tooltip } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'

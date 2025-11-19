@@ -6,15 +6,21 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { ArrowLeft, MapPin, Calendar, Edit, Share2, Trash2 } from "lucide-react"
+import { ArrowLeft, MapPin, Calendar, Edit, Share2, Trash2, Users } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
-import { CheckCircle2, AlertCircle, Info } from "lucide-react"
+import { CheckCircle2, AlertCircle, Info, X, UserPlus } from "lucide-react"
 import Link from "next/link"
 import { format } from "date-fns"
 import ItineraryBuilder from "@/components/itinerary-builder"
 import { ActivitySearchModal } from "@/components/activity-search-modal"
 import { authFetch } from "@/lib/api"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import styles from "./page.module.css"
+import { WeatherCard } from "@/components/weather-card"
+import { NearbyEventsCard } from "@/components/nearby-events-card"
+import { TransportRecommendations } from "@/components/transport-recommendations"
+import { CurrentLocationMapLink } from "@/components/current-location-map-link"
 
 interface TripActivity {
   business_id: string
@@ -22,6 +28,12 @@ interface TripActivity {
   scheduled_date?: string
   notes?: string
   images?: Array<{url: string, notes?: string}>
+  location?: {
+    address?: string
+    city?: string
+    lat?: number
+    lng?: number
+  }
 }
 
 interface Trip {
@@ -33,6 +45,24 @@ interface Trip {
   description?: string
   cover_image?: string
   activities: TripActivity[]
+  user_id: string
+  collaborators?: string[]
+}
+
+interface Collaborator {
+  id: string
+  username: string
+  full_name: string
+  profile_picture?: string
+}
+
+interface UserSearchResult {
+  id: string
+  username: string
+  full_name: string
+  profile_picture?: string
+  trips_count: number
+  is_following: boolean
 }
 
 export default function TripDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -41,6 +71,13 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
   const [trip, setTrip] = useState<Trip | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [showActivitySearch, setShowActivitySearch] = useState(false)
+  const [canEdit, setCanEdit] = useState(false)
+  const [isOwner, setIsOwner] = useState(false)
+  const [showCollaborators, setShowCollaborators] = useState(false)
+  const [collaborators, setCollaborators] = useState<Collaborator[]>([])
+  const [searchQuery, setSearchQuery] = useState("")
+  const [searchResults, setSearchResults] = useState<UserSearchResult[]>([])
+  const [isSearching, setIsSearching] = useState(false)
   const [alertDialog, setAlertDialog] = useState<{
     open: boolean
     type: 'success' | 'error' | 'confirm' | 'info'
@@ -69,8 +106,15 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
           const currentUser = JSON.parse(userData)
           const currentUserId = String(currentUser.id)
           
-          if (String(data.user_id) !== currentUserId) {
-            // User is not the owner, redirect to view mode
+          const owner = String(data.user_id) === currentUserId
+          const collaborator = Array.isArray(data.collaborators) && data.collaborators.includes(currentUserId)
+          const allowed = owner || collaborator
+
+          setIsOwner(owner)
+          setCanEdit(allowed)
+
+          if (!allowed) {
+            // User is neither owner nor collaborator, redirect to view mode
             router.push(`/trips/${resolvedParams.id}/view`)
             return
           }
@@ -171,6 +215,9 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
     }
   }
 
+  const nearestCity = trip.activities.length > 0 ? trip.activities[0].location?.city || "" : ""
+  const firstActivity = trip.activities.length > 0 ? trip.activities[0] : null
+
   const handleUpdateNotes = async (businessId: string, notes: string) => {
     if (!trip) return
     
@@ -262,6 +309,84 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
     }
   }
 
+  const handleOpenCollaborators = async () => {
+    if (!trip) return
+    setShowCollaborators(true)
+    await loadCollaborators()
+  }
+
+  const loadCollaborators = async () => {
+    if (!trip) return
+    try {
+      const data = await authFetch(`http://localhost:8000/api/trips/${trip.id}/collaborators`)
+      setCollaborators(data)
+    } catch (error) {
+      console.error("Error loading collaborators:", error)
+    }
+  }
+
+  const handleSearchUsers = async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([])
+      return
+    }
+    
+    setIsSearching(true)
+    try {
+      const data = await authFetch(`http://localhost:8000/api/users/search?q=${encodeURIComponent(query)}`)
+      setSearchResults(data)
+    } catch (error) {
+      console.error("Error searching users:", error)
+      setSearchResults([])
+    } finally {
+      setIsSearching(false)
+    }
+  }
+
+  const handleAddCollaborator = async (userId: string) => {
+    if (!trip) return
+    
+    try {
+      await authFetch(`http://localhost:8000/api/trips/${trip.id}/collaborators`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: userId }),
+      })
+      
+      await loadCollaborators()
+      setSearchQuery("")
+      setSearchResults([])
+      showAlert('success', 'Colaborador agregado', 'El usuario ha sido agregado como colaborador')
+    } catch (error) {
+      console.error("Error adding collaborator:", error)
+      showAlert('error', 'Error', 'No se pudo agregar el colaborador')
+    }
+  }
+
+  const handleRemoveCollaborator = async (userId: string) => {
+    if (!trip) return
+    
+    setAlertDialog({
+      open: true,
+      type: 'confirm',
+      title: 'Eliminar colaborador',
+      message: '¿Estás seguro de que quieres eliminar este colaborador?',
+      onConfirm: async () => {
+        try {
+          await authFetch(`http://localhost:8000/api/trips/${trip.id}/collaborators/${userId}`, {
+            method: "DELETE",
+          })
+          
+          await loadCollaborators()
+          showAlert('success', 'Colaborador eliminado', 'El colaborador ha sido eliminado')
+        } catch (error) {
+          console.error("Error removing collaborator:", error)
+          showAlert('error', 'Error', 'No se pudo eliminar el colaborador')
+        }
+      }
+    })
+  }
+
   if (isLoading) {
     return (
       <div className={styles.loadingContainer}>
@@ -318,18 +443,28 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                 </div>
 
                 <div className={styles.actionButtons}>
-                  <Button variant="outline" size="sm" onClick={() => router.push(`/trips/${trip.id}/edit`)}>
-                    <Edit className="h-4 w-4 mr-2" />
-                    Editar
-                  </Button>
+                  {isOwner && (
+                    <Button variant="outline" size="sm" onClick={() => router.push(`/trips/${trip.id}/edit`)}>
+                      <Edit className="h-4 w-4 mr-2" />
+                      Editar
+                    </Button>
+                  )}
+                  {isOwner && (
+                    <Button variant="outline" size="sm" onClick={handleOpenCollaborators}>
+                      <Users className="h-4 w-4 mr-2" />
+                      Colaboradores
+                    </Button>
+                  )}
                   <Button variant="outline" size="sm" onClick={() => showAlert('info', 'Próximamente', 'Función de compartir próximamente')}>
                     <Share2 className="h-4 w-4 mr-2" />
                     Compartir
                   </Button>
-                  <Button variant="destructive" size="sm" onClick={handleDeleteTrip} className="hover:bg-red-700">
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Eliminar
-                  </Button>
+                  {isOwner && (
+                    <Button variant="destructive" size="sm" onClick={handleDeleteTrip} className="hover:bg-red-700">
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Eliminar
+                    </Button>
+                  )}
                 </div>
               </div>
 
@@ -351,6 +486,15 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
               onAddActivity={handleAddActivity}
               onRemoveActivity={handleRemoveActivity}
               onUpdateSchedule={handleUpdateSchedule}
+              firstActivityMapLink={
+                firstActivity ? (
+                  <CurrentLocationMapLink
+                    address={firstActivity.location?.address || ""}
+                    city={firstActivity.location?.city || ""}
+                    activityName={firstActivity.business_name}
+                  />
+                ) : undefined
+              }
               onUpdateNotes={handleUpdateNotes}
               onAddImage={handleAddImage}
               onUpdateImageNotes={handleUpdateImageNotes}
@@ -359,7 +503,62 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
           </div>
 
           {/* Sidebar */}
+          <div className="space-y-6">
+            {nearestCity && <WeatherCard city={nearestCity} />}
+
+            {nearestCity && <NearbyEventsCard city={nearestCity} />}
+
+            {trip.activities.length >= 2 && (
+              <TransportRecommendations
+                fromCity={trip.activities[0].location?.city || ""}
+                toCity={trip.activities[1].location?.city || ""}
+              />
+            )}
+
           <div className={styles.sidebar}>
+            <Card>
+              <CardContent className={styles.cardContent}>
+                <h3 className={styles.sectionTitle}>Resumen del Viaje</h3>
+                <div className={styles.tripSummary}>
+                  <div className={styles.summaryRow}>
+                    <span className={styles.summaryLabel}>Duración</span>
+                    <span className={styles.summaryValue}>
+                      {Math.ceil(
+                        (new Date(trip.end_date).getTime() - new Date(trip.start_date).getTime()) /
+                          (1000 * 60 * 60 * 24)
+                      )}{" "}
+                      días
+                    </span>
+                  </div>
+                  <div className={styles.summaryRow}>
+                    <span className={styles.summaryLabel}>Actividades</span>
+                    <span className={styles.summaryValue}>{trip.activities.length}</span>
+                  </div>
+                  <div className={styles.summaryRow}>
+                    <span className={styles.summaryLabel}>Destino</span>
+                    <span className={styles.summaryValue}>{trip.destination}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className={styles.cardContent}>
+                <h3 className={styles.sectionTitle}>Recomendaciones</h3>
+                <p className={styles.recommendationsText}>
+                  Basado en tu itinerario, también te podrían gustar estas experiencias:
+                </p>
+                <div className={styles.recommendationsList}>
+                  <Link href="/explore">
+                    <div className={styles.recommendationItem}>
+                      <h4 className={styles.recommendationTitle}>Explorar más actividades</h4>
+                      <p className={styles.recommendationDescription}>Descubre nuevas experiencias</p>
+                    </div>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
             <Card>
               <CardContent className={styles.cardContent}>
                 <h3 className={styles.sectionTitle}>Resumen del Viaje</h3>
@@ -414,6 +613,110 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
         tripId={trip?.id || ""}
       />
 
+      {/* Collaborators Dialog */}
+      <Dialog open={showCollaborators} onOpenChange={setShowCollaborators}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Colaboradores del viaje</DialogTitle>
+            <DialogDescription>
+              Agrega personas que puedan editar este itinerario contigo
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Search Section */}
+            <div className="space-y-2">
+              <Label>Buscar usuarios</Label>
+              <div className="relative">
+                <Input
+                  placeholder="Busca por nombre de usuario..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value)
+                    handleSearchUsers(e.target.value)
+                  }}
+                />
+                {isSearching && (
+                  <div className="absolute right-3 top-3">
+                    <div className="animate-spin h-4 w-4 border-2 border-gray-300 border-t-gray-600 rounded-full"></div>
+                  </div>
+                )}
+              </div>
+
+              {/* Search Results */}
+              {searchResults.length > 0 && (
+                <div className="border rounded-lg divide-y max-h-48 overflow-y-auto">
+                  {searchResults.map((user) => (
+                    <div key={user.id} className="flex items-center justify-between p-3 hover:bg-gray-50">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                          {user.profile_picture ? (
+                            <img src={user.profile_picture} alt={user.full_name} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-gray-600 font-medium">{user.full_name.charAt(0)}</span>
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">{user.full_name}</p>
+                          <p className="text-xs text-gray-500">@{user.username}</p>
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => handleAddCollaborator(user.id)}
+                        disabled={collaborators.some(c => c.id === user.id)}
+                      >
+                        <UserPlus className="h-4 w-4 mr-1" />
+                        {collaborators.some(c => c.id === user.id) ? 'Agregado' : 'Agregar'}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Current Collaborators */}
+            <div className="space-y-2">
+              <Label>Colaboradores actuales ({collaborators.length})</Label>
+              {collaborators.length === 0 ? (
+                <p className="text-sm text-gray-500 py-4 text-center">No hay colaboradores aún</p>
+              ) : (
+                <div className="border rounded-lg divide-y">
+                  {collaborators.map((collab) => (
+                    <div key={collab.id} className="flex items-center justify-between p-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                          {collab.profile_picture ? (
+                            <img src={collab.profile_picture} alt={collab.full_name} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-gray-600 font-medium">{collab.full_name.charAt(0)}</span>
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">{collab.full_name}</p>
+                          <p className="text-xs text-gray-500">@{collab.username}</p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveCollaborator(collab.id)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button onClick={() => setShowCollaborators(false)}>Cerrar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Alert Dialog */}
       <Dialog open={alertDialog.open} onOpenChange={(open) => setAlertDialog(prev => ({ ...prev, open }))}>
         <DialogContent>
@@ -436,7 +739,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                 </Button>
                 <Button 
                   variant="destructive" 
-                  className="destructiveButton hover:!bg-[#dc2626] hover:!border-[#dc2626]"
+                  className="destructiveButton hover:bg-[#dc2626]! hover:border-[#dc2626]!"
                   onClick={() => {
                     alertDialog.onConfirm?.()
                     setAlertDialog(prev => ({ ...prev, open: false }))

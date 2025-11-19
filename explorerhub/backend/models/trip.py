@@ -32,6 +32,7 @@ class TripBase(BaseModel):
     description: Optional[str] = None
     cover_image: Optional[str] = None
     visibility: TripVisibility = TripVisibility.public
+    collaborators: List[str] = []  # List of user IDs who can edit
 
 
 class TripCreate(TripBase):
@@ -55,6 +56,7 @@ class Trip(TripBase):
     user_id: str
     activities: List[TripActivity]
     created_at: datetime
+    collaborators: List[str] = []
     
     
 class TripComment(BaseModel):
@@ -69,3 +71,23 @@ class TripWithUser(Trip):
     user_profile_picture: Optional[str] = None
     comments: List[TripComment] = []
     likes_count: int = 0
+
+
+class BudgetLevel(str, Enum):
+    bajo = "bajo"
+    medio = "medio"
+    alto = "alto"
+
+
+class CityInput(BaseModel):
+    city: str
+    start_date: datetime
+    end_date: datetime
+
+
+class TripAutoGenerateRequest(BaseModel):
+    name: str
+    budget: BudgetLevel
+    activities_per_day: int = 1
+    cities: List[CityInput]
+    visibility: TripVisibility = TripVisibility.public
