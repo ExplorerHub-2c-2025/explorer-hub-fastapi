@@ -56,12 +56,24 @@ export function PromotionCard({
   compact = false,
   showBadge = false,
 }: PromotionCardProps) {
-  const isExpired = new Date(endDate) < new Date()
+  // Función helper para parsear fechas correctamente (evitar problemas de zona horaria)
+  const parseDate = (dateString: string) => {
+    if (dateString.includes('T')) {
+      // Si tiene hora (formato ISO completo), usar Date normal
+      return new Date(dateString)
+    } else {
+      // Si es solo fecha (YYYY-MM-DD), parsear como fecha local
+      const [year, month, day] = dateString.split('-').map(Number)
+      return new Date(year, month - 1, day) // month - 1 porque los meses en JS van de 0-11
+    }
+  }
+
+  const isExpired = parseDate(endDate) < new Date()
   const isAvailable = isActive && !isExpired
   const isAutomatic = promotionType === "automatic"
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
+    const date = parseDate(dateString)
     return date.toLocaleDateString("es-ES", {
       year: "numeric",
       month: "short",
