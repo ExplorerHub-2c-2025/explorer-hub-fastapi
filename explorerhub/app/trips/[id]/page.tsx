@@ -215,8 +215,8 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
     }
   }
 
-  const nearestCity = trip.activities.length > 0 ? trip.activities[0].location?.city || "" : ""
-  const firstActivity = trip.activities.length > 0 ? trip.activities[0] : null
+  const nearestCity = trip && trip.activities.length > 0 ? trip.activities[0].location?.city || "" : ""
+  const firstActivity = trip && trip.activities.length > 0 ? trip.activities[0] : null
 
   const handleUpdateNotes = async (businessId: string, notes: string) => {
     if (!trip) return
