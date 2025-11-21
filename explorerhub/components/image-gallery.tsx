@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { CachedImage } from "@/components/cached-image"
 import styles from "./image-gallery.module.css"
 
 interface ImageGalleryProps {
@@ -42,14 +43,11 @@ export function ImageGallery({ images, alt = "Gallery image", className = "", sh
     <div className={`${styles.root} ${className} group`}>
       {/* Main Image */}
       <div className={styles.mainImage}>
-        <img
+        <CachedImage
           src={images[currentIndex]}
           alt={`${alt} ${currentIndex + 1}`}
           className={styles.image}
-          onError={(e) => {
-            const target = e.target as HTMLImageElement
-            target.src = "/placeholder.svg"
-          }}
+          fallback="/placeholder.svg"
         />
 
         {/* Navigation Arrows - Only show if more than 1 image */}
@@ -99,14 +97,11 @@ export function ImageGallery({ images, alt = "Gallery image", className = "", sh
               onClick={(e) => goToImage(index, e)}
               className={`${styles.thumbnail} ${index === currentIndex ? styles.thumbnailActive : ""}`}
             >
-              <img
+              <CachedImage
                 src={image}
                 alt={`Miniatura ${index + 1}`}
                 className={styles.thumbnailImage}
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement
-                  target.src = "/placeholder.svg"
-                }}
+                fallback="/placeholder.svg"
               />
             </button>
           ))}

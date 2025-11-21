@@ -4,8 +4,14 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
-import { Calendar, Clock, MapPin, Users, Tag, Percent, X } from "lucide-react"
+import { Calendar, Clock, MapPin, Users, Tag, Percent, X, DollarSign, Ticket } from "lucide-react"
 import styles from "./page.module.css"
+
+interface TicketSelection {
+  adult_count: number
+  senior_count: number
+  child_count: number
+}
 
 interface Booking {
   id: number
@@ -23,6 +29,7 @@ interface Booking {
   original_price?: number
   final_price?: number
   status: 'pending' | 'confirmed' | 'cancelled'
+  ticket_selection?: TicketSelection
 }
 
 export default function BookingsPage() {
@@ -168,6 +175,70 @@ export default function BookingsPage() {
     )
   }
 
+  const renderTicketInfo = (booking: Booking) => {
+    if (!booking.ticket_selection) {
+      return (
+        <div className={styles.detailItem}>
+          <Users className={styles.icon} />
+          <span>
+            {booking.amount}{" "}
+            {booking.amount === 1 ? "persona" : "personas"}
+          </span>
+        </div>
+      )
+    }
+
+    const { adult_count, senior_count, child_count } = booking.ticket_selection
+    const tickets = []
+    
+    if (adult_count > 0) tickets.push(`${adult_count} adulto${adult_count > 1 ? 's' : ''}`)
+    if (senior_count > 0) tickets.push(`${senior_count} mayor${senior_count > 1 ? 'es' : ''}`)
+    if (child_count > 0) tickets.push(`${child_count} niño${child_count > 1 ? 's' : ''}`)
+
+    return (
+      <div className={styles.detailItem}>
+        <Ticket className={styles.icon} />
+        <span>{tickets.join(', ')}</span>
+      </div>
+    )
+  }
+
+  const renderPriceInfo = (booking: Booking) => {
+    if (!booking.original_price && !booking.final_price) {
+      return null
+    }
+
+    return (
+      <div className={styles.priceInfo}>
+        {booking.original_price && booking.discount_applied > 0 ? (
+          <>
+            <div className={styles.priceRow}>
+              <span className={styles.priceLabel}>Precio original:</span>
+              <span className={styles.priceOriginal}>${booking.original_price.toFixed(2)}</span>
+            </div>
+            <div className={styles.priceRow}>
+              <span className={styles.priceLabel}>Descuento ({booking.discount_applied.toFixed(0)}%):</span>
+              <span className={styles.priceDiscount}>
+                -${((booking.original_price * booking.discount_applied) / 100).toFixed(2)}
+              </span>
+            </div>
+            <div className={styles.priceRow}>
+              <span className={styles.priceLabelFinal}>Total pagado:</span>
+              <span className={styles.priceFinal}>
+                ${booking.final_price?.toFixed(2) || (booking.original_price * (1 - booking.discount_applied / 100)).toFixed(2)}
+              </span>
+            </div>
+          </>
+        ) : booking.final_price ? (
+          <div className={styles.priceRow}>
+            <span className={styles.priceLabelFinal}>Total pagado:</span>
+            <span className={styles.priceFinal}>${booking.final_price.toFixed(2)}</span>
+          </div>
+        ) : null}
+      </div>
+    )
+  }
+
   if (isLoading) {
     return (
       <div className={styles.pageContainer}>
@@ -264,14 +335,10 @@ export default function BookingsPage() {
                                 <span>{formatTime(booking.time)}</span>
                               </div>
 
-                              <div className={styles.detailItem}>
-                                <Users className={styles.icon} />
-                                <span>
-                                  {booking.amount}{" "}
-                                  {booking.amount === 1 ? "persona" : "personas"}
-                                </span>
-                              </div>
+                              {renderTicketInfo(booking)}
                             </div>
+
+                            {renderPriceInfo(booking)}
                           </div>
 
                           <div className={styles.cardFooter}>
@@ -357,14 +424,10 @@ export default function BookingsPage() {
                                 <span>{formatTime(booking.time)}</span>
                               </div>
 
-                              <div className={styles.detailItem}>
-                                <Users className={styles.icon} />
-                                <span>
-                                  {booking.amount}{" "}
-                                  {booking.amount === 1 ? "persona" : "personas"}
-                                </span>
-                              </div>
+                              {renderTicketInfo(booking)}
                             </div>
+
+                            {renderPriceInfo(booking)}
                           </div>
 
                           <div className={styles.cardFooter}>
@@ -447,14 +510,10 @@ export default function BookingsPage() {
                               <span>{formatTime(booking.time)}</span>
                             </div>
 
-                            <div className={styles.detailItem}>
-                              <Users className={styles.icon} />
-                              <span>
-                                {booking.amount}{" "}
-                                {booking.amount === 1 ? "persona" : "personas"}
-                              </span>
-                            </div>
+                            {renderTicketInfo(booking)}
                           </div>
+
+                          {renderPriceInfo(booking)}
                         </div>
 
                         <div className={styles.cardFooter}>

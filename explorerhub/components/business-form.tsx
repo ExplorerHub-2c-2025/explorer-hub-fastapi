@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { X, Upload, Image as ImageIcon, ChevronDown } from "lucide-react"
+import { CachedImage } from "@/components/cached-image"
 import styles from "./business-form.module.css"
 
 interface BusinessFormProps {
@@ -36,6 +37,11 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
     images: initialData?.images || [],
     allows_bookings: initialData?.allows_bookings !== undefined ? initialData.allows_bookings : true,
     max_capacity: initialData?.max_capacity || "", // Nuevo campo para cupo máximo
+    // Pricing models
+    ticket_pricing: initialData?.ticket_pricing || null,
+    hotel_pricing: initialData?.hotel_pricing || null,
+    restaurant_pricing: initialData?.restaurant_pricing || null,
+    wellness_pricing: initialData?.wellness_pricing || null,
   })
   
   const [imageUrls, setImageUrls] = useState<string[]>(initialData?.images || [])
@@ -44,10 +50,34 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
   // Update form data when initialData changes
   useEffect(() => {
     if (initialData) {
+      console.log("📋 InitialData categories:", initialData.categories)
+      
+      // Normalizar categorías: convertir español → inglés si es necesario
+      const normalizedCategories = (initialData.categories || []).map((cat: string) => {
+        const mapping: Record<string, string> = {
+          "Restaurante": "Restaurant",
+          "Actividad": "Activity",
+          "Atracción": "Attraction",
+          "Naturaleza": "Nature",
+          "Cultural": "Cultural",
+          "Entretenimiento": "Entertainment",
+          "Compras": "Shopping",
+          "Vida Nocturna": "Nightlife",
+          "Alojamiento": "Hotel",
+          "Accommodation": "Hotel",
+          "Bienestar": "Wellness",
+          "Histórico": "Historical",
+          "Familiar": "Family",
+        }
+        return mapping[cat] || cat // Si ya está en inglés, lo deja igual
+      })
+      
+      console.log("✅ Normalized categories:", normalizedCategories)
+      
       setFormData({
         name: initialData.name || "",
         description: initialData.description || "",
-        categories: initialData.categories || [],
+        categories: normalizedCategories,
         address: initialData.location?.address || "",
         city: initialData.location?.city || "",
         state: initialData.location?.state || "",
@@ -59,25 +89,29 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
         images: initialData.images || [],
         allows_bookings: initialData.allows_bookings !== undefined ? initialData.allows_bookings : true,
         max_capacity: initialData.max_capacity || "",
+        ticket_pricing: initialData.ticket_pricing || null,
+        hotel_pricing: initialData.hotel_pricing || null,
+        restaurant_pricing: initialData.restaurant_pricing || null,
+        wellness_pricing: initialData.wellness_pricing || null,
       })
       setImageUrls(initialData.images || [])
     }
   }, [initialData])
 
-  // Lista de categorías disponibles
+  // Lista de categorías disponibles (valores en inglés para el backend)
   const availableCategories = [
-    { value: "Restaurante", label: "Restaurante" },
-    { value: "Actividad", label: "Actividad" },
-    { value: "Atracción", label: "Atracción" },
-    { value: "Naturaleza", label: "Naturaleza" },
+    { value: "Restaurant", label: "Restaurante" },
+    { value: "Activity", label: "Actividad" },
+    { value: "Attraction", label: "Atracción" },
+    { value: "Nature", label: "Naturaleza" },
     { value: "Cultural", label: "Cultural" },
-    { value: "Entretenimiento", label: "Entretenimiento" },
-    { value: "Compras", label: "Compras" },
-    { value: "Vida Nocturna", label: "Vida Nocturna" },
-    { value: "Alojamiento", label: "Alojamiento" },
-    { value: "Bienestar", label: "Bienestar" },
-    { value: "Histórico", label: "Histórico" },
-    { value: "Familiar", label: "Familiar" },
+    { value: "Entertainment", label: "Entretenimiento" },
+    { value: "Shopping", label: "Compras" },
+    { value: "Nightlife", label: "Vida Nocturna" },
+    { value: "Hotel", label: "Hotel" },
+    { value: "Wellness", label: "Bienestar" },
+    { value: "Historical", label: "Histórico" },
+    { value: "Family", label: "Familiar" },
   ]
 
   const handleCategoryToggle = (categoryValue: string) => {
@@ -135,6 +169,13 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
       images: imageUrls,
       allows_bookings: formData.allows_bookings,
       max_capacity: formData.max_capacity ? parseInt(formData.max_capacity) : null,
+      // Include pricing models (only send if they have values)
+      ticket_pricing: formData.ticket_pricing?.adult_price ? formData.ticket_pricing : undefined,
+      hotel_pricing: formData.hotel_pricing?.price_per_night ? formData.hotel_pricing : undefined,
+      restaurant_pricing: formData.restaurant_pricing?.reservation_fee || 
+                          formData.restaurant_pricing?.average_price_per_person ? 
+                          formData.restaurant_pricing : undefined,
+      wellness_pricing: formData.wellness_pricing?.session_price ? formData.wellness_pricing : undefined,
     }
     onSubmit(submitData)
   }
@@ -334,6 +375,299 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
             </div>
           </div>
 
+          {/* PRICING SECTIONS - Mostrar según categorías */}
+          
+          {/* TICKET PRICING - Para museos, atracciones, actividades, entretenimiento */}
+          {(formData.categories.includes("Attraction") || 
+            formData.categories.includes("Cultural") || 
+            formData.categories.includes("Historical") ||
+            formData.categories.includes("Nature") ||
+            formData.categories.includes("Family") ||
+            formData.categories.includes("Activity") ||
+            formData.categories.includes("Entertainment")) && (
+            <Card className="mt-4 border-2 border-blue-200">
+              <CardHeader className="bg-blue-50">
+                <CardTitle className="text-lg">🎫 Precios de Entrada</CardTitle>
+                <p className="text-sm text-gray-600">Configura los precios para diferentes tipos de visitantes</p>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className={styles.gridTwo}>
+                  <div className={styles.spaceY2}>
+                    <Label htmlFor="adult_price">Precio Adulto ($)</Label>
+                    <Input
+                      id="adult_price"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.ticket_pricing?.adult_price || ""}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        ticket_pricing: {
+                          ...formData.ticket_pricing,
+                          adult_price: e.target.value ? parseFloat(e.target.value) : null
+                        }
+                      })}
+                      placeholder="ej: 15.00"
+                    />
+                  </div>
+                  <div className={styles.spaceY2}>
+                    <Label htmlFor="senior_price">Precio Adulto Mayor ($)</Label>
+                    <Input
+                      id="senior_price"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.ticket_pricing?.senior_price || ""}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        ticket_pricing: {
+                          ...formData.ticket_pricing,
+                          senior_price: e.target.value ? parseFloat(e.target.value) : null
+                        }
+                      })}
+                      placeholder="ej: 10.00"
+                    />
+                  </div>
+                </div>
+                <div className={styles.spaceY2}>
+                  <Label htmlFor="child_price">Precio Niño ($)</Label>
+                  <Input
+                    id="child_price"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.ticket_pricing?.child_price || ""}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      ticket_pricing: {
+                        ...formData.ticket_pricing,
+                        child_price: e.target.value ? parseFloat(e.target.value) : null
+                      }
+                    })}
+                    placeholder="ej: 8.00"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* HOTEL PRICING - Para alojamientos */}
+          {formData.categories.includes("Hotel") && (
+            <Card className="mt-4 border-2 border-purple-200">
+              <CardHeader className="bg-purple-50">
+                <CardTitle className="text-lg">🏨 Precios de Hotel</CardTitle>
+                <p className="text-sm text-gray-600">Configura tarifas por noche y estadía mínima/máxima</p>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className={styles.gridTwo}>
+                  <div className={styles.spaceY2}>
+                    <Label htmlFor="price_per_night">Precio por Noche ($) *</Label>
+                    <Input
+                      id="price_per_night"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.hotel_pricing?.price_per_night || ""}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        hotel_pricing: {
+                          ...formData.hotel_pricing,
+                          price_per_night: e.target.value ? parseFloat(e.target.value) : null
+                        }
+                      })}
+                      placeholder="ej: 85.00"
+                      required={formData.categories.includes("Hotel")}
+                    />
+                  </div>
+                  <div className={styles.spaceY2}>
+                    <Label htmlFor="min_nights">Mínimo de Noches</Label>
+                    <Input
+                      id="min_nights"
+                      type="number"
+                      min="1"
+                      value={formData.hotel_pricing?.min_nights || 1}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        hotel_pricing: {
+                          ...formData.hotel_pricing,
+                          min_nights: e.target.value ? parseInt(e.target.value) : 1
+                        }
+                      })}
+                      placeholder="ej: 2"
+                    />
+                  </div>
+                </div>
+                <div className={styles.spaceY2}>
+                  <Label htmlFor="max_nights">Máximo de Noches (opcional)</Label>
+                  <Input
+                    id="max_nights"
+                    type="number"
+                    min="1"
+                    value={formData.hotel_pricing?.max_nights || ""}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      hotel_pricing: {
+                        ...formData.hotel_pricing,
+                        max_nights: e.target.value ? parseInt(e.target.value) : null
+                      }
+                    })}
+                    placeholder="Dejar vacío si no hay límite"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* RESTAURANT PRICING - Para restaurantes */}
+          {(formData.categories.includes("Restaurant") || 
+            formData.categories.includes("Nightlife")) && (
+            <Card className="mt-4 border-2 border-orange-200">
+              <CardHeader className="bg-orange-50">
+                <CardTitle className="text-lg">🍽️ Precios de Restaurante</CardTitle>
+                <p className="text-sm text-gray-600">Cargo de reserva y precios estimados</p>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className={styles.gridTwo}>
+                  <div className={styles.spaceY2}>
+                    <Label htmlFor="reservation_fee">Cargo de Reserva ($)</Label>
+                    <Input
+                      id="reservation_fee"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.restaurant_pricing?.reservation_fee || ""}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        restaurant_pricing: {
+                          ...formData.restaurant_pricing,
+                          reservation_fee: e.target.value ? parseFloat(e.target.value) : null
+                        }
+                      })}
+                      placeholder="ej: 5.00"
+                    />
+                    <p className="text-xs text-gray-500">Cargo por adelantado al reservar</p>
+                  </div>
+                  <div className={styles.spaceY2}>
+                    <Label htmlFor="average_price_per_person">Precio Promedio por Persona ($)</Label>
+                    <Input
+                      id="average_price_per_person"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.restaurant_pricing?.average_price_per_person || ""}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        restaurant_pricing: {
+                          ...formData.restaurant_pricing,
+                          average_price_per_person: e.target.value ? parseFloat(e.target.value) : null
+                        }
+                      })}
+                      placeholder="ej: 25.00"
+                    />
+                    <p className="text-xs text-gray-500">Para estimación de costos</p>
+                  </div>
+                </div>
+                <div className={styles.spaceY2}>
+                  <Label htmlFor="min_consumption">Consumo Mínimo ($)</Label>
+                  <Input
+                    id="min_consumption"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.restaurant_pricing?.min_consumption || ""}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      restaurant_pricing: {
+                        ...formData.restaurant_pricing,
+                        min_consumption: e.target.value ? parseFloat(e.target.value) : null
+                      }
+                    })}
+                    placeholder="ej: 50.00"
+                  />
+                  <p className="text-xs text-gray-500">Consumo mínimo requerido (opcional)</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* WELLNESS PRICING - Para spas y bienestar */}
+          {formData.categories.includes("Wellness") && (
+            <Card className="mt-4 border-2 border-teal-200">
+              <CardHeader className="bg-teal-50">
+                <CardTitle className="text-lg">💆 Precios de Bienestar</CardTitle>
+                <p className="text-sm text-gray-600">Sesiones individuales y paquetes</p>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className={styles.gridTwo}>
+                  <div className={styles.spaceY2}>
+                    <Label htmlFor="session_price">Precio por Sesión ($) *</Label>
+                    <Input
+                      id="session_price"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.wellness_pricing?.session_price || ""}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        wellness_pricing: {
+                          ...formData.wellness_pricing,
+                          session_price: e.target.value ? parseFloat(e.target.value) : null
+                        }
+                      })}
+                      placeholder="ej: 50.00"
+                      required={formData.categories.includes("Wellness")}
+                    />
+                  </div>
+                  <div className={styles.spaceY2}>
+                    <Label htmlFor="sessions_in_package">Sesiones en Paquete</Label>
+                    <Input
+                      id="sessions_in_package"
+                      type="number"
+                      min="2"
+                      value={formData.wellness_pricing?.sessions_in_package || ""}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        wellness_pricing: {
+                          ...formData.wellness_pricing,
+                          sessions_in_package: e.target.value ? parseInt(e.target.value) : null
+                        }
+                      })}
+                      placeholder="ej: 4"
+                    />
+                    <p className="text-xs text-gray-500">Número de sesiones incluidas</p>
+                  </div>
+                </div>
+                <div className={styles.spaceY2}>
+                  <Label htmlFor="package_price">Precio del Paquete ($)</Label>
+                  <Input
+                    id="package_price"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.wellness_pricing?.package_price || ""}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      wellness_pricing: {
+                        ...formData.wellness_pricing,
+                        package_price: e.target.value ? parseFloat(e.target.value) : null
+                      }
+                    })}
+                    placeholder="ej: 180.00"
+                  />
+                  {formData.wellness_pricing?.session_price && 
+                   formData.wellness_pricing?.sessions_in_package && 
+                   formData.wellness_pricing?.package_price && (
+                    <p className="text-xs text-green-600 mt-1">
+                      ✨ Ahorro por paquete: $
+                      {(formData.wellness_pricing.session_price * formData.wellness_pricing.sessions_in_package - 
+                        formData.wellness_pricing.package_price).toFixed(2)}
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Image Upload Section */}
           <div className={styles.spaceY2}>
             <Label>Imágenes del Negocio</Label>
@@ -361,14 +695,11 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
                   {imageUrls.map((url, index) => (
                     <div key={index} className={styles.imageWrapper}>
                       <div className={styles.imageContainer}>
-                        <img
+                        <CachedImage
                           src={url}
                           alt={`Imagen ${index + 1}`}
                           className={styles.imagePreview}
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement
-                            target.src = "/placeholder.svg"
-                          }}
+                          fallback="/placeholder.svg"
                         />
                       </div>
                       <button

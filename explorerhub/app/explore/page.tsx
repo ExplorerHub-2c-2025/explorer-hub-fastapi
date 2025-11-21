@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from "react"
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
+import { FlashSaleCarousel } from "./FlashSaleCarousel"
 import { Button } from "@/components/ui/button"
 import { Search, Loader2, MapPin, Grid3x3, Heart, ChevronLeft, ChevronRight, Star, Plus, MessageCircle, ChevronDown } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -434,6 +435,9 @@ export default function ExplorePage() {
               Los <strong>establecimientos</strong> se basan en datos de otros usuarios. Tomamos en consideración sus opiniones y calificaciones, la cantidad de visualizaciones de la página y su ubicación.
             </p>
           </div>
+
+          {/* Flash Sale Carousel */}
+          <FlashSaleCarousel />
 
           {isLoading ? (
             <div className={styles.loadingContainer}>

@@ -5,33 +5,46 @@ Script to migrate business category field from string to array and translate to 
 import asyncio
 from database import Database
 
-# Mapping from English to Spanish categories
+# Mapping from old values to new standardized values
 CATEGORY_MAPPING = {
-    "Restaurant": "Restaurante",
-    "Activity": "Actividad", 
-    "Attraction": "Atracción",
-    "Nature": "Naturaleza",
+    "Restaurant": "Restaurant",
+    "Activity": "Activity", 
+    "Attraction": "Attraction",
+    "Nature": "Nature",
     "Cultural": "Cultural",
-    "Entertainment": "Entretenimiento",
-    "Shopping": "Compras",
-    "Nightlife": "Vida Nocturna",
-    "Accommodation": "Alojamiento",
-    "Wellness": "Bienestar",
-    "Historical": "Histórico",
-    "Family": "Familiar",
+    "Entertainment": "Entertainment",
+    "Shopping": "Shopping",
+    "Nightlife": "Nightlife",
+    "Accommodation": "Hotel",
+    "Hotel": "Hotel",
+    "Wellness": "Wellness",
+    "Historical": "Historical",
+    "Family": "Family",
+    # Spanish to English migration
+    "Restaurante": "Restaurant",
+    "Actividad": "Activity",
+    "Atracción": "Attraction", 
+    "Naturaleza": "Nature",
+    "Entretenimiento": "Entertainment",
+    "Compras": "Shopping",
+    "Vida Nocturna": "Nightlife",
+    "Alojamiento": "Hotel",
+    "Bienestar": "Wellness",
+    "Histórico": "Historical",
+    "Familiar": "Family",
     # Also handle lowercase versions
-    "restaurant": "Restaurante",
-    "activity": "Actividad",
-    "attraction": "Atracción", 
-    "nature": "Naturaleza",
+    "restaurant": "Restaurant",
+    "activity": "Activity",
+    "attraction": "Attraction", 
+    "nature": "Nature",
     "cultural": "Cultural",
-    "entertainment": "Entretenimiento",
-    "shopping": "Compras",
-    "nightlife": "Vida Nocturna",
-    "accommodation": "Alojamiento",
-    "wellness": "Bienestar",
-    "historical": "Histórico",
-    "family": "Familiar"
+    "entertainment": "Entertainment",
+    "shopping": "Shopping",
+    "nightlife": "Nightlife",
+    "accommodation": "Hotel",
+    "wellness": "Wellness",
+    "historical": "Historical",
+    "family": "Family"
 }
 
 async def migrate_business_categories():

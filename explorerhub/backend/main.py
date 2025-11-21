@@ -6,12 +6,32 @@ from contextlib import asynccontextmanager
 from database import Database
 from config import settings
 from routes import auth, businesses, reviews, trips, promotions, bookings, notifications, favorites, profile, users
+from routes import debug as debug_routes
 from pathlib import Path
+from flash_sale_checker import check_and_update_flash_sales, deactivate_expired_promotions
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
     await Database.connect_db()
+    
+    # Verificar y actualizar ofertas flash al iniciar
+    logger = logging.getLogger('uvicorn.error')
+    logger.info("🔍 Verificando promociones al iniciar el servidor...")
+    try:
+        db = Database.get_db()
+        
+        # Primero desactivar promociones expiradas
+        deactivated = await deactivate_expired_promotions(db)
+        logger.info(f"✅ Promociones expiradas desactivadas: {deactivated}")
+        
+        # Luego actualizar flash sales
+        updated = await check_and_update_flash_sales(db)
+        logger.info(f"✅ Flash sales actualizadas: {updated}")
+        
+    except Exception as e:
+        logger.error(f"❌ Error al verificar promociones: {e}")
+    
     yield
     # Shutdown
     await Database.close_db()
@@ -70,6 +90,7 @@ app.include_router(notifications)
 app.include_router(favorites)
 app.include_router(profile)
 app.include_router(users)
+app.include_router(debug_routes.debug_router)  # Endpoint temporal de diagnóstico
 
 # Mount uploads directory
 uploads_dir = Path("uploads")

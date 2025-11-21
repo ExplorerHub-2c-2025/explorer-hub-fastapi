@@ -21,6 +21,7 @@ interface Promotion {
   id: number
   title: string
   description: string
+  promotion_type?: string
   discount_percentage?: number
   discount_amount?: number
   code?: string
@@ -32,6 +33,8 @@ interface Promotion {
   min_purchase?: number
   is_active: boolean
   business_id: number
+  is_flash_sale?: boolean  // Oferta relámpago
+  flash_duration_hours?: number  // Duración en horas
 }
 
 interface Business {
@@ -53,6 +56,7 @@ export default function PromotionsManagementPage() {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
+    promotionType: "automatic", // "automatic" | "code"
     discountType: "percentage",
     discountValue: "",
     code: "",
@@ -62,6 +66,8 @@ export default function PromotionsManagementPage() {
     maxUses: "",
     minPurchase: "",
     isActive: true,
+    isFlashSale: false,
+    flashDurationHours: "6",
   })
 
   useEffect(() => {
@@ -159,13 +165,16 @@ export default function PromotionsManagementPage() {
       const promotionData: any = {
         title: formData.title,
         description: formData.description || undefined,
+        promotion_type: formData.promotionType,
         start_date: formData.startDate,
         end_date: formData.endDate,
         terms_conditions: formData.termsConditions || undefined,
-        code: formData.code || undefined,
+        code: formData.promotionType === "code" ? formData.code : undefined,
         max_uses: formData.maxUses ? parseInt(formData.maxUses) : undefined,
         min_purchase: formData.minPurchase ? parseFloat(formData.minPurchase) : undefined,
         is_active: formData.isActive,
+        is_flash_sale: formData.isFlashSale,
+        flash_duration_hours: formData.isFlashSale ? parseInt(formData.flashDurationHours) : undefined,
       }
 
       if (formData.discountType === "percentage") {
@@ -198,6 +207,7 @@ export default function PromotionsManagementPage() {
         setFormData({
           title: "",
           description: "",
+          promotionType: "automatic",
           discountType: "percentage",
           discountValue: "",
           code: "",
@@ -207,6 +217,8 @@ export default function PromotionsManagementPage() {
           maxUses: "",
           minPurchase: "",
           isActive: true,
+          isFlashSale: false,
+          flashDurationHours: "6",
         })
         fetchPromotions(selectedBusinessId)
       } else {
@@ -260,6 +272,7 @@ export default function PromotionsManagementPage() {
     setFormData({
       title: promotion.title,
       description: promotion.description || "",
+      promotionType: (promotion as any).promotion_type || "code",
       discountType: promotion.discount_percentage ? "percentage" : "amount",
       discountValue: promotion.discount_percentage 
         ? String(promotion.discount_percentage) 
@@ -271,6 +284,8 @@ export default function PromotionsManagementPage() {
       maxUses: promotion.max_uses ? String(promotion.max_uses) : "",
       minPurchase: promotion.min_purchase ? String(promotion.min_purchase) : "",
       isActive: promotion.is_active,
+      isFlashSale: promotion.is_flash_sale || false,
+      flashDurationHours: promotion.flash_duration_hours ? String(promotion.flash_duration_hours) : "6",
     })
     setIsDialogOpen(true)
   }
@@ -286,13 +301,16 @@ export default function PromotionsManagementPage() {
       const promotionData: any = {
         title: formData.title,
         description: formData.description || undefined,
+        promotion_type: formData.promotionType,
         start_date: formData.startDate,
         end_date: formData.endDate,
         terms_conditions: formData.termsConditions || undefined,
-        code: formData.code || undefined,
+        code: formData.promotionType === "code" ? formData.code : undefined,
         max_uses: formData.maxUses ? parseInt(formData.maxUses) : undefined,
         min_purchase: formData.minPurchase ? parseFloat(formData.minPurchase) : undefined,
         is_active: formData.isActive,
+        is_flash_sale: formData.isFlashSale,
+        flash_duration_hours: formData.isFlashSale ? parseInt(formData.flashDurationHours) : undefined,
       }
 
       if (formData.discountType === "percentage") {
@@ -328,6 +346,7 @@ export default function PromotionsManagementPage() {
         setFormData({
           title: "",
           description: "",
+          promotionType: "automatic",
           discountType: "percentage",
           discountValue: "",
           code: "",
@@ -337,6 +356,8 @@ export default function PromotionsManagementPage() {
           maxUses: "",
           minPurchase: "",
           isActive: true,
+          isFlashSale: false,
+          flashDurationHours: "6",
         })
         fetchPromotions(selectedBusinessId)
       } else {
@@ -358,6 +379,7 @@ export default function PromotionsManagementPage() {
       setFormData({
         title: "",
         description: "",
+        promotionType: "automatic",
         discountType: "percentage",
         discountValue: "",
         code: "",
@@ -367,6 +389,8 @@ export default function PromotionsManagementPage() {
         maxUses: "",
         minPurchase: "",
         isActive: true,
+        isFlashSale: false,
+        flashDurationHours: "6",
       })
     }
   }
@@ -465,6 +489,87 @@ export default function PromotionsManagementPage() {
                       />
                     </div>
 
+                    {/* Tipo de Promoción */}
+                    <div className="space-y-2">
+                      <Label htmlFor="promotionType">Tipo de Promoción *</Label>
+                      <Select
+                        value={formData.promotionType}
+                        onValueChange={(value) => setFormData({ ...formData, promotionType: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="automatic">
+                            <div className="flex flex-col">
+                              <span className="font-medium">Descuento Automático</span>
+                              <span className="text-xs text-muted-foreground">Se aplica automáticamente al precio</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="code">
+                            <div className="flex flex-col">
+                              <span className="font-medium">Código Promocional</span>
+                              <span className="text-xs text-muted-foreground">Requiere código para aplicar</span>
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {formData.promotionType === "automatic" && (
+                        <p className="text-xs text-muted-foreground">
+                          ℹ️ Este descuento se aplicará automáticamente al hacer una reserva
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Oferta Relámpago (Solo para tipo automático) */}
+                    {formData.promotionType === "automatic" && (
+                      <div className="space-y-3 p-4 border rounded-lg bg-gradient-to-r from-yellow-50 to-orange-50">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="isFlashSale"
+                            checked={formData.isFlashSale}
+                            onCheckedChange={(checked) => setFormData({ ...formData, isFlashSale: checked as boolean })}
+                          />
+                          <Label 
+                            htmlFor="isFlashSale" 
+                            className="text-sm font-semibold text-orange-700 cursor-pointer"
+                          >
+                            ⚡ Oferta Relámpago (estilo Mercado Libre)
+                          </Label>
+                        </div>
+                        
+                        {formData.isFlashSale && (
+                          <div className="space-y-2 pl-6">
+                            <Label htmlFor="flashDurationHours" className="text-sm">
+                              Duración en horas *
+                            </Label>
+                            <Select
+                              value={formData.flashDurationHours}
+                              onValueChange={(value) => setFormData({ ...formData, flashDurationHours: value })}
+                            >
+                              <SelectTrigger className="w-full">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="1">1 hora ⏱️</SelectItem>
+                                <SelectItem value="2">2 horas ⏱️</SelectItem>
+                                <SelectItem value="3">3 horas ⏱️</SelectItem>
+                                <SelectItem value="6">6 horas ⚡ (Recomendado)</SelectItem>
+                                <SelectItem value="12">12 horas ⏰</SelectItem>
+                                <SelectItem value="24">24 horas 🕐</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <p className="text-xs text-orange-600">
+                              ⚡ La oferta se mostrará con contador regresivo y badge "POR {formData.flashDurationHours} HS"
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              💡 Tip: Define "Máximo de Usos" para limitar cupos (ej: "Quedan 5 disponibles")
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="discountType">Tipo de Descuento *</Label>
@@ -498,15 +603,21 @@ export default function PromotionsManagementPage() {
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="code">Código Promocional (opcional)</Label>
-                      <Input
-                        id="code"
-                        value={formData.code}
-                        onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                        placeholder="VERANO2025"
-                      />
-                    </div>
+                    {/* Código Promocional - Solo para tipo "code" */}
+                    {formData.promotionType === "code" && (
+                      <div className="space-y-2">
+                        <Label htmlFor="code">Código Promocional *</Label>
+                        <Input
+                          id="code"
+                          value={formData.code}
+                          onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+                          placeholder="VERANO2025"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Los clientes deberán ingresar este código para aplicar el descuento
+                        </p>
+                      </div>
+                    )}
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
@@ -591,7 +702,8 @@ export default function PromotionsManagementPage() {
                         !formData.title || 
                         !formData.discountValue || 
                         !formData.startDate || 
-                        !formData.endDate
+                        !formData.endDate ||
+                        (formData.promotionType === "code" && !formData.code)
                       } 
                       className="w-full"
                     >
@@ -675,6 +787,7 @@ export default function PromotionsManagementPage() {
                   discountPercentage={promotion.discount_percentage}
                   discountAmount={promotion.discount_amount}
                   code={promotion.code}
+                  promotionType={promotion.promotion_type}
                   startDate={promotion.start_date}
                   endDate={promotion.end_date}
                   termsConditions={promotion.terms_conditions}
@@ -682,6 +795,8 @@ export default function PromotionsManagementPage() {
                   maxUses={promotion.max_uses}
                   minPurchase={promotion.min_purchase}
                   isActive={promotion.is_active}
+                  isFlashSale={promotion.is_flash_sale}
+                  flashDurationHours={promotion.flash_duration_hours}
                   onEdit={handleEditPromotion}
                   onDelete={handleDeletePromotion}
                   showActions={true}

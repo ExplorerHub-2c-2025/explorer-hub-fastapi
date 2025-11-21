@@ -320,34 +320,52 @@
 
 .priceInfo {
   display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
   background: #faf8f6;
   border: 1px solid #e9e4df;
   border-radius: 8px;
-  margin-bottom: 1rem;
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
 }
 
-.originalPrice {
+.priceRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.priceLabel {
+  color: #573F23;
+  opacity: 0.7;
+  font-size: 0.75rem;
+}
+
+.priceLabelFinal {
+  color: #573F23;
+  font-weight: 600;
   font-size: 0.875rem;
+}
+
+.priceOriginal {
   color: #573F23;
   opacity: 0.6;
   text-decoration: line-through;
+  font-size: 0.75rem;
 }
 
-.finalPrice {
-  font-size: 1.25rem;
+.priceDiscount {
+  color: #16a34a;
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+.priceFinal {
+  font-size: 1rem;
   font-weight: 700;
   color: #573F23;
-}
-
-.savings {
-  font-size: 0.875rem;
-  color: #573F23;
-  opacity: 0.8;
-  font-weight: 600;
-  margin-left: auto;
 }
 
 .cardFooter {
