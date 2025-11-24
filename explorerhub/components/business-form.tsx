@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { X, Upload, Image as ImageIcon, ChevronDown } from "lucide-react"
+import { X, Upload, ImageIcon, ChevronDown } from "lucide-react"
 import { CachedImage } from "@/components/cached-image"
 import styles from "./business-form.module.css"
 
@@ -37,13 +37,14 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
     images: initialData?.images || [],
     allows_bookings: initialData?.allows_bookings !== undefined ? initialData.allows_bookings : true,
     max_capacity: initialData?.max_capacity || "", // Nuevo campo para cupo máximo
+    is_unique: initialData?.is_unique || false, // Nueva opción de actividad única
     // Pricing models
     ticket_pricing: initialData?.ticket_pricing || null,
     hotel_pricing: initialData?.hotel_pricing || null,
     restaurant_pricing: initialData?.restaurant_pricing || null,
     wellness_pricing: initialData?.wellness_pricing || null,
   })
-  
+
   const [imageUrls, setImageUrls] = useState<string[]>(initialData?.images || [])
   const [newImageUrl, setNewImageUrl] = useState("")
 
@@ -51,29 +52,30 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
   useEffect(() => {
     if (initialData) {
       console.log("📋 InitialData categories:", initialData.categories)
-      
+      console.log("[v0] InitialData is_unique:", initialData.is_unique)
+
       // Normalizar categorías: convertir español → inglés si es necesario
       const normalizedCategories = (initialData.categories || []).map((cat: string) => {
         const mapping: Record<string, string> = {
-          "Restaurante": "Restaurant",
-          "Actividad": "Activity",
-          "Atracción": "Attraction",
-          "Naturaleza": "Nature",
-          "Cultural": "Cultural",
-          "Entretenimiento": "Entertainment",
-          "Compras": "Shopping",
+          Restaurante: "Restaurant",
+          Actividad: "Activity",
+          Atracción: "Attraction",
+          Naturaleza: "Nature",
+          Cultural: "Cultural",
+          Entretenimiento: "Entertainment",
+          Compras: "Shopping",
           "Vida Nocturna": "Nightlife",
-          "Alojamiento": "Hotel",
-          "Accommodation": "Hotel",
-          "Bienestar": "Wellness",
-          "Histórico": "Historical",
-          "Familiar": "Family",
+          Alojamiento: "Hotel",
+          Accommodation: "Hotel",
+          Bienestar: "Wellness",
+          Histórico: "Historical",
+          Familiar: "Family",
         }
         return mapping[cat] || cat // Si ya está en inglés, lo deja igual
       })
-      
+
       console.log("✅ Normalized categories:", normalizedCategories)
-      
+
       setFormData({
         name: initialData.name || "",
         description: initialData.description || "",
@@ -89,6 +91,7 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
         images: initialData.images || [],
         allows_bookings: initialData.allows_bookings !== undefined ? initialData.allows_bookings : true,
         max_capacity: initialData.max_capacity || "",
+        is_unique: initialData.is_unique || false,
         ticket_pricing: initialData.ticket_pricing || null,
         hotel_pricing: initialData.hotel_pricing || null,
         restaurant_pricing: initialData.restaurant_pricing || null,
@@ -117,16 +120,16 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
   const handleCategoryToggle = (categoryValue: string) => {
     const currentCategories = formData.categories
     const isSelected = currentCategories.includes(categoryValue)
-    
+
     if (isSelected) {
       setFormData({
         ...formData,
-        categories: currentCategories.filter((cat: string) => cat !== categoryValue)
+        categories: currentCategories.filter((cat: string) => cat !== categoryValue),
       })
     } else {
       setFormData({
         ...formData,
-        categories: [...currentCategories, categoryValue]
+        categories: [...currentCategories, categoryValue],
       })
     }
   }
@@ -148,13 +151,15 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     // Validar que al menos una categoría esté seleccionada
     if (formData.categories.length === 0) {
       alert("Debes seleccionar al menos una categoría")
       return
     }
-    
+
+    console.log("[v0] Submitting form with is_unique:", formData.is_unique)
+
     const submitData = {
       ...formData,
       location: {
@@ -163,18 +168,23 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
         state: formData.state,
         country: formData.country,
       },
-      tags: Array.isArray(formData.tags) 
-        ? formData.tags 
-        : formData.tags.split(",").map((tag: string) => tag.trim()).filter((tag: string) => tag),
+      tags: Array.isArray(formData.tags)
+        ? formData.tags
+        : formData.tags
+            .split(",")
+            .map((tag: string) => tag.trim())
+            .filter((tag: string) => tag),
       images: imageUrls,
       allows_bookings: formData.allows_bookings,
-      max_capacity: formData.max_capacity ? parseInt(formData.max_capacity) : null,
+      max_capacity: formData.max_capacity ? Number.parseInt(formData.max_capacity) : null,
+      is_unique: formData.is_unique,
       // Include pricing models (only send if they have values)
       ticket_pricing: formData.ticket_pricing?.adult_price ? formData.ticket_pricing : undefined,
       hotel_pricing: formData.hotel_pricing?.price_per_night ? formData.hotel_pricing : undefined,
-      restaurant_pricing: formData.restaurant_pricing?.reservation_fee || 
-                          formData.restaurant_pricing?.average_price_per_person ? 
-                          formData.restaurant_pricing : undefined,
+      restaurant_pricing:
+        formData.restaurant_pricing?.reservation_fee || formData.restaurant_pricing?.average_price_per_person
+          ? formData.restaurant_pricing
+          : undefined,
       wellness_pricing: formData.wellness_pricing?.session_price ? formData.wellness_pricing : undefined,
     }
     onSubmit(submitData)
@@ -202,17 +212,13 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
               <Label>Categorías *</Label>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    className={`${styles.multiSelectTrigger} justify-between`}
-                  >
+                  <Button variant="outline" role="combobox" className={`${styles.multiSelectTrigger} justify-between`}>
                     <span className={styles.multiSelectText}>
                       {formData.categories.length > 0
                         ? formData.categories.length <= 2
-                          ? formData.categories.map((cat: string) => 
-                              availableCategories.find(c => c.value === cat)?.label
-                            ).join(", ")
+                          ? formData.categories
+                              .map((cat: string) => availableCategories.find((c) => c.value === cat)?.label)
+                              .join(", ")
                           : `${formData.categories.length} categorías seleccionadas`
                         : "Seleccionar categorías..."}
                     </span>
@@ -228,7 +234,7 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
                           checked={formData.categories.includes(cat.value)}
                           onCheckedChange={() => handleCategoryToggle(cat.value)}
                         />
-                        <Label 
+                        <Label
                           htmlFor={`category-${cat.value}`}
                           className={`${styles.multiSelectLabel} text-sm font-normal cursor-pointer`}
                         >
@@ -254,6 +260,27 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
               rows={4}
               required
             />
+          </div>
+
+          <div className={styles.spaceY2}>
+            <div className="flex items-start space-x-3 p-4 border-2 border-dashed border-primary/30 rounded-lg bg-primary/5">
+              <Checkbox
+                id="is_unique"
+                checked={formData.is_unique}
+                onCheckedChange={(checked) => {
+                  console.log("[v0] Checkbox changed to:", checked)
+                  setFormData({ ...formData, is_unique: checked as boolean })
+                }}
+              />
+              <div className="flex-1">
+                <Label htmlFor="is_unique" className="text-sm font-semibold leading-none cursor-pointer">
+                  Actividad Única
+                </Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Marca esta opción si tu negocio ofrece una experiencia única e irrepetible
+                </p>
+              </div>
+            </div>
           </div>
 
           <div className={styles.gridTwo}>
@@ -351,9 +378,7 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
                 onChange={(e) => setFormData({ ...formData, max_capacity: e.target.value })}
                 placeholder="ej: 50 personas"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Límite de personas que pueden reservar al mismo tiempo
-              </p>
+              <p className="text-xs text-gray-500 mt-1">Límite de personas que pueden reservar al mismo tiempo</p>
             </div>
           </div>
 
@@ -362,12 +387,10 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
               <Checkbox
                 id="allows_bookings"
                 checked={formData.allows_bookings}
-                onCheckedChange={(checked) => 
-                  setFormData({ ...formData, allows_bookings: checked as boolean })
-                }
+                onCheckedChange={(checked) => setFormData({ ...formData, allows_bookings: checked as boolean })}
               />
-              <Label 
-                htmlFor="allows_bookings" 
+              <Label
+                htmlFor="allows_bookings"
                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
               >
                 Permitir reservas en este negocio
@@ -376,10 +399,10 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
           </div>
 
           {/* PRICING SECTIONS - Mostrar según categorías */}
-          
+
           {/* TICKET PRICING - Para museos, atracciones, actividades, entretenimiento */}
-          {(formData.categories.includes("Attraction") || 
-            formData.categories.includes("Cultural") || 
+          {(formData.categories.includes("Attraction") ||
+            formData.categories.includes("Cultural") ||
             formData.categories.includes("Historical") ||
             formData.categories.includes("Nature") ||
             formData.categories.includes("Family") ||
@@ -400,13 +423,15 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
                       min="0"
                       step="0.01"
                       value={formData.ticket_pricing?.adult_price || ""}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        ticket_pricing: {
-                          ...formData.ticket_pricing,
-                          adult_price: e.target.value ? parseFloat(e.target.value) : null
-                        }
-                      })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          ticket_pricing: {
+                            ...formData.ticket_pricing,
+                            adult_price: e.target.value ? Number.parseFloat(e.target.value) : null,
+                          },
+                        })
+                      }
                       placeholder="ej: 15.00"
                     />
                   </div>
@@ -418,13 +443,15 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
                       min="0"
                       step="0.01"
                       value={formData.ticket_pricing?.senior_price || ""}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        ticket_pricing: {
-                          ...formData.ticket_pricing,
-                          senior_price: e.target.value ? parseFloat(e.target.value) : null
-                        }
-                      })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          ticket_pricing: {
+                            ...formData.ticket_pricing,
+                            senior_price: e.target.value ? Number.parseFloat(e.target.value) : null,
+                          },
+                        })
+                      }
                       placeholder="ej: 10.00"
                     />
                   </div>
@@ -437,13 +464,15 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
                     min="0"
                     step="0.01"
                     value={formData.ticket_pricing?.child_price || ""}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      ticket_pricing: {
-                        ...formData.ticket_pricing,
-                        child_price: e.target.value ? parseFloat(e.target.value) : null
-                      }
-                    })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        ticket_pricing: {
+                          ...formData.ticket_pricing,
+                          child_price: e.target.value ? Number.parseFloat(e.target.value) : null,
+                        },
+                      })
+                    }
                     placeholder="ej: 8.00"
                   />
                 </div>
@@ -468,13 +497,15 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
                       min="0"
                       step="0.01"
                       value={formData.hotel_pricing?.price_per_night || ""}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        hotel_pricing: {
-                          ...formData.hotel_pricing,
-                          price_per_night: e.target.value ? parseFloat(e.target.value) : null
-                        }
-                      })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          hotel_pricing: {
+                            ...formData.hotel_pricing,
+                            price_per_night: e.target.value ? Number.parseFloat(e.target.value) : null,
+                          },
+                        })
+                      }
                       placeholder="ej: 85.00"
                       required={formData.categories.includes("Hotel")}
                     />
@@ -486,13 +517,15 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
                       type="number"
                       min="1"
                       value={formData.hotel_pricing?.min_nights || 1}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        hotel_pricing: {
-                          ...formData.hotel_pricing,
-                          min_nights: e.target.value ? parseInt(e.target.value) : 1
-                        }
-                      })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          hotel_pricing: {
+                            ...formData.hotel_pricing,
+                            min_nights: e.target.value ? Number.parseInt(e.target.value) : 1,
+                          },
+                        })
+                      }
                       placeholder="ej: 2"
                     />
                   </div>
@@ -504,13 +537,15 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
                     type="number"
                     min="1"
                     value={formData.hotel_pricing?.max_nights || ""}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      hotel_pricing: {
-                        ...formData.hotel_pricing,
-                        max_nights: e.target.value ? parseInt(e.target.value) : null
-                      }
-                    })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        hotel_pricing: {
+                          ...formData.hotel_pricing,
+                          max_nights: e.target.value ? Number.parseInt(e.target.value) : null,
+                        },
+                      })
+                    }
                     placeholder="Dejar vacío si no hay límite"
                   />
                 </div>
@@ -519,8 +554,7 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
           )}
 
           {/* RESTAURANT PRICING - Para restaurantes */}
-          {(formData.categories.includes("Restaurant") || 
-            formData.categories.includes("Nightlife")) && (
+          {(formData.categories.includes("Restaurant") || formData.categories.includes("Nightlife")) && (
             <Card className="mt-4 border-2 border-orange-200">
               <CardHeader className="bg-orange-50">
                 <CardTitle className="text-lg">🍽️ Precios de Restaurante</CardTitle>
@@ -536,13 +570,15 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
                       min="0"
                       step="0.01"
                       value={formData.restaurant_pricing?.reservation_fee || ""}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        restaurant_pricing: {
-                          ...formData.restaurant_pricing,
-                          reservation_fee: e.target.value ? parseFloat(e.target.value) : null
-                        }
-                      })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          restaurant_pricing: {
+                            ...formData.restaurant_pricing,
+                            reservation_fee: e.target.value ? Number.parseFloat(e.target.value) : null,
+                          },
+                        })
+                      }
                       placeholder="ej: 5.00"
                     />
                     <p className="text-xs text-gray-500">Cargo por adelantado al reservar</p>
@@ -555,13 +591,15 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
                       min="0"
                       step="0.01"
                       value={formData.restaurant_pricing?.average_price_per_person || ""}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        restaurant_pricing: {
-                          ...formData.restaurant_pricing,
-                          average_price_per_person: e.target.value ? parseFloat(e.target.value) : null
-                        }
-                      })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          restaurant_pricing: {
+                            ...formData.restaurant_pricing,
+                            average_price_per_person: e.target.value ? Number.parseFloat(e.target.value) : null,
+                          },
+                        })
+                      }
                       placeholder="ej: 25.00"
                     />
                     <p className="text-xs text-gray-500">Para estimación de costos</p>
@@ -575,13 +613,15 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
                     min="0"
                     step="0.01"
                     value={formData.restaurant_pricing?.min_consumption || ""}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      restaurant_pricing: {
-                        ...formData.restaurant_pricing,
-                        min_consumption: e.target.value ? parseFloat(e.target.value) : null
-                      }
-                    })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        restaurant_pricing: {
+                          ...formData.restaurant_pricing,
+                          min_consumption: e.target.value ? Number.parseFloat(e.target.value) : null,
+                        },
+                      })
+                    }
                     placeholder="ej: 50.00"
                   />
                   <p className="text-xs text-gray-500">Consumo mínimo requerido (opcional)</p>
@@ -607,13 +647,15 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
                       min="0"
                       step="0.01"
                       value={formData.wellness_pricing?.session_price || ""}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        wellness_pricing: {
-                          ...formData.wellness_pricing,
-                          session_price: e.target.value ? parseFloat(e.target.value) : null
-                        }
-                      })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          wellness_pricing: {
+                            ...formData.wellness_pricing,
+                            session_price: e.target.value ? Number.parseFloat(e.target.value) : null,
+                          },
+                        })
+                      }
                       placeholder="ej: 50.00"
                       required={formData.categories.includes("Wellness")}
                     />
@@ -625,13 +667,15 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
                       type="number"
                       min="2"
                       value={formData.wellness_pricing?.sessions_in_package || ""}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        wellness_pricing: {
-                          ...formData.wellness_pricing,
-                          sessions_in_package: e.target.value ? parseInt(e.target.value) : null
-                        }
-                      })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          wellness_pricing: {
+                            ...formData.wellness_pricing,
+                            sessions_in_package: e.target.value ? Number.parseInt(e.target.value) : null,
+                          },
+                        })
+                      }
                       placeholder="ej: 4"
                     />
                     <p className="text-xs text-gray-500">Número de sesiones incluidas</p>
@@ -645,24 +689,28 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
                     min="0"
                     step="0.01"
                     value={formData.wellness_pricing?.package_price || ""}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      wellness_pricing: {
-                        ...formData.wellness_pricing,
-                        package_price: e.target.value ? parseFloat(e.target.value) : null
-                      }
-                    })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        wellness_pricing: {
+                          ...formData.wellness_pricing,
+                          package_price: e.target.value ? Number.parseFloat(e.target.value) : null,
+                        },
+                      })
+                    }
                     placeholder="ej: 180.00"
                   />
-                  {formData.wellness_pricing?.session_price && 
-                   formData.wellness_pricing?.sessions_in_package && 
-                   formData.wellness_pricing?.package_price && (
-                    <p className="text-xs text-green-600 mt-1">
-                      ✨ Ahorro por paquete: $
-                      {(formData.wellness_pricing.session_price * formData.wellness_pricing.sessions_in_package - 
-                        formData.wellness_pricing.package_price).toFixed(2)}
-                    </p>
-                  )}
+                  {formData.wellness_pricing?.session_price &&
+                    formData.wellness_pricing?.sessions_in_package &&
+                    formData.wellness_pricing?.package_price && (
+                      <p className="text-xs text-green-600 mt-1">
+                        ✨ Ahorro por paquete: $
+                        {(
+                          formData.wellness_pricing.session_price * formData.wellness_pricing.sessions_in_package -
+                          formData.wellness_pricing.package_price
+                        ).toFixed(2)}
+                      </p>
+                    )}
                 </div>
               </CardContent>
             </Card>
@@ -702,16 +750,10 @@ export function BusinessForm({ onSubmit, initialData, isLoading }: BusinessFormP
                           fallback="/placeholder.svg"
                         />
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveImage(index)}
-                        className={styles.removeButton}
-                      >
+                      <button type="button" onClick={() => handleRemoveImage(index)} className={styles.removeButton}>
                         <X className="h-4 w-4" />
                       </button>
-                      <div className={styles.imageIndex}>
-                        {index + 1}
-                      </div>
+                      <div className={styles.imageIndex}>{index + 1}</div>
                     </div>
                   ))}
                 </div>

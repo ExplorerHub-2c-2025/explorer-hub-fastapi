@@ -38,7 +38,7 @@
 .mainTitle {
   font-size: 2rem;
   font-weight: 700;
-  color: #573F23;
+  color: #573f23;
   margin: 0;
 }
 
@@ -52,7 +52,7 @@
   align-items: center;
   gap: 0.5rem;
   font-weight: 500;
-  background-color: #A08058;
+  background-color: #a08058;
   color: white;
   border: none;
 }
@@ -67,7 +67,7 @@
 }
 
 .subtitle {
-  color: #573F23;
+  color: #573f23;
   font-size: 0.9rem;
   line-height: 1.5;
   max-width: 800px;
@@ -84,7 +84,7 @@
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
-  scrollbar-color: #A08058 #e9e4df;
+  scrollbar-color: #a08058 #e9e4df;
   margin-left: auto;
   margin-right: auto;
   max-width: 1400px;
@@ -100,7 +100,7 @@
 }
 
 .attractionsGrid::-webkit-scrollbar-thumb {
-  background: #A08058;
+  background: #a08058;
   border-radius: 4px;
 }
 
@@ -174,7 +174,7 @@
 .heartIcon {
   width: 18px;
   height: 18px;
-  color: #A08058;
+  color: #a08058;
   transition: all 0.2s ease;
 }
 
@@ -204,7 +204,7 @@
 .plusIcon {
   width: 18px;
   height: 18px;
-  color: #A08058;
+  color: #a08058;
   transition: all 0.2s ease;
 }
 
@@ -247,7 +247,7 @@
 .navIcon {
   width: 18px;
   height: 18px;
-  color: #573F23;
+  color: #573f23;
 }
 
 /* Image Indicators */
@@ -299,34 +299,52 @@
 }
 
 .cardContent:hover .cardTitle {
-  color: #A08058;
+  color: #a08058;
 }
 
 .cardHeader {
   display: flex;
-  align-items: flex-start;
-  gap: 0.4rem;
-  margin-bottom: 0.6rem;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cardTitle {
+  flex: 1;
+  min-width: 0;              /* permite elipsis */
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .cardNumber {
   font-size: 1rem;
   font-weight: 600;
-  color: #A08058;
+  color: #a08058;
   flex-shrink: 0;
 }
 
-.cardTitle {
-  font-size: 1rem;
+/* Added unique badge styles */
+.uniqueBadge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  background: linear-gradient(135deg, #8b6f47 0%, #6b5838 100%);
+  color: white;
+  border: 2px solid #000;
+  border-radius: 4px;
+  font-size: 0.7rem;
   font-weight: 600;
-  color: #573F23;
-  margin: 0;
-  line-height: 1.3;
-  transition: color 0.2s ease;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  flex-shrink: 0;
+  margin-left: auto;          /* empuja el badge al borde derecho */
+  align-self: center;
+}
+
+.uniqueBadge:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
 }
 
 /* Rating Section */
@@ -350,19 +368,19 @@
 }
 
 .ratingBubbleFilled {
-  background: #A08058;
+  background: #a08058;
 }
 
 .reviewCount {
   font-size: 0.8rem;
-  color: #573F23;
+  color: #573f23;
   opacity: 0.7;
 }
 
 /* Category Badge */
 .categoryBadge {
   font-size: 0.8rem;
-  color: #573F23;
+  color: #573f23;
   opacity: 0.7;
   margin-bottom: 0.6rem;
 }
@@ -370,7 +388,7 @@
 /* Description - Truncated */
 .cardDescription {
   font-size: 0.85rem;
-  color: #573F23;
+  color: #573f23;
   line-height: 1.4;
   margin-bottom: 0.8rem;
   flex: 1;
@@ -395,7 +413,7 @@
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  color: #573F23;
+  color: #573f23;
   font-size: 0.8rem;
   opacity: 0.7;
 }
@@ -408,7 +426,7 @@
 .viewButton2 {
   background: none;
   border: none;
-  color: #A08058;
+  color: #a08058;
   font-weight: 600;
   font-size: 0.8rem;
   cursor: pointer;
@@ -433,14 +451,14 @@
   display: flex;
   align-items: center;
   gap: 0.3rem;
-  color: #573F23;
+  color: #573f23;
   opacity: 0.8;
 }
 
 .statIcon {
   width: 14px;
   height: 14px;
-  color: #A08058;
+  color: #a08058;
 }
 
 .statCount {
@@ -460,7 +478,7 @@
   height: 3rem;
   width: 3rem;
   animation: spin 1s linear infinite;
-  color: #A08058;
+  color: #a08058;
 }
 
 @keyframes spin {
@@ -482,20 +500,20 @@
 }
 
 .errorTitle {
-  color: #A08058;
+  color: #a08058;
   margin-bottom: 0.5rem;
   font-weight: 600;
 }
 
 .errorText {
   font-size: 0.875rem;
-  color: #573F23;
+  color: #573f23;
   opacity: 0.7;
 }
 
 .retryButton {
   margin-top: 1rem;
-  background-color: #A08058;
+  background-color: #a08058;
   color: white;
 }
 
@@ -515,7 +533,7 @@
 .emptyIcon {
   height: 4rem;
   width: 4rem;
-  color: #A08058;
+  color: #a08058;
   margin: 0 auto 1rem;
   opacity: 0.5;
 }
@@ -524,11 +542,11 @@
   font-size: 1.25rem;
   font-weight: 600;
   margin-bottom: 0.5rem;
-  color: #573F23;
+  color: #573f23;
 }
 
 .emptyMessage {
-  color: #573F23;
+  color: #573f23;
   opacity: 0.7;
 }
 
@@ -568,7 +586,7 @@
 .filterTitle {
   font-size: 1.125rem;
   font-weight: 600;
-  color: #573F23;
+  color: #573f23;
   margin-bottom: 0.75rem;
 }
 
@@ -622,7 +640,7 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #A08058;
+  background: #a08058;
   cursor: pointer;
 }
 
@@ -640,7 +658,7 @@
   display: block;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #573F23;
+  color: #573f23;
   margin-bottom: 0.5rem;
 }
 
@@ -772,7 +790,7 @@
   gap: 0.5rem;
   margin-bottom: 0.5rem;
   font-size: 0.8rem;
-  color: #573F23;
+  color: #573f23;
   opacity: 0.8;
 }
 
@@ -781,7 +799,7 @@
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  color: #573F23;
+  color: #573f23;
   font-size: 0.8rem;
   opacity: 0.7;
 }

@@ -1,25 +1,36 @@
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from "next/navigation"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { FlashSaleCarousel } from "./FlashSaleCarousel"
 import { Button } from "@/components/ui/button"
-import { Search, Loader2, MapPin, Grid3x3, Heart, ChevronLeft, ChevronRight, Star, Plus, MessageCircle, ChevronDown } from 'lucide-react'
+import {
+  Search,
+  Loader2,
+  MapPin,
+  Grid3x3,
+  Heart,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  MessageCircle,
+  ChevronDown,
+} from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Checkbox } from "@/components/ui/checkbox"
-import dynamic from 'next/dynamic'
+import dynamic from "next/dynamic"
 import styles from "./page.module.css"
 
 // Dynamic import for Map component to avoid SSR issues
-const Map = dynamic(() => import('./MapComponent'), { ssr: false })
+const Map = dynamic(() => import("./MapComponent"), { ssr: false })
 
 interface Business {
   id: number
   name: string
   description: string
-  categories: string[] // Cambiado de category: string a categories: string[]
+  categories: string[]
   location: {
     address: string
     city: string
@@ -34,6 +45,7 @@ interface Business {
   is_active: boolean
   allows_bookings: boolean
   max_capacity?: number
+  is_unique?: boolean
 }
 
 export default function ExplorePage() {
@@ -42,7 +54,7 @@ export default function ExplorePage() {
   const [activities, setActivities] = useState<Business[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid')
+  const [viewMode, setViewMode] = useState<"grid" | "map">("grid")
   const [favorites, setFavorites] = useState<Set<number>>(new Set())
   const [imageIndexes, setImageIndexes] = useState<Record<number, number>>({})
   const [favoriteCounts, setFavoriteCounts] = useState<Record<number, number>>({})
@@ -64,7 +76,7 @@ export default function ExplorePage() {
     const tagsParam = searchParams?.get("tags")
     const minPriceParam = searchParams?.get("minPrice")
     const maxPriceParam = searchParams?.get("maxPrice")
-    
+
     if (categoryParam) {
       setFilters((prev) => ({ ...prev, categories: [categoryParam] }))
     }
@@ -75,9 +87,9 @@ export default function ExplorePage() {
       setSearchQuery(tagsParam.split(",").join(" "))
     }
     if (minPriceParam && maxPriceParam) {
-      setFilters((prev) => ({ 
-        ...prev, 
-        priceRange: [parseInt(minPriceParam), parseInt(maxPriceParam)] 
+      setFilters((prev) => ({
+        ...prev,
+        priceRange: [Number.parseInt(minPriceParam), Number.parseInt(maxPriceParam)],
       }))
     }
 
@@ -89,15 +101,15 @@ export default function ExplorePage() {
   const fetchBusinesses = async () => {
     try {
       setIsLoading(true)
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/businesses`)
-      
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/api/businesses`)
+
       if (!response.ok) {
         throw new Error("Error al cargar los establecimientos")
       }
 
       const data = await response.json()
       setActivities(data)
-      
+
       // Load favorite counts for all businesses
       await loadFavoriteCounts(data)
     } catch (err) {
@@ -109,29 +121,29 @@ export default function ExplorePage() {
   }
 
   const loadFavorites = async () => {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem("token")
     if (!token) return
 
     try {
-      const response = await fetch('/api/favorites', {
+      const response = await fetch("/api/favorites", {
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       })
-      
+
       if (response.ok) {
         const favoritesData = await response.json()
         const favoriteIds = new Set<number>(favoritesData.map((fav: any) => fav.business_id as number))
         setFavorites(favoriteIds)
       }
     } catch (error) {
-      console.error('Error loading favorites:', error)
+      console.error("Error loading favorites:", error)
     }
   }
 
   const loadFavoriteCounts = async (businesses: Business[]) => {
     const counts: Record<number, number> = {}
-    
+
     for (const business of businesses) {
       try {
         const response = await fetch(`/api/favorites/count/${business.id}`)
@@ -144,127 +156,127 @@ export default function ExplorePage() {
         counts[business.id] = 0
       }
     }
-    
+
     setFavoriteCounts(counts)
   }
 
   const toggleFavorite = async (id: number) => {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem("token")
     if (!token) {
       // TODO: Show login dialog
-      console.log('User not logged in')
+      console.log("User not logged in")
       return
     }
 
     try {
       const isCurrentlyFavorite = favorites.has(id)
-      
+
       if (isCurrentlyFavorite) {
         // Remove from favorites
         const response = await fetch(`/api/favorites/${id}`, {
-          method: 'DELETE',
+          method: "DELETE",
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
         })
-        
+
         if (response.ok) {
           const newFavorites = new Set(favorites)
           newFavorites.delete(id)
           setFavorites(newFavorites)
           // Update favorite count
-          setFavoriteCounts(prev => ({
+          setFavoriteCounts((prev) => ({
             ...prev,
-            [id]: Math.max(0, (prev[id] || 0) - 1)
+            [id]: Math.max(0, (prev[id] || 0) - 1),
           }))
         }
       } else {
         // Add to favorites
-        const response = await fetch('/api/favorites', {
-          method: 'POST',
+        const response = await fetch("/api/favorites", {
+          method: "POST",
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
-          body: JSON.stringify({ business_id: id })
+          body: JSON.stringify({ business_id: id }),
         })
-        
+
         if (response.ok) {
           const newFavorites = new Set(favorites)
           newFavorites.add(id)
           setFavorites(newFavorites)
           // Update favorite count
-          setFavoriteCounts(prev => ({
+          setFavoriteCounts((prev) => ({
             ...prev,
-            [id]: (prev[id] || 0) + 1
+            [id]: (prev[id] || 0) + 1,
           }))
         }
       }
     } catch (error) {
-      console.error('Error toggling favorite:', error)
+      console.error("Error toggling favorite:", error)
     }
   }
 
   const loadUserTrips = async () => {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem("token")
     if (!token) return
 
     try {
-      const response = await fetch('http://localhost:8000/api/trips/', {
+      const response = await fetch("http://localhost:8000/api/trips/", {
         headers: {
-          'Authorization': `Bearer ${token}`,
-        }
+          Authorization: `Bearer ${token}`,
+        },
       })
-      
+
       if (response.ok) {
         const trips = await response.json()
         setUserTrips(trips)
       }
     } catch (error) {
-      console.error('Error loading trips:', error)
+      console.error("Error loading trips:", error)
     }
   }
 
   const addToTrip = async (businessId: number, tripId: string) => {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem("token")
     if (!token) return
 
     try {
-      const business = activities.find(a => a.id === businessId)
+      const business = activities.find((a) => a.id === businessId)
       if (!business) return
 
       const response = await fetch(`http://localhost:8000/api/trips/${tripId}/activities`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           business_id: String(businessId),
           business_name: business.name,
           scheduled_date: null,
-          notes: null
-        })
+          notes: null,
+        }),
       })
 
       if (response.ok) {
-        alert('¡Actividad agregada al itinerario!')
+        alert("¡Actividad agregada al itinerario!")
         setShowTripSelector(null)
       } else {
-        alert('Error al agregar la actividad')
+        alert("Error al agregar la actividad")
       }
     } catch (error) {
-      console.error('Error adding to trip:', error)
-      alert('Error al agregar la actividad')
+      console.error("Error adding to trip:", error)
+      alert("Error al agregar la actividad")
     }
   }
 
   const handleAddToItinerary = async (businessId: number) => {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem("token")
     if (!token) {
-      alert('Debes iniciar sesión para agregar actividades a un itinerario')
-      router.push('/sign-in')
+      alert("Debes iniciar sesión para agregar actividades a un itinerario")
+      router.push("/sign-in")
       return
     }
 
@@ -275,8 +287,8 @@ export default function ExplorePage() {
 
     // If user has no trips, redirect to create one
     if (userTrips.length === 0) {
-      if (confirm('No tienes viajes. ¿Quieres crear uno?')) {
-        router.push('/trips/new')
+      if (confirm("No tienes viajes. ¿Quieres crear uno?")) {
+        router.push("/trips/new")
       }
       return
     }
@@ -286,16 +298,16 @@ export default function ExplorePage() {
   }
 
   const nextImage = (id: number, maxImages: number) => {
-    setImageIndexes(prev => ({
+    setImageIndexes((prev) => ({
       ...prev,
-      [id]: ((prev[id] || 0) + 1) % maxImages
+      [id]: ((prev[id] || 0) + 1) % maxImages,
     }))
   }
 
   const prevImage = (id: number, maxImages: number) => {
-    setImageIndexes(prev => ({
+    setImageIndexes((prev) => ({
       ...prev,
-      [id]: ((prev[id] || 0) - 1 + maxImages) % maxImages
+      [id]: ((prev[id] || 0) - 1 + maxImages) % maxImages,
     }))
   }
 
@@ -326,46 +338,46 @@ export default function ExplorePage() {
   const handleCategoryToggle = (categoryValue: string) => {
     const currentCategories = filters.categories
     const isSelected = currentCategories.includes(categoryValue)
-    
+
     if (isSelected) {
       setFilters({
         ...filters,
-        categories: currentCategories.filter((cat: string) => cat !== categoryValue)
+        categories: currentCategories.filter((cat: string) => cat !== categoryValue),
       })
     } else {
       setFilters({
         ...filters,
-        categories: [...currentCategories, categoryValue]
+        categories: [...currentCategories, categoryValue],
       })
     }
   }
 
   const filteredActivities = useMemo(() => {
-    let filtered = activities.filter(activity => activity.is_active)
+    let filtered = activities.filter((activity) => activity.is_active)
 
     if (searchQuery) {
-      const searchTerms = searchQuery.toLowerCase().split(" ").filter(term => term.length > 0)
-      
+      const searchTerms = searchQuery
+        .toLowerCase()
+        .split(" ")
+        .filter((term) => term.length > 0)
+
       filtered = filtered.filter((activity) => {
         const matchesName = activity.name.toLowerCase().includes(searchQuery.toLowerCase())
         const matchesDescription = activity.description.toLowerCase().includes(searchQuery.toLowerCase())
-        const matchesLocation = activity.location.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                               activity.location.state.toLowerCase().includes(searchQuery.toLowerCase())
-        
+        const matchesLocation =
+          activity.location.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          activity.location.state.toLowerCase().includes(searchQuery.toLowerCase())
+
         // Check if any search term matches any tag
-        const matchesTags = searchTerms.some(term => 
-          activity.tags.some(tag => tag.toLowerCase().includes(term))
-        )
-        
+        const matchesTags = searchTerms.some((term) => activity.tags.some((tag) => tag.toLowerCase().includes(term)))
+
         return matchesName || matchesDescription || matchesLocation || matchesTags
       })
     }
 
     // Apply category filter
     if (filters.categories.length > 0) {
-      filtered = filtered.filter((activity) => 
-        activity.categories.some(cat => filters.categories.includes(cat))
-      )
+      filtered = filtered.filter((activity) => activity.categories.some((cat) => filters.categories.includes(cat)))
     }
 
     // Apply price range filter
@@ -409,21 +421,19 @@ export default function ExplorePage() {
           {/* Header Section */}
           <div className={styles.headerSection}>
             <div className={styles.headerTop}>
-              <h1 className={styles.mainTitle}>
-                Las experiencias más populares
-              </h1>
+              <h1 className={styles.mainTitle}>Las experiencias más populares</h1>
               <div className={styles.viewButtons}>
-                <Button 
-                  variant={viewMode === 'grid' ? 'default' : 'outline'}
-                  onClick={() => setViewMode('grid')}
+                <Button
+                  variant={viewMode === "grid" ? "default" : "outline"}
+                  onClick={() => setViewMode("grid")}
                   className={styles.viewButton}
                 >
                   <Grid3x3 className={styles.viewIcon} />
                   Ver todo
                 </Button>
-                <Button 
-                  variant={viewMode === 'map' ? 'default' : 'outline'}
-                  onClick={() => setViewMode('map')}
+                <Button
+                  variant={viewMode === "map" ? "default" : "outline"}
+                  onClick={() => setViewMode("map")}
                   className={styles.viewButton}
                 >
                   <MapPin className={styles.viewIcon} />
@@ -432,7 +442,8 @@ export default function ExplorePage() {
               </div>
             </div>
             <p className={styles.subtitle}>
-              Los <strong>establecimientos</strong> se basan en datos de otros usuarios. Tomamos en consideración sus opiniones y calificaciones, la cantidad de visualizaciones de la página y su ubicación.
+              Los <strong>establecimientos</strong> se basan en datos de otros usuarios. Tomamos en consideración sus
+              opiniones y calificaciones, la cantidad de visualizaciones de la página y su ubicación.
             </p>
           </div>
 
@@ -454,37 +465,37 @@ export default function ExplorePage() {
           ) : (
             <>
               {/* Grid View */}
-              {viewMode === 'grid' && (
+              {viewMode === "grid" && (
                 <div className={styles.attractionsGrid}>
                   {filteredActivities.map((activity, index) => {
                     const currentImageIndex = imageIndexes[activity.id] || 0
                     const hasMultipleImages = activity.images.length > 1
-                    
+
                     return (
                       <div key={activity.id} className={styles.attractionCard}>
                         {/* Image Section */}
                         <div className={styles.imageContainer}>
                           <div className={styles.imageWrapper}>
-                            <img 
-                              src={activity.images[currentImageIndex] || '/images/placeholder-business.jpg'} 
+                            <img
+                              src={activity.images[currentImageIndex] || "/images/placeholder-business.jpg"}
                               alt={activity.name}
                               className={styles.cardImage}
                             />
-                            
+
                             {/* Favorite Button */}
-                            <button 
+                            <button
                               className={styles.favoriteButton}
                               onClick={() => toggleFavorite(activity.id)}
                               aria-label="Guardar en favoritos"
                             >
-                              <Heart 
+                              <Heart
                                 className={styles.heartIcon}
-                                fill={favorites.has(activity.id) ? 'currentColor' : 'none'}
+                                fill={favorites.has(activity.id) ? "currentColor" : "none"}
                               />
                             </button>
 
                             {/* Add to Itinerary Button */}
-                            <button 
+                            <button
                               className={styles.itineraryButton}
                               onClick={(e) => {
                                 e.preventDefault()
@@ -498,7 +509,7 @@ export default function ExplorePage() {
                             {/* Navigation Arrows */}
                             {hasMultipleImages && (
                               <>
-                                <button 
+                                <button
                                   className={`${styles.navButton} ${styles.navButtonLeft}`}
                                   onClick={(e) => {
                                     e.preventDefault()
@@ -508,7 +519,7 @@ export default function ExplorePage() {
                                 >
                                   <ChevronLeft className={styles.navIcon} />
                                 </button>
-                                <button 
+                                <button
                                   className={`${styles.navButton} ${styles.navButtonRight}`}
                                   onClick={(e) => {
                                     e.preventDefault()
@@ -522,9 +533,9 @@ export default function ExplorePage() {
                                 {/* Image Indicators */}
                                 <div className={styles.imageIndicators}>
                                   {activity.images.map((_, imgIndex) => (
-                                    <div 
+                                    <div
                                       key={imgIndex}
-                                      className={`${styles.indicator} ${imgIndex === currentImageIndex ? styles.indicatorActive : ''}`}
+                                      className={`${styles.indicator} ${imgIndex === currentImageIndex ? styles.indicatorActive : ""}`}
                                     />
                                   ))}
                                 </div>
@@ -532,14 +543,12 @@ export default function ExplorePage() {
                             )}
 
                             {/* Badge */}
-                            <div className={styles.badge}>
-                              {activity.categories[0] || 'Sin categoría'}
-                            </div>
+                            <div className={styles.badge}>{activity.categories[0] || "Sin categoría"}</div>
                           </div>
                         </div>
 
                         {/* Content Section */}
-                        <div 
+                        <div
                           className={styles.cardContent}
                           onClick={() => router.push(`/activity/${activity.id}`)}
                           role="button"
@@ -548,52 +557,47 @@ export default function ExplorePage() {
                           <div className={styles.cardHeader}>
                             <span className={styles.cardNumber}>{index + 1}.</span>
                             <h2 className={styles.cardTitle}>{activity.name}</h2>
+                            {activity.is_unique && <span className={styles.uniqueBadge}>Único</span>}
                           </div>
 
                           {/* Rating */}
                           <div className={styles.ratingSection}>
                             <div className={styles.ratingBubbles}>
                               {[...Array(5)].map((_, i) => (
-                                <div 
+                                <div
                                   key={i}
-                                  className={`${styles.ratingBubble} ${i < Math.floor(activity.rating) ? styles.ratingBubbleFilled : ''}`}
+                                  className={`${styles.ratingBubble} ${i < Math.floor(activity.rating) ? styles.ratingBubbleFilled : ""}`}
                                 />
                               ))}
                             </div>
-                            <span className={styles.reviewCount}>
-                              ({activity.review_count.toLocaleString()})
-                            </span>
+                            <span className={styles.reviewCount}>({activity.review_count.toLocaleString()})</span>
                           </div>
 
                           {/* Category Badge */}
-                          <div className={styles.categoryBadge}>
-                            {activity.tags.slice(0, 2).join(' • ')}
-                          </div>
+                          <div className={styles.categoryBadge}>{activity.tags.slice(0, 2).join(" • ")}</div>
 
                           {/* Description */}
                           <p className={styles.cardDescription}>
                             {activity.description.slice(0, 150)}
-                            {activity.description.length > 150 && '...'}
+                            {activity.description.length > 150 && "..."}
                           </p>
 
                           {/* Footer */}
                           <div className={styles.cardFooter}>
                             <div className={styles.locationInfo}>
                               <MapPin className={styles.locationIcon} />
-                              <span>{activity.location.city}, {activity.location.state}</span>
+                              <span>
+                                {activity.location.city}, {activity.location.state}
+                              </span>
                             </div>
                             <div className={styles.statsContainer}>
                               <div className={styles.statItem}>
                                 <Heart className={styles.statIcon} />
-                                <span className={styles.statCount}>
-                                  {favoriteCounts[activity.id] || 0}
-                                </span>
+                                <span className={styles.statCount}>{favoriteCounts[activity.id] || 0}</span>
                               </div>
                               <div className={styles.statItem}>
                                 <MessageCircle className={styles.statIcon} />
-                                <span className={styles.statCount}>
-                                  {activity.review_count}
-                                </span>
+                                <span className={styles.statCount}>{activity.review_count}</span>
                               </div>
                             </div>
                           </div>
@@ -605,7 +609,7 @@ export default function ExplorePage() {
               )}
 
               {/* Map View */}
-              {viewMode === 'map' && (
+              {viewMode === "map" && (
                 <div className={styles.mapLayout}>
                   {/* Sidebar with Filters */}
                   <div className={styles.mapSidebar}>
@@ -628,10 +632,10 @@ export default function ExplorePage() {
                           <select
                             value={filters.priceRange[0]}
                             onChange={(e) => {
-                              const newMin = parseInt(e.target.value)
-                              setFilters(prev => ({ 
-                                ...prev, 
-                                priceRange: [newMin, Math.max(newMin, prev.priceRange[1])] 
+                              const newMin = Number.parseInt(e.target.value)
+                              setFilters((prev) => ({
+                                ...prev,
+                                priceRange: [newMin, Math.max(newMin, prev.priceRange[1])],
                               }))
                             }}
                             className={styles.priceSelect}
@@ -647,10 +651,10 @@ export default function ExplorePage() {
                           <select
                             value={filters.priceRange[1]}
                             onChange={(e) => {
-                              const newMax = parseInt(e.target.value)
-                              setFilters(prev => ({ 
-                                ...prev, 
-                                priceRange: [Math.min(prev.priceRange[0], newMax), newMax] 
+                              const newMax = Number.parseInt(e.target.value)
+                              setFilters((prev) => ({
+                                ...prev,
+                                priceRange: [Math.min(prev.priceRange[0], newMax), newMax],
                               }))
                             }}
                             className={styles.priceSelect}
@@ -663,7 +667,7 @@ export default function ExplorePage() {
                         </div>
                       </div>
                       <div className={styles.priceRangeDisplay}>
-                        Rango seleccionado: {'$'.repeat(filters.priceRange[0])} - {'$'.repeat(filters.priceRange[1])}
+                        Rango seleccionado: {"$".repeat(filters.priceRange[0])} - {"$".repeat(filters.priceRange[1])}
                       </div>
                     </div>
 
@@ -671,7 +675,9 @@ export default function ExplorePage() {
                       <h3 className={styles.filterTitle}>Calificación Mínima</h3>
                       <select
                         value={filters.minRating}
-                        onChange={(e) => setFilters(prev => ({ ...prev, minRating: parseInt(e.target.value) }))}
+                        onChange={(e) =>
+                          setFilters((prev) => ({ ...prev, minRating: Number.parseInt(e.target.value) }))
+                        }
                         className={styles.searchInput}
                       >
                         <option value={0}>Todas las calificaciones</option>
@@ -695,9 +701,9 @@ export default function ExplorePage() {
                             <span className={styles.multiSelectText}>
                               {filters.categories.length > 0
                                 ? filters.categories.length <= 2
-                                  ? filters.categories.map((cat) => 
-                                      availableCategories.find(c => c.value === cat)?.label
-                                    ).join(", ")
+                                  ? filters.categories
+                                      .map((cat) => availableCategories.find((c) => c.value === cat)?.label)
+                                      .join(", ")
                                   : `${filters.categories.length} categorías seleccionadas`
                                 : "Seleccionar categorías..."}
                             </span>
@@ -713,7 +719,7 @@ export default function ExplorePage() {
                                   checked={filters.categories.includes(cat.value)}
                                   onCheckedChange={() => handleCategoryToggle(cat.value)}
                                 />
-                                <label 
+                                <label
                                   htmlFor={`category-${cat.value}`}
                                   className={`${styles.multiSelectLabel} text-sm font-normal cursor-pointer`}
                                 >
@@ -738,9 +744,7 @@ export default function ExplorePage() {
                 <div className={styles.emptyState}>
                   <Search className={styles.emptyIcon} />
                   <p className={styles.emptyTitle}>No se encontraron experiencias</p>
-                  <p className={styles.emptyMessage}>
-                    Intenta ajustar tus criterios de búsqueda.
-                  </p>
+                  <p className={styles.emptyMessage}>Intenta ajustar tus criterios de búsqueda.</p>
                 </div>
               )}
             </>
@@ -750,14 +754,11 @@ export default function ExplorePage() {
 
       {/* Trip Selector Modal */}
       {showTripSelector !== null && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
           onClick={() => setShowTripSelector(null)}
         >
-          <div 
-            className="bg-white rounded-lg p-6 max-w-md w-full mx-4"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-xl font-bold mb-4">Selecciona un viaje</h3>
             <div className="space-y-2 max-h-96 overflow-y-auto">
               {userTrips.map((trip) => (
@@ -772,18 +773,14 @@ export default function ExplorePage() {
               ))}
             </div>
             <div className="mt-4 flex gap-2">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => setShowTripSelector(null)}
-              >
+              <Button variant="outline" className="flex-1 bg-transparent" onClick={() => setShowTripSelector(null)}>
                 Cancelar
               </Button>
               <Button
                 className="flex-1"
                 onClick={() => {
                   setShowTripSelector(null)
-                  router.push('/trips/new')
+                  router.push("/trips/new")
                 }}
               >
                 Crear Nuevo Viaje

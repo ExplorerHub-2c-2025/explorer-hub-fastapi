@@ -53,6 +53,7 @@ class BusinessBase(BaseModel):
     tags: List[str] = []
     allows_bookings: bool = True
     max_capacity: Optional[int] = None  # Cupo máximo de personas
+    is_unique: bool = False  # Indica si es una actividad única
     
     # Diferentes modelos de precios según el tipo de negocio
     ticket_pricing: Optional[TicketPricing] = None  # Para museos, atracciones, actividades, entretenimiento
@@ -90,6 +91,7 @@ class Business(BusinessBase):
     is_active: bool
     allows_bookings: bool
     max_capacity: Optional[int] = None
+    is_unique: bool = False
     
     # Diferentes modelos de precios
     ticket_pricing: Optional[TicketPricing] = None
