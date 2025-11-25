@@ -16,12 +16,20 @@ class ActivityImage(BaseModel):
     notes: Optional[str] = None
 
 
+class ActivityLocation(BaseModel):
+    address: Optional[str] = None
+    city: Optional[str] = None
+    lat: Optional[float] = None
+    lng: Optional[float] = None
+
+
 class TripActivity(BaseModel):
     business_id: int
     business_name: str
     scheduled_date: Optional[datetime] = None
     notes: Optional[str] = None
     images: List[ActivityImage] = []
+    location: Optional[ActivityLocation] = None
 
 
 class TripBase(BaseModel):

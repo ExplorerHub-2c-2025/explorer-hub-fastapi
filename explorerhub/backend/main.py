@@ -7,6 +7,7 @@ from database import Database
 from config import settings
 from routes import auth, businesses, reviews, trips, promotions, bookings, notifications, favorites, profile, users
 from routes import debug as debug_routes
+from routes import weather, directions
 from pathlib import Path
 from flash_sale_checker import check_and_update_flash_sales, deactivate_expired_promotions
 
@@ -91,6 +92,8 @@ app.include_router(favorites)
 app.include_router(profile)
 app.include_router(users)
 app.include_router(debug_routes.debug_router)  # Endpoint temporal de diagnóstico
+app.include_router(weather.router, prefix="/api/weather", tags=["weather"])
+app.include_router(directions.router, prefix="/api/directions", tags=["directions"])
 
 # Mount uploads directory
 uploads_dir = Path("uploads")
