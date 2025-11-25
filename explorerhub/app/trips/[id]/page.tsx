@@ -28,6 +28,7 @@ interface TripActivity {
   scheduled_date?: string
   notes?: string
   images?: Array<{url: string, notes?: string}>
+  business_images?: string[]
   location?: {
     address?: string
     city?: string
@@ -406,6 +407,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
     scheduled_date: activity.scheduled_date ? new Date(activity.scheduled_date) : undefined,
     notes: activity.notes,
     images: activity.images || [],
+    business_images: activity.business_images || [],
   }))
 
   // Calculate nearest city for weather - use trip destination or first activity with location
@@ -553,7 +555,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
               </CardContent>
             </Card>
 
-            <Card>
+           {/*  <Card>
               <CardContent className={styles.cardContent}>
                 <h3 className={styles.sectionTitle}>Recomendaciones</h3>
                 <p className={styles.recommendationsText}>
@@ -568,7 +570,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                   </Link>
                 </div>
               </CardContent>
-            </Card>
+            </Card> */}
           </div>
         </div>
       </main>
