@@ -11,6 +11,7 @@ from utils import serialize_doc, serialize_docs
 from routes.notifications import notify_booking_created
 from flash_sale_checker import check_promotion_after_use
 from pricing_calculator import calculate_price_with_categories, apply_promotion_discount
+from services.geocoding_service import GeocodingService
 
 router = APIRouter(prefix="/api/businesses", tags=["businesses"])
 
@@ -37,6 +38,12 @@ async def create_business(
             detail="User ID not found"
         )
     business_dict["owner_id"] = str(user_id)
+    
+    # Geocode the location to get coordinates
+    if "location" in business_dict:
+        business_dict["location"] = await GeocodingService.geocode_business_location(
+            business_dict["location"]
+        )
     
     # Get next sequential ID
     next_id = await get_next_sequence_value("businesses", db)
@@ -149,6 +156,13 @@ async def update_business(
         raise HTTPException(status_code=403, detail="Not authorized to update this business")
     
     update_data = business_update.model_dump()
+    
+    # Geocode the location if it was updated
+    if "location" in update_data:
+        update_data["location"] = await GeocodingService.geocode_business_location(
+            update_data["location"]
+        )
+    
     update_data["updated_at"] = datetime.utcnow()
     await db.businesses.update_one(
         {"id": business_id},

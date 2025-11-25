@@ -4,14 +4,30 @@ import type React from "react"
 
 import { useEffect, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
-import { Cloud, CloudRain, Sun, Wind, Droplets, AlertCircle } from "lucide-react"
+import { Cloud, CloudRain, Sun, Wind, Droplets, AlertCircle, Sunrise, Sunset, Eye } from "lucide-react"
 
 interface WeatherData {
+  city: string
+  country: string
   temperature: number
+  feels_like: number
+  temp_min: number
+  temp_max: number
+  humidity: number
+  pressure: number
+  wind_speed: number
+  wind_deg?: number
+  clouds: number
   condition: string
-  humidity?: number
-  windSpeed?: number
+  description: string
   icon: string
+  visibility: number
+  sunrise: number
+  sunset: number
+  coord: {
+    lat: number
+    lon: number
+  }
 }
 
 interface WeatherCardProps {
@@ -22,7 +38,11 @@ const WEATHER_ICONS: Record<string, React.ReactNode> = {
   clear: <Sun className="w-12 h-12 text-yellow-400" />,
   clouds: <Cloud className="w-12 h-12 text-gray-400" />,
   rain: <CloudRain className="w-12 h-12 text-blue-400" />,
+  drizzle: <CloudRain className="w-12 h-12 text-blue-300" />,
+  thunderstorm: <CloudRain className="w-12 h-12 text-purple-500" />,
   snow: <Cloud className="w-12 h-12 text-blue-200" />,
+  mist: <Cloud className="w-12 h-12 text-gray-300" />,
+  fog: <Cloud className="w-12 h-12 text-gray-300" />,
 }
 
 export function WeatherCard({ city }: WeatherCardProps) {
@@ -39,47 +59,22 @@ export function WeatherCard({ city }: WeatherCardProps) {
 
       try {
         setIsLoading(true)
-        const geoResponse = await fetch(
-          `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=en&format=json`,
+        setError(null)
+        
+        // Call our backend API that uses OpenWeatherMap
+        const response = await fetch(
+          `http://localhost:8000/api/weather/weather/${encodeURIComponent(city)}?country_code=AR`,
         )
-        const geoData = await geoResponse.json()
 
-        if (!geoData.results || geoData.results.length === 0) {
-          setError("City not found")
-          setIsLoading(false)
-          return
+        if (!response.ok) {
+          throw new Error("Ciudad no encontrada")
         }
 
-        const { latitude, longitude } = geoData.results[0]
-
-        const weatherResponse = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&temperature_unit=celsius`,
-        )
-        const weatherData = await weatherResponse.json()
-
-        if (weatherData.current) {
-          const current = weatherData.current
-          const weatherCode = current.weather_code
-
-          // Map WMO weather codes to conditions
-          let condition = "clear"
-          if (weatherCode === 0) condition = "clear"
-          else if ([1, 2, 3].includes(weatherCode)) condition = "clouds"
-          else if ([45, 48].includes(weatherCode)) condition = "clouds"
-          else if ([51, 53, 55, 61, 63, 65, 71, 73, 75, 77, 80, 81, 82].includes(weatherCode)) condition = "rain"
-          else if ([85, 86].includes(weatherCode)) condition = "snow"
-
-          setWeather({
-            temperature: Math.round(current.temperature_2m),
-            condition: condition,
-            humidity: current.relative_humidity_2m,
-            windSpeed: Math.round(current.wind_speed_10m),
-            icon: condition,
-          })
-        }
+        const data = await response.json()
+        setWeather(data)
       } catch (err) {
         console.error("Error fetching weather:", err)
-        setError("Unable to fetch weather data")
+        setError(err instanceof Error ? err.message : "Error al cargar el clima")
       } finally {
         setIsLoading(false)
       }
@@ -106,7 +101,7 @@ export function WeatherCard({ city }: WeatherCardProps) {
         <CardContent className="pt-6">
           <div className="flex items-center gap-3 text-sm text-muted-foreground">
             <AlertCircle className="w-5 h-5" />
-            <p>No se pudo cargar el clima</p>
+            <p>{error || "No se pudo cargar el clima"}</p>
           </div>
         </CardContent>
       </Card>
@@ -119,33 +114,63 @@ export function WeatherCard({ city }: WeatherCardProps) {
         <div className="space-y-4">
           <div className="flex items-start justify-between">
             <div>
-              <h3 className="font-semibold text-sm text-muted-foreground mb-1">Clima en {city}</h3>
+              <h3 className="font-semibold text-sm text-muted-foreground mb-1">
+                Clima en {weather.city}
+              </h3>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-bold">{weather.temperature}°</span>
-                <span className="text-sm text-muted-foreground capitalize">{weather.condition}</span>
+                <span className="text-sm text-muted-foreground capitalize">{weather.description}</span>
               </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Sensación térmica: {weather.feels_like}°
+              </p>
             </div>
-            <div className="flex justify-center">{WEATHER_ICONS[weather.icon] || WEATHER_ICONS["clear"]}</div>
+            <div className="flex justify-center">
+              {WEATHER_ICONS[weather.condition] || WEATHER_ICONS["clear"]}
+            </div>
           </div>
 
-          {weather.humidity !== undefined && weather.windSpeed !== undefined && (
-            <div className="grid grid-cols-2 gap-3 pt-3 border-t border-border">
-              <div className="flex items-center gap-2 text-xs">
-                <Droplets className="w-4 h-4 text-blue-500" />
-                <div>
-                  <p className="text-muted-foreground">Humedad</p>
-                  <p className="font-medium">{weather.humidity}%</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 text-xs">
-                <Wind className="w-4 h-4 text-blue-500" />
-                <div>
-                  <p className="text-muted-foreground">Viento</p>
-                  <p className="font-medium">{weather.windSpeed} km/h</p>
-                </div>
+          <div className="grid grid-cols-2 gap-3 pt-3 border-t border-border">
+            <div className="flex items-center gap-2 text-xs">
+              <Droplets className="w-4 h-4 text-blue-500" />
+              <div>
+                <p className="text-muted-foreground">Humedad</p>
+                <p className="font-medium">{weather.humidity}%</p>
               </div>
             </div>
-          )}
+            <div className="flex items-center gap-2 text-xs">
+              <Wind className="w-4 h-4 text-blue-500" />
+              <div>
+                <p className="text-muted-foreground">Viento</p>
+                <p className="font-medium">{weather.wind_speed} km/h</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 text-xs">
+              <Eye className="w-4 h-4 text-blue-500" />
+              <div>
+                <p className="text-muted-foreground">Visibilidad</p>
+                <p className="font-medium">{weather.visibility.toFixed(1)} km</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 text-xs">
+              <Cloud className="w-4 h-4 text-blue-500" />
+              <div>
+                <p className="text-muted-foreground">Nubes</p>
+                <p className="font-medium">{weather.clouds}%</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between pt-2 border-t border-border text-xs text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <Sunrise className="w-3 h-3" />
+              <span>{new Date(weather.sunrise * 1000).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Sunset className="w-3 h-3" />
+              <span>{new Date(weather.sunset * 1000).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>

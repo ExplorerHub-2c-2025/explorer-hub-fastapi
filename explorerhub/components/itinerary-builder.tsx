@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Calendar, Clock, X, Plus, Edit2, Save, Image, Trash2 } from "lucide-react"
 import { format } from "date-fns"
-import { GoogleMapsLink } from "@/components/google-maps-link"
+import { OpenStreetMapLink } from "@/components/openstreetmap-link"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import styles from "./itinerary-builder.module.css"
@@ -350,15 +350,16 @@ export function ItineraryBuilder({
                           📍 {activity.location.address}, {activity.location.city}
                         </p>
 
-                        {/* Google Maps link to next activity or from previous activity */}
-                        {globalIndex > 0 && sortedActivities[globalIndex - 1].location?.city && (
+                        {/* OpenStreetMap link to next activity or from previous activity */}
+                        {index > 0 && sortedActivities[index - 1].location?.city && (
                           <>
-                            <GoogleMapsLink
-                              fromAddress={sortedActivities[globalIndex - 1].location?.address || ""}
-                              fromCity={sortedActivities[globalIndex - 1].location?.city || ""}
+                            <OpenStreetMapLink
+                              fromAddress={sortedActivities[index - 1].location?.address || ""}
+                              fromCity={sortedActivities[index - 1].location?.city || ""}
                               toAddress={activity.location.address || ""}
                               toCity={activity.location.city || ""}
                               activityName={activity.business_name}
+                              mode="foot-walking"
                             />
 
                             {/* Images Section */}

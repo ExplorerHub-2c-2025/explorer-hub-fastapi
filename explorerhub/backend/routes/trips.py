@@ -395,10 +395,20 @@ async def add_activity_to_trip(
     if not business:
         raise HTTPException(status_code=404, detail="Business not found")
     
+    # Enrich activity with business location data
+    activity_dict = activity.model_dump()
+    business_location = business.get("location", {})
+    activity_dict["location"] = {
+        "address": business_location.get("address"),
+        "city": business_location.get("city"),
+        "lat": business_location.get("latitude"),
+        "lng": business_location.get("longitude")
+    }
+    
     await db.trips.update_one(
         {"id": trip_id},
         {
-            "$push": {"activities": activity.model_dump()},
+            "$push": {"activities": activity_dict},
             "$set": {"updated_at": datetime.utcnow()}
         }
     )
