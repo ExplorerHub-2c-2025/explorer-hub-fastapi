@@ -415,3 +415,22 @@ async def notify_new_follower(
         context_id=follower_id
     )
     await create_notification(notification, db)
+
+
+async def notify_trip_collaborator(
+    trip_id: int,
+    trip_name: str,
+    owner_name: str,
+    collaborator_user_id: int,
+    db
+):
+    """Create notification when a user is added as collaborator to a trip."""
+    notification = NotificationCreate(
+        user_id=collaborator_user_id,
+        type=NotificationType.trip_invite,
+        title="Invitación a colaborar",
+        description=f"{owner_name} te agregó como colaborador del viaje '{trip_name}'.",
+        link=f"/trips/{trip_id}",
+        context_id=trip_id
+    )
+    await create_notification(notification, db)

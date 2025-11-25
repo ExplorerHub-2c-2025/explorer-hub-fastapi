@@ -28,6 +28,7 @@ interface TripActivity {
   scheduled_date?: string
   notes?: string
   images?: Array<{url: string, notes?: string}>
+  business_images?: string[]
   location?: {
     address?: string
     city?: string
@@ -216,6 +217,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
   }
 
   const nearestCity = trip && trip.activities.length > 0 ? trip.activities[0].location?.city || "" : ""
+  console.log(trip?.activities)
   const firstActivity = trip && trip.activities.length > 0 ? trip.activities[0] : null
 
   const handleUpdateNotes = async (businessId: string, notes: string) => {
@@ -407,6 +409,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
     scheduled_date: activity.scheduled_date ? new Date(activity.scheduled_date) : undefined,
     notes: activity.notes,
     images: activity.images || [],
+    business_images: activity.business_images || [],
   }))
 
   return (
@@ -559,7 +562,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
               </CardContent>
             </Card>
           </div>
-            <Card>
+            {/* <Card>
               <CardContent className={styles.cardContent}>
                 <h3 className={styles.sectionTitle}>Resumen del Viaje</h3>
                 <div className={styles.tripSummary}>
@@ -583,9 +586,9 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                   </div>
                 </div>
               </CardContent>
-            </Card>
+            </Card> */}
 
-            <Card>
+           {/*  <Card>
               <CardContent className={styles.cardContent}>
                 <h3 className={styles.sectionTitle}>Recomendaciones</h3>
                 <p className={styles.recommendationsText}>
@@ -600,7 +603,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                   </Link>
                 </div>
               </CardContent>
-            </Card>
+            </Card> */}
           </div>
         </div>
       </main>
