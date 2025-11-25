@@ -553,7 +553,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                   </div>
                 </div>
               </CardContent>
-            </Card> */}
+            </Card>
 
            {/*  <Card>
               <CardContent className={styles.cardContent}>
