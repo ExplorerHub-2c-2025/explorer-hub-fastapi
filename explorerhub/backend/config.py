@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     from_email: Optional[str] = None
     from_name: str = "ExplorerHub"
     
+    # External APIs
+    openweather_api_key: Optional[str] = None
+    openroute_api_key: Optional[str] = None
+    
     class Config:
         env_file = ".env"
 
