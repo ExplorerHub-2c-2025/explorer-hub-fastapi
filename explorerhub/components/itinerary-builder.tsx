@@ -26,6 +26,7 @@ interface Activity {
     city?: string
   }
   images?: Array<{url: string, notes?: string}>
+  business_images?: string[] // Images from the business itself
 }
 
 interface ItineraryBuilderProps {
@@ -56,6 +57,8 @@ export function ItineraryBuilder({
   const [editingImageNotes, setEditingImageNotes] = useState<{businessId: string, imageIndex: number} | null>(null)
   const [tempImageNotes, setTempImageNotes] = useState("")
   const [imageInput, setImageInput] = useState<{[key: string]: string}>({})
+  const [pendingScheduleChanges, setPendingScheduleChanges] = useState<{[businessId: string]: Date}>({})
+  const [draggedActivity, setDraggedActivity] = useState<Activity | null>(null)
 
   const handleEditNotes = (businessId: string, currentNotes?: string) => {
     setEditingNotes(businessId)
@@ -107,7 +110,57 @@ export function ItineraryBuilder({
     }
   }
 
-  const sortedActivities = [...activities].sort((a, b) => {
+  const handleDragStart = (activity: Activity) => {
+    setDraggedActivity(activity)
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+  }
+
+  const handleDrop = (targetDateKey: string) => {
+    if (!draggedActivity) return
+
+    let newDate: Date
+    if (targetDateKey === "sin-fecha") {
+      // Remove the date
+      newDate = null as any
+    } else {
+      newDate = new Date(targetDateKey + "T12:00:00")
+    }
+
+    // Store the pending change instead of applying immediately
+    setPendingScheduleChanges(prev => ({
+      ...prev,
+      [draggedActivity.business_id]: newDate
+    }))
+
+    setDraggedActivity(null)
+  }
+
+  const handleSaveChanges = () => {
+    // Apply all pending schedule changes
+    Object.entries(pendingScheduleChanges).forEach(([businessId, date]) => {
+      onUpdateSchedule(businessId, date)
+    })
+    // Clear pending changes
+    setPendingScheduleChanges({})
+  }
+
+  const hasPendingChanges = Object.keys(pendingScheduleChanges).length > 0
+
+  // Apply pending changes to activities for display
+  const activitiesWithPendingChanges = activities.map(activity => {
+    if (pendingScheduleChanges[activity.business_id] !== undefined) {
+      return {
+        ...activity,
+        scheduled_date: pendingScheduleChanges[activity.business_id]
+      }
+    }
+    return activity
+  })
+
+  const sortedActivities = [...activitiesWithPendingChanges].sort((a, b) => {
     // Activities without dates go to the end
     if (!a.scheduled_date && !b.scheduled_date) return 0
     if (!a.scheduled_date) return 1
@@ -117,14 +170,41 @@ export function ItineraryBuilder({
     return a.scheduled_date.getTime() - b.scheduled_date.getTime()
   })
 
+  // Group activities by date
+  const groupedActivities = sortedActivities.reduce((groups, activity) => {
+    const dateKey = activity.scheduled_date 
+      ? format(activity.scheduled_date, "yyyy-MM-dd")
+      : "sin-fecha"
+    
+    if (!groups[dateKey]) {
+      groups[dateKey] = []
+    }
+    groups[dateKey].push(activity)
+    return groups
+  }, {} as Record<string, typeof sortedActivities>)
+
+  const orderedDates = Object.keys(groupedActivities).sort((a, b) => {
+    if (a === "sin-fecha") return 1
+    if (b === "sin-fecha") return -1
+    return a.localeCompare(b)
+  })
+
   return (
     <div className={styles.rootContainer}>
       <div className={styles.headerRow}>
         <h3 className={styles.title}>Itinerario</h3>
-        <Button onClick={onAddActivity} className={styles.addActivityButton}>
-          <Plus className={styles.addIcon} />
-          Agregar Actividad
-        </Button>
+        <div className="flex gap-2">
+          {hasPendingChanges && (
+            <Button onClick={handleSaveChanges} variant="default" className="bg-green-600 hover:bg-green-700">
+              <Save className="h-4 w-4 mr-2" />
+              Guardar Cambios
+            </Button>
+          )}
+          <Button onClick={onAddActivity} className={styles.addActivityButton}>
+            <Plus className={styles.addIcon} />
+            Agregar Actividad
+          </Button>
+        </div>
       </div>
 
       {activities.length === 0 ? (
@@ -141,12 +221,67 @@ export function ItineraryBuilder({
         </Card>
       ) : (
         <div className={styles.spaceY3}>
-          {sortedActivities.map((activity, index) => (
-            <Card key={activity.business_id}>
-              <CardContent className={styles.activityCard}>
-                {index === 0 && firstActivityMapLink && <div className="mb-3">{firstActivityMapLink}</div>}
+          {orderedDates.map((dateKey) => {
+            const dateActivities = groupedActivities[dateKey]
+            const isUnscheduled = dateKey === "sin-fecha"
+            const displayDate = isUnscheduled 
+              ? "Sin fecha programada"
+              : format(new Date(dateKey + "T12:00:00"), "EEEE d 'de' MMMM", { locale: require("date-fns/locale/es").es })
+            
+            return (
+              <div 
+                key={dateKey} 
+                className="space-y-3"
+                onDragOver={handleDragOver}
+                onDrop={() => handleDrop(dateKey)}
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex-1 h-px bg-gray-200" />
+                  <h4 className="text-lg font-semibold text-gray-700 capitalize">
+                    {displayDate}
+                  </h4>
+                  <div className="flex-1 h-px bg-gray-200" />
+                </div>
+                
+                {dateActivities.map((activity, activityIndex) => {
+                  const globalIndex = sortedActivities.findIndex(a => a.business_id === activity.business_id)
+                  const isPendingChange = pendingScheduleChanges[activity.business_id] !== undefined
+                  return (
+            <Card 
+              key={activity.business_id}
+              draggable
+              onDragStart={() => handleDragStart(activity)}
+              className={`cursor-move ${isPendingChange ? 'border-2 border-yellow-500' : ''}`}
+            >
+              <CardContent className={`${styles.activityCard} relative`}>
+                <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onRemoveActivity(activity.business_id)}
+                    className="text-red-600 hover:text-red-700"
+                    title="Eliminar actividad"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+                {globalIndex === 0 && firstActivityMapLink && <div className="mb-3">{firstActivityMapLink}</div>}
 
                 <div className={styles.activityContent}>
+                  {/* Business Image on the left */}
+                  {activity.business_images && activity.business_images.length > 0 && (
+                    <div className="shrink-0 mr-4">
+                      <img
+                        src={activity.business_images[0]}
+                        alt={activity.business_name}
+                        className="w-32 h-32 object-cover rounded-lg"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none'
+                        }}
+                      />
+                    </div>
+                  )}
+
                   <div className={styles.activityMain}>
                     <div className={styles.activityHeader}>
                       <h4 className={styles.activityTitle}>{activity.business_name}</h4>
@@ -155,8 +290,8 @@ export function ItineraryBuilder({
                       </Badge>
                     </div>
 
-                    {/* Date Scheduler */}
-                    <div className={styles.timeRow}>
+                    {/* Date Scheduler - Hidden, date shown in section header */}
+                    <div className={styles.timeRow} style={{ display: 'none' }}>
                       <Clock className={styles.timeIcon} />
                       <Popover>
                         <PopoverTrigger asChild>
@@ -346,7 +481,11 @@ export function ItineraryBuilder({
                 </div>
               </CardContent>
             </Card>
-          ))}
+                  )
+                })}
+              </div>
+            )
+          })}
         </div>
       )}
     </div>

@@ -46,10 +46,6 @@
   margin-bottom: 1rem;
 }
 
-.activityCard {
-  padding-top: 1.5rem;
-}
-
 .activityContent {
   display: flex;
   align-items: flex-start;
