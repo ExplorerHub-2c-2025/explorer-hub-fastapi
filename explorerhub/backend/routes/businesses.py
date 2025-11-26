@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from typing import List, Optional
 from datetime import datetime
 from database import get_database
-from models.business import BusinessCreate, Business, BusinessInDB
+from models.business import BusinessCreate, Business, BusinessInDB, BusinessPublic
 from models.counter import get_next_sequence_value
 from auth import get_current_active_user
 from models.user import UserInDB
@@ -56,6 +56,9 @@ async def create_business(
     business_dict["created_at"] = datetime.utcnow()
     business_dict["updated_at"] = datetime.utcnow()
     business_dict["is_active"] = True
+    business_dict["is_subscribed"] = False
+    business_dict["subscription_tier"] = None
+    business_dict["subscription_ends_at"] = None
     
     # Ensure allows_bookings has a default value
     if "allows_bookings" not in business_dict:
@@ -68,7 +71,7 @@ async def create_business(
     return Business(**created_business)
 
 
-@router.get("/", response_model=List[Business])
+@router.get("/", response_model=List[BusinessPublic])
 async def get_businesses(
     category: Optional[List[str]] = Query(None),
     city: Optional[str] = None,
@@ -79,7 +82,9 @@ async def get_businesses(
     limit: int = 20,
     db = Depends(get_database)
 ):
-    """Get businesses with optional filtering"""
+    """Get businesses with optional filtering (public endpoint - no subscription info)"""
+    from datetime import datetime as dt
+    
     query = {"is_active": True}
     
     if category:
@@ -99,15 +104,63 @@ async def get_businesses(
         query["$or"] = [
             {"name": {"$regex": search, "$options": "i"}},
             {"description": {"$regex": search, "$options": "i"}},
-            {"tags": {"$regex": search, "$options": "i"}}
+            {"tags": {"$regex": search, "$options": "i"}},
+            {"categories": {"$regex": search, "$options": "i"}}
         ]
     
-    cursor = db.businesses.find(query).skip(skip).limit(limit).sort("rating", -1)
-    businesses = await cursor.to_list(length=limit)
+    # Ordenar priorizando negocios suscritos por nivel, luego por rating
+    # Enterprise > Premium > Basic > Sin suscripción
+    # Dentro de cada nivel, ordenar por rating más alto
+    cursor = db.businesses.find(query).skip(skip).limit(limit)
+    businesses = await cursor.to_list(length=None)  # Obtener todos para ordenar en Python
+    
+    # Validar que la suscripción esté activa y asignar prioridad
+    current_time = dt.utcnow()
+    for business in businesses:
+        if business.get("is_subscribed") and business.get("subscription_ends_at"):
+            # Si la suscripción expiró, actualizarla
+            if business["subscription_ends_at"] < current_time:
+                await db.businesses.update_one(
+                    {"id": business["id"]},
+                    {"$set": {
+                        "is_subscribed": False,
+                        "subscription_tier": None
+                    }}
+                )
+                business["is_subscribed"] = False
+                business["subscription_tier"] = None
+        
+        # Asignar prioridad de ordenamiento (mayor = primero)
+        if business.get("is_subscribed"):
+            tier = business.get("subscription_tier", "").lower()
+            if tier == "enterprise":
+                business["_sort_priority"] = 3
+            elif tier == "premium":
+                business["_sort_priority"] = 2
+            elif tier == "basic":
+                business["_sort_priority"] = 1
+            else:
+                business["_sort_priority"] = 0
+        else:
+            business["_sort_priority"] = 0
+    
+    # Ordenar por prioridad de suscripción (descendente) y luego por rating (descendente)
+    businesses.sort(key=lambda x: (x.get("_sort_priority", 0), x.get("rating", 0)), reverse=True)
+    
+    # Aplicar paginación después del ordenamiento
+    businesses = businesses[skip:skip + limit] if limit else businesses[skip:]
+    
     businesses = serialize_docs(businesses)
     
     # Ensure all required fields have default values
     for business in businesses:
+        # Remover el campo interno de prioridad antes de devolver
+        business.pop("_sort_priority", None)
+        # Remover campos de suscripción para usuarios públicos
+        business.pop("is_subscribed", None)
+        business.pop("subscription_tier", None)
+        business.pop("subscription_ends_at", None)
+        
         business.setdefault("rating", 0.0)
         business.setdefault("views", 0)
         business.setdefault("review_count", 0)
@@ -117,7 +170,7 @@ async def get_businesses(
         business.setdefault("categories", [])
         business.setdefault("max_capacity", None)
     
-    return [Business(**b) for b in businesses]
+    return [BusinessPublic(**b) for b in businesses]
 
 
 @router.get("/{business_id}", response_model=Business)
@@ -136,6 +189,9 @@ async def get_business(business_id: int, db = Depends(get_database)):
     business.setdefault("created_at", datetime.utcnow())
     business.setdefault("is_active", True)
     business.setdefault("allows_bookings", True)
+    business.setdefault("is_subscribed", False)
+    business.setdefault("subscription_tier", None)
+    business.setdefault("subscription_ends_at", None)
     
     return Business(**business)
 
@@ -179,6 +235,9 @@ async def update_business(
     updated_business.setdefault("created_at", datetime.utcnow())
     updated_business.setdefault("is_active", True)
     updated_business.setdefault("allows_bookings", True)
+    updated_business.setdefault("is_subscribed", False)
+    updated_business.setdefault("subscription_tier", None)
+    updated_business.setdefault("subscription_ends_at", None)
     
     return Business(**updated_business)
 
@@ -229,6 +288,9 @@ async def get_my_businesses(
         business.setdefault("created_at", datetime.utcnow())
         business.setdefault("is_active", True)
         business.setdefault("allows_bookings", True)
+        business.setdefault("is_subscribed", False)
+        business.setdefault("subscription_tier", None)
+        business.setdefault("subscription_ends_at", None)
     
     return [Business(**b) for b in businesses]
 
@@ -699,3 +761,194 @@ async def get_capacity_usage(current_user: UserInDB = Depends(get_current_active
         capacity_info.append(business_info)
 
     return capacity_info
+
+
+@router.post("/{business_id}/subscription", response_model=Business)
+async def update_business_subscription(
+    business_id: int,
+    subscription_data: dict,
+    current_user: UserInDB = Depends(get_current_active_user),
+    db = Depends(get_database)
+):
+    """
+    Activar o renovar la suscripción de un negocio.
+    
+    subscription_data debe incluir:
+    - tier: "basic", "premium", o "enterprise"
+    - duration_days: número de días de suscripción (ej: 30, 90, 365)
+    """
+    from datetime import datetime as dt, timedelta
+    
+    # Verificar que el negocio existe
+    business = await db.businesses.find_one({"id": business_id})
+    if not business:
+        raise HTTPException(status_code=404, detail="Business not found")
+    
+    # Verificar que el usuario es el dueño del negocio
+    if business["owner_id"] != str(current_user.id):
+        raise HTTPException(
+            status_code=403, 
+            detail="Solo el dueño del negocio puede gestionar la suscripción"
+        )
+    
+    # Validar los datos de suscripción
+    tier = subscription_data.get("tier")
+    duration_days = subscription_data.get("duration_days")
+    
+    if tier not in ["basic", "premium", "enterprise"]:
+        raise HTTPException(
+            status_code=400,
+            detail="Tier debe ser 'basic', 'premium' o 'enterprise'"
+        )
+    
+    if not duration_days or duration_days <= 0:
+        raise HTTPException(
+            status_code=400,
+            detail="duration_days debe ser un número positivo"
+        )
+    
+    # Calcular fecha de vencimiento
+    current_time = dt.utcnow()
+    
+    # Si ya tiene suscripción activa, extender desde la fecha actual de expiración
+    if business.get("is_subscribed") and business.get("subscription_ends_at"):
+        if business["subscription_ends_at"] > current_time:
+            subscription_ends_at = business["subscription_ends_at"] + timedelta(days=duration_days)
+        else:
+            subscription_ends_at = current_time + timedelta(days=duration_days)
+    else:
+        subscription_ends_at = current_time + timedelta(days=duration_days)
+    
+    # Actualizar la suscripción
+    await db.businesses.update_one(
+        {"id": business_id},
+        {
+            "$set": {
+                "is_subscribed": True,
+                "subscription_tier": tier,
+                "subscription_ends_at": subscription_ends_at,
+                "updated_at": current_time
+            }
+        }
+    )
+    
+    # Obtener el negocio actualizado
+    updated_business = await db.businesses.find_one({"id": business_id})
+    updated_business = serialize_doc(updated_business)
+    
+    # Asegurar valores por defecto
+    updated_business.setdefault("rating", 0.0)
+    updated_business.setdefault("views", 0)
+    updated_business.setdefault("review_count", 0)
+    updated_business.setdefault("created_at", datetime.utcnow())
+    updated_business.setdefault("is_active", True)
+    updated_business.setdefault("allows_bookings", True)
+    
+    return Business(**updated_business)
+
+
+@router.delete("/{business_id}/subscription", response_model=Business)
+async def cancel_business_subscription(
+    business_id: int,
+    current_user: UserInDB = Depends(get_current_active_user),
+    db = Depends(get_database)
+):
+    """Cancelar la suscripción de un negocio"""
+    from datetime import datetime as dt
+    
+    # Verificar que el negocio existe
+    business = await db.businesses.find_one({"id": business_id})
+    if not business:
+        raise HTTPException(status_code=404, detail="Business not found")
+    
+    # Verificar que el usuario es el dueño del negocio
+    if business["owner_id"] != str(current_user.id):
+        raise HTTPException(
+            status_code=403,
+            detail="Solo el dueño del negocio puede cancelar la suscripción"
+        )
+    
+    # Cancelar la suscripción
+    current_time = dt.utcnow()
+    await db.businesses.update_one(
+        {"id": business_id},
+        {
+            "$set": {
+                "is_subscribed": False,
+                "subscription_tier": None,
+                "subscription_ends_at": None,
+                "updated_at": current_time
+            }
+        }
+    )
+    
+    # Obtener el negocio actualizado
+    updated_business = await db.businesses.find_one({"id": business_id})
+    updated_business = serialize_doc(updated_business)
+    
+    # Asegurar valores por defecto
+    updated_business.setdefault("rating", 0.0)
+    updated_business.setdefault("views", 0)
+    updated_business.setdefault("review_count", 0)
+    updated_business.setdefault("created_at", datetime.utcnow())
+    updated_business.setdefault("is_active", True)
+    updated_business.setdefault("allows_bookings", True)
+    
+    return Business(**updated_business)
+
+
+@router.get("/{business_id}/subscription-status")
+async def get_subscription_status(
+    business_id: int,
+    current_user: UserInDB = Depends(get_current_active_user),
+    db = Depends(get_database)
+):
+    """Obtener el estado de la suscripción de un negocio"""
+    from datetime import datetime as dt
+    
+    # Verificar que el negocio existe
+    business = await db.businesses.find_one({"id": business_id})
+    if not business:
+        raise HTTPException(status_code=404, detail="Business not found")
+    
+    # Verificar que el usuario es el dueño del negocio
+    if business["owner_id"] != str(current_user.id):
+        raise HTTPException(
+            status_code=403,
+            detail="Solo el dueño del negocio puede ver el estado de suscripción"
+        )
+    
+    is_subscribed = business.get("is_subscribed", False)
+    subscription_tier = business.get("subscription_tier")
+    subscription_ends_at = business.get("subscription_ends_at")
+    
+    # Verificar si la suscripción está activa
+    is_active = False
+    days_remaining = None
+    
+    if is_subscribed and subscription_ends_at:
+        current_time = dt.utcnow()
+        if subscription_ends_at > current_time:
+            is_active = True
+            days_remaining = (subscription_ends_at - current_time).days
+        else:
+            # Actualizar si expiró
+            await db.businesses.update_one(
+                {"id": business_id},
+                {"$set": {
+                    "is_subscribed": False,
+                    "subscription_tier": None
+                }}
+            )
+            is_subscribed = False
+            subscription_tier = None
+    
+    return {
+        "business_id": business_id,
+        "is_subscribed": is_subscribed,
+        "subscription_tier": subscription_tier,
+        "subscription_ends_at": subscription_ends_at.isoformat() if subscription_ends_at else None,
+        "is_active": is_active,
+        "days_remaining": days_remaining
+    }
+

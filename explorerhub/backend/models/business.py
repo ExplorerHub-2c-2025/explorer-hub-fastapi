@@ -53,6 +53,9 @@ class BusinessBase(BaseModel):
     tags: List[str] = []
     allows_bookings: bool = True
     max_capacity: Optional[int] = None  # Cupo máximo de personas
+    is_subscribed: bool = False  # Indica si el negocio tiene una suscripción activa
+    subscription_tier: Optional[str] = None  # Nivel de suscripción: "basic", "premium", "enterprise"
+    subscription_ends_at: Optional[datetime] = None  # Fecha de vencimiento de la suscripción
     
     # Diferentes modelos de precios según el tipo de negocio
     ticket_pricing: Optional[TicketPricing] = None  # Para museos, atracciones, actividades, entretenimiento
@@ -74,6 +77,9 @@ class BusinessInDB(BusinessBase):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     is_active: bool = True
+    is_subscribed: bool = False
+    subscription_tier: Optional[str] = None
+    subscription_ends_at: Optional[datetime] = None
     
     class Config:
         populate_by_name = True
@@ -82,6 +88,42 @@ class BusinessInDB(BusinessBase):
 
 class Business(BusinessBase):
     id: int
+    owner_id: str
+    rating: float
+    views: int
+    review_count: int
+    created_at: datetime
+    is_active: bool
+    allows_bookings: bool
+    max_capacity: Optional[int] = None
+    is_subscribed: bool = False
+    subscription_tier: Optional[str] = None
+    subscription_ends_at: Optional[datetime] = None
+    
+    # Diferentes modelos de precios
+    ticket_pricing: Optional[TicketPricing] = None
+    hotel_pricing: Optional[HotelPricing] = None
+    restaurant_pricing: Optional[RestaurantPricing] = None
+    wellness_pricing: Optional[WellnessPricing] = None
+
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
+
+
+class BusinessPublic(BaseModel):
+    """Modelo público de negocio sin información de suscripción"""
+    id: int
+    name: str
+    description: str
+    categories: List[str] = []
+    location: Location
+    phone: Optional[str] = None
+    website: Optional[str] = None
+    price_level: int = Field(ge=1, le=4)
+    images: List[str] = []
+    tags: List[str] = []
     owner_id: str
     rating: float
     views: int
