@@ -517,20 +517,6 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
 
             {/* Nearby Events - Always show using nearest city */}
             <NearbyEventsCard city={nearestCity} />
-
-            {/* Transport Recommendations - Show only when we have 2+ activities with locations */}
-            {trip.activities.length >= 2 && 
-             trip.activities[0].location?.city && 
-             trip.activities[0].location?.address &&
-             trip.activities[1].location?.city && 
-             trip.activities[1].location?.address && (
-              <TransportRecommendations
-                fromCity={trip.activities[0].location.city}
-                toCity={trip.activities[1].location.city}
-                fromAddress={trip.activities[0].location.address}
-                toAddress={trip.activities[1].location.address}
-              />
-            )}
             <Card>
               <CardContent className={styles.cardContent}>
                 <h3 className={styles.sectionTitle}>Resumen del Viaje</h3>
