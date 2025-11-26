@@ -498,7 +498,7 @@ export default function BusinessDashboard() {
                   </div>
                 )}
               </CardContent>
-            </Card>
+            </Card>)}
 
             {/* Capacity Usage Section */}
             {capacityInfo.length > 0 && (
