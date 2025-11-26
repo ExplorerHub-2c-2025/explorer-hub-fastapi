@@ -23,6 +23,7 @@ import { TransportRecommendations } from "@/components/transport-recommendations
 import { CurrentLocationMapLink } from "@/components/current-location-map-link"
 
 interface TripActivity {
+  categories: never[]
   business_id: string
   business_name: string
   scheduled_date?: string
@@ -403,11 +404,12 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
     id: activity.business_id,
     business_id: activity.business_id,
     business_name: activity.business_name,
-    categories: [], // Categories would come from business data
+    categories: activity.categories || [],
     scheduled_date: activity.scheduled_date ? new Date(activity.scheduled_date) : undefined,
     notes: activity.notes,
     images: activity.images || [],
     business_images: activity.business_images || [],
+    location: activity.location,
   }))
 
   // Calculate nearest city for weather - use trip destination or first activity with location
@@ -579,7 +581,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
       <ActivitySearchModal
         isOpen={showActivitySearch}
         onClose={() => setShowActivitySearch(false)}
-        onAddActivity={handleActivityAdded}
+        onAddActivity={(business, scheduledDate) => handleActivityAdded(business)}
         tripId={trip?.id || ""}
       />
 

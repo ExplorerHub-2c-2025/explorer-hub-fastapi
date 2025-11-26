@@ -53,6 +53,7 @@ class BusinessBase(BaseModel):
     tags: List[str] = []
     allows_bookings: bool = True
     max_capacity: Optional[int] = None  # Cupo máximo de personas
+    is_unique: bool = False  # Indica si es una actividad única
     is_subscribed: bool = False  # Indica si el negocio tiene una suscripción activa
     subscription_tier: Optional[str] = None  # Nivel de suscripción: "basic", "premium", "enterprise"
     subscription_ends_at: Optional[datetime] = None  # Fecha de vencimiento de la suscripción
@@ -96,6 +97,7 @@ class Business(BusinessBase):
     is_active: bool
     allows_bookings: bool
     max_capacity: Optional[int] = None
+    is_unique: bool = False
     is_subscribed: bool = False
     subscription_tier: Optional[str] = None
     subscription_ends_at: Optional[datetime] = None

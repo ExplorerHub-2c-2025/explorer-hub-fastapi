@@ -4,17 +4,16 @@ import type React from "react"
 
 import Link from "next/link"
 import { useState, useEffect } from "react"
-import { Star, MapPin, DollarSign, Heart } from "lucide-react"
+import { Star, MapPin, DollarSign } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { ImageGallery } from "@/components/image-gallery"
 import styles from "./activity-card.module.css"
 
 interface ActivityCardProps {
   id: string | number
   name: string
-  category?: string  // Hacer opcional para compatibilidad
-  categories?: string[]  // Nuevo campo para array de categorías
+  category?: string // Hacer opcional para compatibilidad
+  categories?: string[] // Nuevo campo para array de categorías
   location: string
   rating: number
   reviewCount: number
@@ -23,6 +22,7 @@ interface ActivityCardProps {
   images?: string[]
   description: string
   tags?: string[]
+  is_unique?: boolean // Nuevo campo para actividades únicas
   onSaveToggle?: (id: string | number, isSaved: boolean) => void
   badgeClassName?: string
 }
@@ -40,26 +40,28 @@ export function ActivityCard({
   images = [],
   description,
   tags = [],
+  is_unique = false,
   onSaveToggle,
   badgeClassName,
 }: ActivityCardProps) {
   // Use images array if available, otherwise fallback to single image
   const imageArray = images && images.length > 0 ? images : image ? [image] : []
-  
+
   // Use categories array if available, otherwise fallback to category string
   let categoryArray: string[] = []
-  
+
   if (categories && Array.isArray(categories) && categories.length > 0) {
-    categoryArray = categories.filter((cat: any) => cat && typeof cat === 'string' && cat.trim().length > 0)
-  } else if (category && typeof category === 'string' && category.trim().length > 0) {
+    categoryArray = categories.filter((cat: any) => cat && typeof cat === "string" && cat.trim().length > 0)
+  } else if (category && typeof category === "string" && category.trim().length > 0) {
     categoryArray = [category.trim()]
   }
-  
-  const displayCategory = categoryArray.length === 0 
-    ? 'Sin categoría' 
-    : categoryArray.length <= 2 
-      ? categoryArray.join(', ') 
-      : `${categoryArray[0]} +${categoryArray.length - 1}`
+
+  const displayCategory =
+    categoryArray.length === 0
+      ? "Sin categoría"
+      : categoryArray.length <= 2
+        ? categoryArray.join(", ")
+        : `${categoryArray[0]} +${categoryArray.length - 1}`
 
   const [isSaved, setIsSaved] = useState(false)
   const [isCheckingFavorite, setIsCheckingFavorite] = useState(true)
@@ -150,11 +152,18 @@ export function ActivityCard({
       <div className={styles.card}>
         <div className={styles.imageWrapper}>
           <ImageGallery images={imageArray} alt={name} />
-          <Badge className={`${styles.badge} ${badgeClassName || ''}`}>{displayCategory}</Badge>
+          <Badge className={`${styles.badge} ${badgeClassName || ""}`}>{displayCategory}</Badge>
         </div>
 
         <div className={styles.content}>
-          <h3 className={`${styles.title} group-hover:text-primary`}>{name}</h3>
+          <div className="flex items-center gap-2 mb-2">
+            <h3 className={`${styles.title} group-hover:text-primary flex-1`}>{name}</h3>
+            {is_unique && (
+              <div className={styles.uniqueBadge}>
+                <span className={styles.uniqueBadgeText}>ÚNICO</span>
+              </div>
+            )}
+          </div>
 
           <div className={styles.ratingRow}>
             <div className={styles.ratingValue}>
@@ -185,10 +194,8 @@ export function ActivityCard({
               <div className={styles.tagsGroup}>
                 <Badge variant="secondary" className={styles.tagBadge}>
                   {(() => {
-                    const validTags = tags.filter((tag: any) => tag && typeof tag === 'string' && tag.trim().length > 0)
-                    return validTags.length <= 2 
-                      ? validTags.join(', ') 
-                      : `${validTags[0]} +${validTags.length - 1}`
+                    const validTags = tags.filter((tag: any) => tag && typeof tag === "string" && tag.trim().length > 0)
+                    return validTags.length <= 2 ? validTags.join(", ") : `${validTags[0]} +${validTags.length - 1}`
                   })()}
                 </Badge>
               </div>
