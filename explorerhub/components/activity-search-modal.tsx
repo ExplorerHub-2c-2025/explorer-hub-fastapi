@@ -27,7 +27,7 @@ interface Business {
 interface ActivitySearchModalProps {
   isOpen: boolean
   onClose: () => void
-  onAddActivity: (business: Business) => void
+  onAddActivity: (business: Business, scheduledDate?: string) => void
   tripId: string
 }
 
@@ -37,6 +37,7 @@ export function ActivitySearchModal({ isOpen, onClose, onAddActivity, tripId }: 
   const [filteredBusinesses, setFilteredBusinesses] = useState<Business[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [hasSearched, setHasSearched] = useState(false)
+  const [scheduledDate, setScheduledDate] = useState<string>("")
 
   useEffect(() => {
     if (isOpen) {
@@ -86,6 +87,10 @@ export function ActivitySearchModal({ isOpen, onClose, onAddActivity, tripId }: 
   const handleAddActivity = async (business: Business) => {
     try {
       const token = localStorage.getItem("token")
+      // Build ISO datetime if a date was selected
+      const scheduled_date = scheduledDate
+        ? new Date(scheduledDate + "T12:00:00").toISOString()
+        : null
       await fetch(`http://localhost:8000/api/trips/${tripId}/activities`, {
         method: "POST",
         headers: {
@@ -93,14 +98,14 @@ export function ActivitySearchModal({ isOpen, onClose, onAddActivity, tripId }: 
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          business_id: String(business.id),
+          business_id: business.id,
           business_name: business.name,
-          scheduled_date: null,
+          scheduled_date,
           notes: null,
         }),
       })
 
-      onAddActivity(business)
+      onAddActivity(business, scheduledDate)
       // Show success message instead of alert
       const successMessage = document.createElement('div')
       successMessage.textContent = '¡Actividad agregada al itinerario!'
@@ -158,7 +163,7 @@ export function ActivitySearchModal({ isOpen, onClose, onAddActivity, tripId }: 
           </Button>
         </div>
 
-        {/* Search */}
+        {/* Search and Date */}
         <div className="p-6 border-b">
           <div className="flex gap-2">
             <div className="relative flex-1">
@@ -182,6 +187,14 @@ export function ActivitySearchModal({ isOpen, onClose, onAddActivity, tripId }: 
                 </>
               )}
             </Button>
+          </div>
+          <div className="mt-3">
+            <label className="block text-sm text-gray-600 mb-1">Fecha para programar la actividad (opcional)</label>
+            <Input
+              type="date"
+              value={scheduledDate}
+              onChange={(e) => setScheduledDate(e.target.value)}
+            />
           </div>
         </div>
 
@@ -210,7 +223,7 @@ export function ActivitySearchModal({ isOpen, onClose, onAddActivity, tripId }: 
                   <CardContent className="p-4">
                     <div className="flex gap-4">
                       {/* Image */}
-                      <div className="flex-shrink-0">
+                      <div className="shrink-0">
                         <CachedImage
                           src={business.images?.[0] || "/placeholder.svg"}
                           alt={business.name}
@@ -236,7 +249,7 @@ export function ActivitySearchModal({ isOpen, onClose, onAddActivity, tripId }: 
                       </div>
 
                       {/* Add Button */}
-                      <div className="flex-shrink-0">
+                      <div className="shrink-0">
                         <Button size="sm" onClick={() => handleAddActivity(business)}>
                           <Plus className="h-4 w-4 mr-1" />
                           Agregar

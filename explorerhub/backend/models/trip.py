@@ -30,6 +30,8 @@ class TripActivity(BaseModel):
     notes: Optional[str] = None
     images: List[ActivityImage] = []
     location: Optional[ActivityLocation] = None
+    categories: List[str] = []  # Business categories
+    business_images: List[str] = []  # Dynamic images from related business (not persisted manually)
 
 
 class TripBase(BaseModel):

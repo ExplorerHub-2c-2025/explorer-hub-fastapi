@@ -246,18 +246,31 @@ async def get_trip(
     if trip.get("activities"):
         for activity in trip["activities"]:
             business_id = activity.get("business_id")
+            logger.info(f"[GET_TRIP] Enriching activity business_id={business_id}, name={activity.get('business_name')}")
             if business_id:
                 business = await db.businesses.find_one({"id": int(business_id)})
                 if business:
-                    activity["business_images"] = business.get("images", [])
+                    logger.info(f"[GET_TRIP] Raw business data keys: {list(business.keys())}")
+                    images = business.get("images", [])
+                    cats = business.get("categories", [])
+                    logger.info(f"[GET_TRIP] Business images field: {images}")
+                    logger.info(f"[GET_TRIP] Business categories field: {cats}")
+                    activity["business_images"] = images
+                    activity["categories"] = cats
+                    logger.info(f"[GET_TRIP] Activity after enrichment - business_images: {activity.get('business_images')}, categories: {activity.get('categories')}")
                     # Add location from business
                     if business.get("location"):
+                        loc = business["location"]
+                        logger.info(f"[GET_TRIP] Business location structure: {loc}")
                         activity["location"] = {
-                            "address": business["location"].get("address", ""),
-                            "city": business["location"].get("city", ""),
-                            "lat": business["location"].get("coordinates", {}).get("lat"),
-                            "lng": business["location"].get("coordinates", {}).get("lng")
+                            "address": loc.get("address", ""),
+                            "city": loc.get("city", ""),
+                            "lat": loc.get("coordinates", {}).get("lat") if loc.get("coordinates") else loc.get("latitude"),
+                            "lng": loc.get("coordinates", {}).get("lng") if loc.get("coordinates") else loc.get("longitude")
                         }
+                        logger.info(f"[GET_TRIP] Added location: {activity['location']}")
+                else:
+                    logger.warning(f"[GET_TRIP] Business not found for id={business_id}")
     
     return Trip(**trip)
 
@@ -302,10 +315,15 @@ async def get_trip_public(
     if trip_data.get("activities"):
         for activity in trip_data["activities"]:
             business_id = activity.get("business_id")
+            logger.info(f"[GET_TRIP_PUBLIC] Enriching activity business_id={business_id}")
             if business_id:
                 business = await db.businesses.find_one({"id": int(business_id)})
                 if business:
-                    activity["business_images"] = business.get("images", [])
+                    images = business.get("images", [])
+                    cats = business.get("categories", [])
+                    activity["business_images"] = images
+                    activity["categories"] = cats
+                    logger.info(f"[GET_TRIP_PUBLIC] Found business: images={len(images)}, categories={cats}")
                     # Add location from business
                     if business.get("location"):
                         activity["location"] = {
@@ -314,6 +332,8 @@ async def get_trip_public(
                             "lat": business["location"].get("coordinates", {}).get("lat"),
                             "lng": business["location"].get("coordinates", {}).get("lng")
                         }
+                else:
+                    logger.warning(f"[GET_TRIP_PUBLIC] Business not found for id={business_id}")
     
     return TripWithUser(**trip_data)
 
@@ -750,7 +770,7 @@ async def generate_trip(
                     activities.append(TripActivity(
                         business_id=a.get("id"),
                         business_name=a.get("name"),
-                        scheduled_date=day,
+                        scheduled_date=day
                     ))
                     used_activity_ids.add(a.get("id"))
                     selected_count += 1
