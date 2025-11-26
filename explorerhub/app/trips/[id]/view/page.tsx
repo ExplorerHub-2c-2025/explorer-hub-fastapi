@@ -19,6 +19,7 @@ interface TripActivity {
   scheduled_date?: string
   notes?: string
   images?: Array<{url: string, notes?: string}>
+  business_images?: string[]
 }
 
 interface Trip {
@@ -213,6 +214,7 @@ export default function TripViewPage({ params }: { params: Promise<{ id: string 
     scheduled_date: activity.scheduled_date ? new Date(activity.scheduled_date) : undefined,
     notes: activity.notes,
     images: activity.images || [],
+    business_images: activity.business_images || [],
   }))
 
   return (
@@ -292,76 +294,124 @@ export default function TripViewPage({ params }: { params: Promise<{ id: string 
                     </CardContent>
                   </Card>
                 ) : (
-                  <div className="space-y-4">
-                    {formattedActivities
-                      .sort((a, b) => {
+                  <div className="space-y-6">
+                    {(() => {
+                      const sortedActivities = [...formattedActivities].sort((a, b) => {
                         if (!a.scheduled_date && !b.scheduled_date) return 0
                         if (!a.scheduled_date) return 1
                         if (!b.scheduled_date) return -1
                         return a.scheduled_date.getTime() - b.scheduled_date.getTime()
                       })
-                      .map((activity) => (
-                        <Card key={activity.id}>
-                          <CardContent className="p-4">
-                            <div className="flex items-start gap-4">
-                              <div className="flex-1">
-                                <h3 className="font-semibold text-lg mb-2">{activity.business_name}</h3>
 
-                                {activity.scheduled_date && (
-                                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-                                    <Calendar className="h-4 w-4" />
-                                    <span>{format(activity.scheduled_date, "PPP", { locale: es })}</span>
-                                  </div>
-                                )}
+                      // Group activities by date
+                      const groupedActivities = sortedActivities.reduce((groups, activity) => {
+                        const dateKey = activity.scheduled_date 
+                          ? format(activity.scheduled_date, "yyyy-MM-dd")
+                          : "sin-fecha"
+                        
+                        if (!groups[dateKey]) {
+                          groups[dateKey] = []
+                        }
+                        groups[dateKey].push(activity)
+                        return groups
+                      }, {} as Record<string, typeof sortedActivities>)
 
-                                {activity.notes && (
-                                  <p className="text-sm text-gray-700 mb-3">{activity.notes}</p>
-                                )}
+                      const orderedDates = Object.keys(groupedActivities).sort((a, b) => {
+                        if (a === "sin-fecha") return 1
+                        if (b === "sin-fecha") return -1
+                        return a.localeCompare(b)
+                      })
 
-                                {activity.images && activity.images.length > 0 && (
-                                  <div className="space-y-2">
-                                    <div className="relative rounded-lg overflow-hidden" style={{ height: '300px' }}>
-                                      <img
-                                        src={activity.images[imageIndexes[activity.id] || 0]?.url || "/placeholder.svg"}
-                                        alt={activity.business_name}
-                                        className="w-full h-full object-cover"
-                                      />
+                      return orderedDates.map((dateKey) => {
+                        const dateActivities = groupedActivities[dateKey]
+                        const isUnscheduled = dateKey === "sin-fecha"
+                        const displayDate = isUnscheduled 
+                          ? "Sin fecha programada"
+                          : format(new Date(dateKey + "T12:00:00"), "EEEE d 'de' MMMM", { locale: es })
 
-                                      {activity.images.length > 1 && (
-                                        <>
-                                          <button
-                                            onClick={() => prevImage(activity.id, activity.images!.length)}
-                                            className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-lg"
-                                          >
-                                            ←
-                                          </button>
-                                          <button
-                                            onClick={() => nextImage(activity.id, activity.images!.length)}
-                                            className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-lg"
-                                          >
-                                            →
-                                          </button>
-                                          <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
-                                            {(imageIndexes[activity.id] || 0) + 1} / {activity.images.length}
+                        return (
+                          <div key={dateKey} className="space-y-4">
+                            <div className="flex items-center gap-3 mb-4">
+                              <div className="flex-1 h-px bg-gray-200" />
+                              <h3 className="text-lg font-semibold text-gray-700 capitalize">
+                                {displayDate}
+                              </h3>
+                              <div className="flex-1 h-px bg-gray-200" />
+                            </div>
+
+                            {dateActivities.map((activity) => (
+                              <Card key={activity.id}>
+                                <CardContent className="p-4">
+                                  <div className="flex items-start gap-4">
+                                    {/* Business Image on the left */}
+                                    {activity.business_images && activity.business_images.length > 0 && (
+                                      <div className="shrink-0">
+                                        <img
+                                          src={activity.business_images[0]}
+                                          alt={activity.business_name}
+                                          className="w-32 h-32 object-cover rounded-lg"
+                                          onError={(e) => {
+                                            e.currentTarget.style.display = 'none'
+                                          }}
+                                        />
+                                      </div>
+                                    )}
+
+                                    <div className="flex-1">
+                                      <h4 className="font-semibold text-lg mb-2">{activity.business_name}</h4>
+
+                                      {activity.notes && (
+                                        <p className="text-sm text-gray-700 mb-3">{activity.notes}</p>
+                                      )}
+
+                                      {activity.images && activity.images.length > 0 && (
+                                        <div className="space-y-2">
+                                          <div className="relative rounded-lg overflow-hidden" style={{ height: '300px' }}>
+                                            <img
+                                              src={activity.images[imageIndexes[activity.id] || 0]?.url || "/placeholder.svg"}
+                                              alt={activity.business_name}
+                                              className="w-full h-full object-cover"
+                                            />
+
+                                            {activity.images.length > 1 && (
+                                              <>
+                                                <button
+                                                  onClick={() => prevImage(activity.id, activity.images!.length)}
+                                                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-lg"
+                                                >
+                                                  ←
+                                                </button>
+                                                <button
+                                                  onClick={() => nextImage(activity.id, activity.images!.length)}
+                                                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-lg"
+                                                >
+                                                  →
+                                                </button>
+                                                <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                                                  {(imageIndexes[activity.id] || 0) + 1} / {activity.images.length}
+                                                </div>
+                                              </>
+                                            )}
                                           </div>
-                                        </>
+
+                                          {activity.images.map((image, idx) => (
+                                            <div key={idx} className="mt-2">
+                                              {image.notes && (
+                                                <p className="text-xs text-gray-600 italic">"{image.notes}"</p>
+                                              )}
+                                            </div>
+                                          ))}
+                                        </div>
                                       )}
                                     </div>
-
-                                    {activity.images.map((image, idx) => (
-                                      <div key={idx} className="mt-2">
-                                        {image.notes && (
-                                          <p className="text-xs text-gray-600 italic">"{image.notes}"</p>
-                                        )}
-                                      </div>
-                                    ))}
                                   </div>
-                                )}
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
+                        )
+                      })
+                    })()}
                   </div>
                 )}
               </div>

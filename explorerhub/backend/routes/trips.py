@@ -10,6 +10,7 @@ from models.counter import get_next_sequence_value
 from auth import get_current_active_user, get_optional_current_user
 from models.user import UserInDB
 from utils import serialize_doc, serialize_docs
+from routes.notifications import notify_trip_collaborator
 
 router = APIRouter(prefix="/api/trips", tags=["trips"])
 logger = logging.getLogger("uvicorn.error")
@@ -240,6 +241,24 @@ async def get_trip(
         raise HTTPException(status_code=403, detail="Not authorized to view this trip")
     
     trip = serialize_doc(trip)
+    
+    # Enrich activities with business images and location
+    if trip.get("activities"):
+        for activity in trip["activities"]:
+            business_id = activity.get("business_id")
+            if business_id:
+                business = await db.businesses.find_one({"id": int(business_id)})
+                if business:
+                    activity["business_images"] = business.get("images", [])
+                    # Add location from business
+                    if business.get("location"):
+                        activity["location"] = {
+                            "address": business["location"].get("address", ""),
+                            "city": business["location"].get("city", ""),
+                            "lat": business["location"].get("coordinates", {}).get("lat"),
+                            "lng": business["location"].get("coordinates", {}).get("lng")
+                        }
+    
     return Trip(**trip)
 
 
@@ -278,6 +297,23 @@ async def get_trip_public(
     # Get likes count
     likes_count = await db.trip_likes.count_documents({"trip_id": trip_id})
     trip_data["likes_count"] = likes_count
+    
+    # Enrich activities with business images and location
+    if trip_data.get("activities"):
+        for activity in trip_data["activities"]:
+            business_id = activity.get("business_id")
+            if business_id:
+                business = await db.businesses.find_one({"id": int(business_id)})
+                if business:
+                    activity["business_images"] = business.get("images", [])
+                    # Add location from business
+                    if business.get("location"):
+                        activity["location"] = {
+                            "address": business["location"].get("address", ""),
+                            "city": business["location"].get("city", ""),
+                            "lat": business["location"].get("coordinates", {}).get("lat"),
+                            "lng": business["location"].get("coordinates", {}).get("lng")
+                        }
     
     return TripWithUser(**trip_data)
 
@@ -359,10 +395,20 @@ async def add_activity_to_trip(
     if not business:
         raise HTTPException(status_code=404, detail="Business not found")
     
+    # Enrich activity with business location data
+    activity_dict = activity.model_dump()
+    business_location = business.get("location", {})
+    activity_dict["location"] = {
+        "address": business_location.get("address"),
+        "city": business_location.get("city"),
+        "lat": business_location.get("latitude"),
+        "lng": business_location.get("longitude")
+    }
+    
     await db.trips.update_one(
         {"id": trip_id},
         {
-            "$push": {"activities": activity.model_dump()},
+            "$push": {"activities": activity_dict},
             "$set": {"updated_at": datetime.utcnow()}
         }
     )
@@ -813,6 +859,18 @@ async def add_collaborator(
     await db.trips.update_one(
         {"id": trip_id},
         {"$set": {"collaborators": collaborators, "updated_at": datetime.utcnow()}}
+    )
+    
+    # Send notification to collaborator
+    owner = await db.users.find_one({"id": current_user.id})
+    owner_name = owner.get("full_name", "Un usuario") if owner else "Un usuario"
+    
+    await notify_trip_collaborator(
+        trip_id=trip_id,
+        trip_name=trip.get("name", "un viaje"),
+        owner_name=owner_name,
+        collaborator_user_id=int(collaborator_id),
+        db=db
     )
     
     return {"message": "Collaborator added successfully", "collaborator_id": collaborator_id}

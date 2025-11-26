@@ -28,6 +28,7 @@ interface TripActivity {
   scheduled_date?: string
   notes?: string
   images?: Array<{url: string, notes?: string}>
+  business_images?: string[]
   location?: {
     address?: string
     city?: string
@@ -215,7 +216,6 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
     }
   }
 
-  const nearestCity = trip && trip.activities.length > 0 ? trip.activities[0].location?.city || "" : ""
   const firstActivity = trip && trip.activities.length > 0 ? trip.activities[0] : null
 
   const handleUpdateNotes = async (businessId: string, notes: string) => {
@@ -407,7 +407,13 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
     scheduled_date: activity.scheduled_date ? new Date(activity.scheduled_date) : undefined,
     notes: activity.notes,
     images: activity.images || [],
+    business_images: activity.business_images || [],
   }))
+
+  // Calculate nearest city for weather - use trip destination or first activity with location
+  const nearestCity = trip.activities.find(a => a.location?.city)?.location?.city || 
+                      trip.destination.split(',')[0].trim() || 
+                      'Buenos Aires'
 
   return (
     <div className={styles.pageContainer}>
@@ -503,19 +509,26 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
-            {nearestCity && <WeatherCard city={nearestCity} />}
+          <div className={styles.sidebar}>
+            {/* Weather Card - Always show using trip destination */}
+            <WeatherCard city={nearestCity} />
 
-            {nearestCity && <NearbyEventsCard city={nearestCity} />}
+            {/* Nearby Events - Always show using nearest city */}
+            <NearbyEventsCard city={nearestCity} />
 
-            {trip.activities.length >= 2 && (
+            {/* Transport Recommendations - Show only when we have 2+ activities with locations */}
+            {trip.activities.length >= 2 && 
+             trip.activities[0].location?.city && 
+             trip.activities[0].location?.address &&
+             trip.activities[1].location?.city && 
+             trip.activities[1].location?.address && (
               <TransportRecommendations
-                fromCity={trip.activities[0].location?.city || ""}
-                toCity={trip.activities[1].location?.city || ""}
+                fromCity={trip.activities[0].location.city}
+                toCity={trip.activities[1].location.city}
+                fromAddress={trip.activities[0].location.address}
+                toAddress={trip.activities[1].location.address}
               />
             )}
-
-          <div className={styles.sidebar}>
             <Card>
               <CardContent className={styles.cardContent}>
                 <h3 className={styles.sectionTitle}>Resumen del Viaje</h3>
@@ -542,7 +555,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
               </CardContent>
             </Card>
 
-            <Card>
+           {/*  <Card>
               <CardContent className={styles.cardContent}>
                 <h3 className={styles.sectionTitle}>Recomendaciones</h3>
                 <p className={styles.recommendationsText}>
@@ -557,50 +570,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                   </Link>
                 </div>
               </CardContent>
-            </Card>
-          </div>
-            <Card>
-              <CardContent className={styles.cardContent}>
-                <h3 className={styles.sectionTitle}>Resumen del Viaje</h3>
-                <div className={styles.tripSummary}>
-                  <div className={styles.summaryRow}>
-                    <span className={styles.summaryLabel}>Duración</span>
-                    <span className={styles.summaryValue}>
-                      {Math.ceil(
-                        (new Date(trip.end_date).getTime() - new Date(trip.start_date).getTime()) /
-                          (1000 * 60 * 60 * 24)
-                      )}{" "}
-                      días
-                    </span>
-                  </div>
-                  <div className={styles.summaryRow}>
-                    <span className={styles.summaryLabel}>Actividades</span>
-                    <span className={styles.summaryValue}>{trip.activities.length}</span>
-                  </div>
-                  <div className={styles.summaryRow}>
-                    <span className={styles.summaryLabel}>Destino</span>
-                    <span className={styles.summaryValue}>{trip.destination}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className={styles.cardContent}>
-                <h3 className={styles.sectionTitle}>Recomendaciones</h3>
-                <p className={styles.recommendationsText}>
-                  Basado en tu itinerario, también te podrían gustar estas experiencias:
-                </p>
-                <div className={styles.recommendationsList}>
-                  <Link href="/explore">
-                    <div className={styles.recommendationItem}>
-                      <h4 className={styles.recommendationTitle}>Explorar más actividades</h4>
-                      <p className={styles.recommendationDescription}>Descubre nuevas experiencias</p>
-                    </div>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
+            </Card> */}
           </div>
         </div>
       </main>

@@ -13,6 +13,7 @@ class NotificationType(str, Enum):
     booking_confirmed = "booking_confirmed"
     booking_cancelled = "booking_cancelled"
     new_follower = "new_follower"
+    trip_invite = "trip_invite"
     
     # Business notifications
     new_review = "new_review"
