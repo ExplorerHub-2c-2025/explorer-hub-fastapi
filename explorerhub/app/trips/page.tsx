@@ -24,6 +24,7 @@ interface Trip {
   start_date: string
   end_date: string
   description?: string
+  cover_image?: string
   activities: any[]
 }
 
@@ -244,53 +245,52 @@ export default function TripsPage() {
         ) : (
           <div className={styles.tripsGrid}>
             {trips.map((trip) => (
-              <div key={trip.id} className={styles.tripCardContainer}>
-                <Link href={`/trips/${trip.id}`}>
-                  <Card className={styles.tripCard}>
-                    <div className={styles.tripImage}>
-                      <img
-                        src="/placeholder.svg"
-                        alt={trip.name}
-                      />
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        className={styles.deleteButton}
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          handleDeleteTrip(trip.id, e)
-                        }}
-                      >
-                        <Trash2 className={styles.deleteIcon} />
-                      </Button>
-                    </div>
-                    <CardHeader>
-                      <CardTitle>{trip.name}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className={styles.tripContent}>
-                        <div className={styles.tripInfo}>
-                          <MapPin className={styles.infoIcon} />
-                          <span>{trip.destination}</span>
-                        </div>
-                        <div className={styles.tripInfo}>
-                          <Calendar className={styles.infoIcon} />
-                          <span>
-                            {format(new Date(trip.start_date), "d 'de' MMM", { locale: es })} -{" "}
-                            {format(new Date(trip.end_date), "d 'de' MMM, yyyy", { locale: es })}
-                          </span>
-                        </div>
-                        <div className={styles.tripActivities}>
-                          <span className={styles.activitiesText}>
-                            {trip.activities.length} actividades planeadas
-                          </span>
-                        </div>
+              <Link key={trip.id} href={`/trips/${trip.id}`} className={styles.tripCardLink}>
+                <Card className={styles.tripCard}>
+                  <div className={styles.tripImageWrapper}>
+                    <img
+                      src={trip.cover_image || `https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=400&h=300&fit=crop`}
+                      alt={trip.name}
+                      className={styles.tripImage}
+                    />
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className={styles.deleteButton}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        handleDeleteTrip(trip.id, e)
+                      }}
+                    >
+                      <Trash2 className={styles.deleteIcon} />
+                    </Button>
+                  </div>
+                  <CardHeader>
+                    <CardTitle>{trip.name}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className={styles.tripContent}>
+                      <div className={styles.tripInfo}>
+                        <MapPin className={styles.infoIcon} />
+                        <span>{trip.destination}</span>
                       </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              </div>
+                      <div className={styles.tripInfo}>
+                        <Calendar className={styles.infoIcon} />
+                        <span>
+                          {format(new Date(trip.start_date), "d 'de' MMM", { locale: es })} -{" "}
+                          {format(new Date(trip.end_date), "d 'de' MMM, yyyy", { locale: es })}
+                        </span>
+                      </div>
+                      <div className={styles.tripActivities}>
+                        <span className={styles.activitiesText}>
+                          {trip.activities.length} actividades planeadas
+                        </span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
             ))}
           </div>
         )}
