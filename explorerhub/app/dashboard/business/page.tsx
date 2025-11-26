@@ -8,8 +8,20 @@ import { Footer } from "@/components/footer"
 import { ActivityCard } from "@/components/activity-card"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Briefcase, Plus, Edit, Eye, Loader2, Users, Calendar, Clock } from "lucide-react"
+import { Briefcase, Plus, Edit, Eye, Loader2, Users, Calendar, Clock, Crown, CheckCircle2, AlertCircle, Info } from "lucide-react"
 import styles from "./page.module.css"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
 
 interface Business {
   id: number
@@ -30,6 +42,9 @@ interface Business {
   tags: string[]
   is_active: boolean
   is_unique?: boolean
+  is_subscribed: boolean
+  subscription_tier?: string | null
+  subscription_ends_at?: string | null
 }
 
 export default function BusinessDashboard() {
@@ -39,6 +54,22 @@ export default function BusinessDashboard() {
   const [capacityInfo, setCapacityInfo] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingCapacity, setIsLoadingCapacity] = useState(false)
+  const [isSubscriptionDialogOpen, setIsSubscriptionDialogOpen] = useState(false)
+  const [selectedBusinessId, setSelectedBusinessId] = useState<string>("")
+  const [selectedTier, setSelectedTier] = useState("basic")
+  const [selectedDuration, setSelectedDuration] = useState("30")
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [alertDialog, setAlertDialog] = useState<{
+    open: boolean
+    type: 'success' | 'error' | 'info'
+    title: string
+    message: string
+  }>({
+    open: false,
+    type: 'success',
+    title: '',
+    message: ''
+  })
 
   useEffect(() => {
     const userData = localStorage.getItem("user")
@@ -103,6 +134,61 @@ export default function BusinessDashboard() {
     }
   }
 
+  const showAlert = (type: 'success' | 'error' | 'info', title: string, message: string) => {
+    setAlertDialog({ open: true, type, title, message })
+  }
+
+  const closeAlert = () => {
+    setAlertDialog({ ...alertDialog, open: false })
+  }
+
+  const handleSubscribe = async () => {
+    if (!selectedBusinessId) {
+      showAlert('error', 'Error', 'Por favor selecciona un negocio')
+      return
+    }
+
+    setIsProcessing(true)
+    try {
+      const token = localStorage.getItem("token")
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/api/businesses/${selectedBusinessId}/subscription`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            tier: selectedTier,
+            duration_days: parseInt(selectedDuration),
+          }),
+        }
+      )
+
+      if (response.ok) {
+        showAlert('success', '¡Suscripción activada!', 'Tu negocio ahora tendrá prioridad en las búsquedas')
+        setIsSubscriptionDialogOpen(false)
+        setSelectedBusinessId("")
+        fetchMyBusinesses()
+      } else {
+        const error = await response.json()
+        showAlert('error', 'Error', error.detail || 'No se pudo activar la suscripción')
+      }
+    } catch (error) {
+      console.error("Error al activar suscripción:", error)
+      showAlert('error', 'Error', 'Error al activar la suscripción. Intenta nuevamente.')
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const getSelectedBusiness = () => {
+    return businesses.find(b => b.id.toString() === selectedBusinessId)
+  }
+
+  const selectedBusiness = getSelectedBusiness()
+
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -131,6 +217,129 @@ export default function BusinessDashboard() {
                     Editar Perfil
                   </Link>
                 </Button>
+                <Dialog open={isSubscriptionDialogOpen} onOpenChange={setIsSubscriptionDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="default" className="bg-amber-500 hover:bg-amber-600">
+                      <Crown className="mr-2 h-4 w-4" />
+                      Gestionar Suscripciones
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Gestionar Suscripción Premium</DialogTitle>
+                      <DialogDescription>
+                        Activa o renueva la suscripción de tus negocios para aparecer primero en las búsquedas
+                      </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="business">Seleccionar Negocio</Label>
+                        <Select value={selectedBusinessId} onValueChange={setSelectedBusinessId}>
+                          <SelectTrigger id="business">
+                            <SelectValue placeholder="Selecciona un negocio" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {businesses.map((business) => (
+                              <SelectItem key={business.id} value={business.id.toString()}>
+                                <div className="flex items-center justify-between w-full">
+                                  <span>{business.name}</span>
+                                  {business.is_subscribed && (
+                                    <Badge className="ml-2 bg-amber-100 text-amber-800 text-xs">
+                                      Premium
+                                    </Badge>
+                                  )}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {selectedBusiness?.is_subscribed && (
+                          <p className="text-xs text-muted-foreground">
+                            Estado actual: <strong>{selectedBusiness.subscription_tier}</strong>
+                            {selectedBusiness.subscription_ends_at && (
+                              <> · Expira: {new Date(selectedBusiness.subscription_ends_at).toLocaleDateString()}</>
+                            )}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="tier">Plan de Suscripción</Label>
+                        <Select value={selectedTier} onValueChange={setSelectedTier}>
+                          <SelectTrigger id="tier">
+                            <SelectValue placeholder="Selecciona un plan" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="basic">
+                              <div className="flex flex-col items-start">
+                                <span className="font-medium">Básico</span>
+                                <span className="text-xs text-muted-foreground">Prioridad en búsquedas</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="premium">
+                              <div className="flex flex-col items-start">
+                                <span className="font-medium">Premium</span>
+                                <span className="text-xs text-muted-foreground">Prioridad + Beneficios extra</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="enterprise">
+                              <div className="flex flex-col items-start">
+                                <span className="font-medium">Enterprise</span>
+                                <span className="text-xs text-muted-foreground">Máxima prioridad</span>
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="duration">Duración</Label>
+                        <Select value={selectedDuration} onValueChange={setSelectedDuration}>
+                          <SelectTrigger id="duration">
+                            <SelectValue placeholder="Selecciona duración" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="30">30 días - 1 mes</SelectItem>
+                            <SelectItem value="90">90 días - 3 meses</SelectItem>
+                            <SelectItem value="180">180 días - 6 meses</SelectItem>
+                            <SelectItem value="365">365 días - 1 año</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="p-4 bg-primary/5 rounded-lg space-y-2">
+                        <h4 className="font-semibold text-sm">Beneficios de la Suscripción:</h4>
+                        <ul className="text-sm space-y-1 text-muted-foreground">
+                          <li>✓ Tu negocio aparece primero en búsquedas</li>
+                          <li>✓ Mayor visibilidad para usuarios</li>
+                          <li>✓ Prioridad sobre competidores</li>
+                          <li>✓ Incrementa reservas y vistas</li>
+                        </ul>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        className="flex-1" 
+                        onClick={() => {
+                          setIsSubscriptionDialogOpen(false)
+                          setSelectedBusinessId("")
+                        }}
+                      >
+                        Cancelar
+                      </Button>
+                      <Button 
+                        className="flex-1 bg-amber-500 hover:bg-amber-600" 
+                        onClick={handleSubscribe} 
+                        disabled={isProcessing || !selectedBusinessId}
+                      >
+                        {isProcessing ? "Procesando..." : selectedBusiness?.is_subscribed ? "Renovar" : "Activar"}
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
                 <Button asChild className={styles.addBusinessButton}>
                   <Link href="/business/new">
                     <Plus className="mr-2 h-4 w-4" />
@@ -140,8 +349,85 @@ export default function BusinessDashboard() {
               </div>
             </div>
 
-            {/* Businesses List */}
-            <Card>
+          {/* Businesses List */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Mis Establecimientos</CardTitle>
+              <CardDescription>
+                {businesses.length === 0
+                  ? "Aún no has agregado ningún negocio"
+                  : `Tienes ${businesses.length} establecimiento${businesses.length !== 1 ? "s" : ""} registrado${businesses.length !== 1 ? "s" : ""}`}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="flex justify-center items-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : businesses.length === 0 ? (
+                <div className="text-center py-12">
+                  <Briefcase className="h-16 w-16 mx-auto text-muted-foreground/50 mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No tienes negocios registrados</h3>
+                  <p className="text-muted-foreground mb-6">Comienza agregando tu primer establecimiento</p>
+                  <Button asChild className={styles.addBusinessButton}>
+                    <Link href="/business/new">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Agregar Negocio
+                    </Link>
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {businesses.map((business) => (
+                    <div key={business.id} className="relative flex flex-col h-full">
+                      {!business.is_active && (
+                        <div className="absolute top-2 right-2 px-3 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full font-medium z-10">
+                          Inactivo
+                        </div>
+                      )}
+                      {business.is_subscribed && (
+                        <div className="absolute top-2 left-2 px-3 py-1 text-xs bg-amber-100 text-amber-800 rounded-full font-medium z-10 flex items-center gap-1">
+                          <Crown className="h-3 w-3" />
+                          Premium
+                        </div>
+                      )}
+                      <ActivityCard
+                        id={business.id}
+                        name={business.name}
+                        categories={business.categories || (business.category ? (Array.isArray(business.category) ? business.category : [business.category]) : [])}
+                        location={`${business.location.city}, ${business.location.state}`}
+                        rating={business.rating}
+                        reviewCount={business.review_count}
+                        priceLevel={business.price_level}
+                        images={business.images}
+                        description={business.description}
+                        tags={business.tags}
+                        badgeClassName={styles.categoryBadge}
+                      />
+                      <div className="flex gap-2 mt-3">
+                        <Button asChild variant="outline" size="sm" className={`${styles.viewButton} flex-1`}>
+                          <Link href={`/activity/${business.id}`}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            Ver
+                          </Link>
+                        </Button>
+                        <Button asChild size="sm" className={`${styles.editButton} flex-1`}>
+                          <Link href={`/business/${business.id}/edit`}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Editar
+                          </Link>
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Capacity Usage Section */}
+          {capacityInfo.length > 0 && (
+            <Card className="mt-8">
               <CardHeader>
                 <CardTitle>Mis Establecimientos</CardTitle>
                 <CardDescription>
@@ -302,6 +588,42 @@ export default function BusinessDashboard() {
       </main>
 
       <Footer />
+
+      {/* Alert Dialog */}
+      <Dialog open={alertDialog.open} onOpenChange={closeAlert}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              {alertDialog.type === 'success' && (
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
+                  <CheckCircle2 className="h-6 w-6 text-green-600" />
+                </div>
+              )}
+              {alertDialog.type === 'error' && (
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
+                  <AlertCircle className="h-6 w-6 text-red-600" />
+                </div>
+              )}
+              {alertDialog.type === 'info' && (
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
+                  <Info className="h-6 w-6 text-blue-600" />
+                </div>
+              )}
+              <div>
+                <DialogTitle>{alertDialog.title}</DialogTitle>
+                <DialogDescription className="mt-1">
+                  {alertDialog.message}
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          <DialogFooter className="sm:justify-end">
+            <Button onClick={closeAlert} className="w-full sm:w-auto">
+              Entendido
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
