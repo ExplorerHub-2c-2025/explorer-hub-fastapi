@@ -30,6 +30,8 @@ async def create_business(
         )
     
     business_dict = business.model_dump()
+    print(f"[v0] Creating business with is_unique: {business_dict.get('is_unique', False)}")
+    
     # Get user id from current_user
     user_id = current_user.id if current_user.id is not None else None
     if user_id is None:
@@ -61,9 +63,14 @@ async def create_business(
     if "allows_bookings" not in business_dict:
         business_dict["allows_bookings"] = True
     
+    if "is_unique" not in business_dict:
+        business_dict["is_unique"] = False
+    
     await db.businesses.insert_one(business_dict)
     created_business = await db.businesses.find_one({"id": next_id})
     created_business = serialize_doc(created_business)
+    
+    print(f"[v0] Business created with is_unique: {created_business.get('is_unique', False)}")
     
     return Business(**created_business)
 
@@ -116,6 +123,7 @@ async def get_businesses(
         business.setdefault("allows_bookings", True)
         business.setdefault("categories", [])
         business.setdefault("max_capacity", None)
+        business.setdefault("is_unique", False)
     
     return [Business(**b) for b in businesses]
 
@@ -136,6 +144,7 @@ async def get_business(business_id: int, db = Depends(get_database)):
     business.setdefault("created_at", datetime.utcnow())
     business.setdefault("is_active", True)
     business.setdefault("allows_bookings", True)
+    business.setdefault("is_unique", False)
     
     return Business(**business)
 
@@ -156,6 +165,7 @@ async def update_business(
         raise HTTPException(status_code=403, detail="Not authorized to update this business")
     
     update_data = business_update.model_dump()
+    print(f"[v0] Updating business {business_id} with is_unique: {update_data.get('is_unique', False)}")
     
     # Geocode the location if it was updated
     if "location" in update_data:
@@ -179,6 +189,9 @@ async def update_business(
     updated_business.setdefault("created_at", datetime.utcnow())
     updated_business.setdefault("is_active", True)
     updated_business.setdefault("allows_bookings", True)
+    updated_business.setdefault("is_unique", False)
+    
+    print(f"[v0] Business updated with is_unique: {updated_business.get('is_unique', False)}")
     
     return Business(**updated_business)
 
@@ -229,6 +242,7 @@ async def get_my_businesses(
         business.setdefault("created_at", datetime.utcnow())
         business.setdefault("is_active", True)
         business.setdefault("allows_bookings", True)
+        business.setdefault("is_unique", False)
     
     return [Business(**b) for b in businesses]
 
