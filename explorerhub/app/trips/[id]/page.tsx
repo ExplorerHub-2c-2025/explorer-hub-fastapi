@@ -199,14 +199,14 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
     })
   }
 
-  const handleUpdateSchedule = async (businessId: string, date: Date) => {
+  const handleUpdateSchedule = async (businessId: string, date: Date | null) => {
     if (!trip) return
     
     try {
       await authFetch(`http://localhost:8000/api/trips/${trip.id}/activities/${businessId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scheduled_date: date.toISOString() }),
+        body: JSON.stringify({ scheduled_date: date ? date.toISOString() : null }),
       })
       
       // Reload trip data
@@ -569,6 +569,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
         onClose={() => setShowActivitySearch(false)}
         onAddActivity={(business, scheduledDate) => handleActivityAdded(business)}
         tripId={trip?.id || ""}
+        tripStartDate={trip?.start_date ? trip.start_date.split('T')[0] : undefined}
       />
 
       {/* Collaborators Dialog */}

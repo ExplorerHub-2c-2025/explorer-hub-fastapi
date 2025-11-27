@@ -101,7 +101,11 @@ export default function BusinessDashboard() {
 
       if (response.ok) {
         const data = await response.json()
-        setBusinesses(data)
+        // Remove duplicates by id (keep first occurrence)
+        const uniqueBusinesses = Array.from(
+          new Map(data.map((business: Business) => [business.id, business])).values()
+        ) as Business[]
+        setBusinesses(uniqueBusinesses)
       }
     } catch (error) {
       console.error("Error fetching businesses:", error)

@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { MapPin, ExternalLink, Navigation, Loader2, Car, Bus, Footprints, Bike, Zap } from "lucide-react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 type TransportMode = "foot-walking" | "driving-car" | "driving-motorcycle" | "cycling-regular" | "public-transport"
@@ -13,6 +13,7 @@ interface OpenStreetMapLinkProps {
   toAddress: string
   toCity: string
   activityName?: string
+  fromActivityName?: string
   mode?: TransportMode
 }
 
@@ -28,21 +29,65 @@ export function OpenStreetMapLink({
   toAddress, 
   toCity, 
   activityName,
+  fromActivityName,
   mode = "foot-walking"
 }: OpenStreetMapLinkProps) {
+  // Create a TRULY unique identifier for this route using all address details
+  const routeId = useMemo(() => {
+    const id = `${fromActivityName || 'unknown'}-${activityName || 'unknown'}-${fromAddress}-${fromCity}-${toAddress}-${toCity}`
+    console.log(`[Creating routeId] ${id}`)
+    return id
+  }, [fromAddress, fromCity, toAddress, toCity, fromActivityName, activityName])
+  
+  console.log(`[Component Render] ${routeId}`, {
+    fromActivityName,
+    activityName,
+    fromAddress,
+    fromCity,
+    toAddress,
+    toCity
+  })
+  
   const [selectedMode, setSelectedMode] = useState<TransportMode>(mode)
   const [routeData, setRouteData] = useState<RouteData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Reset state when routeId changes (different route)
+  useEffect(() => {
+    console.log(`[State Reset] Resetting state for ${routeId}`)
+    setRouteData(null)
+    setError(null)
+    setIsLoading(false)
+  }, [routeId])
+
   useEffect(() => {
     const fetchRoute = async () => {
+      // Skip if addresses are empty or invalid
+      if (!fromAddress || !toAddress || !fromCity || !toCity) {
+        console.log(`[${routeId}] SKIP: Missing address data`, {
+          fromAddress, fromCity, toAddress, toCity
+        })
+        return
+      }
+
+      console.log(`[${routeId}] FETCHING for this specific component`)
       setIsLoading(true)
       setError(null)
+      setRouteData(null) // Reset route data
 
       try {
         const fromAddressFull = `${fromAddress}, ${fromCity}, Argentina`
         const toAddressFull = `${toAddress}, ${toCity}, Argentina`
+        
+        // Debug log
+        console.log(`[${routeId}] START Fetching route:`, {
+          from: fromActivityName || fromAddressFull,
+          to: activityName || toAddressFull,
+          mode: selectedMode,
+          fromFull: fromAddressFull,
+          toFull: toAddressFull
+        })
 
         // Map frontend modes to backend API profiles
         let apiProfile = selectedMode
@@ -59,35 +104,34 @@ export function OpenStreetMapLink({
           `profile=${apiProfile}`
         )
 
+        console.log(`[${routeId}] Response status:`, response.status)
+
         if (!response.ok) {
-          throw new Error("No se pudo calcular la ruta")
+          const errorText = await response.text()
+          console.error(`[${routeId}] Error response:`, errorText)
+          throw new Error(`No se pudo calcular la ruta: ${response.status}`)
         }
 
         const data = await response.json()
         
-        // Adjust duration for public transport (typically slower than walking in total time due to waits)
-        if (selectedMode === "public-transport") {
-          data.route.duration_min = Math.round(data.route.duration_min * 1.5)
-          data.route.profile = "public-transport"
-        } else if (selectedMode === "driving-motorcycle") {
-          // Motorcycle might be slightly faster in traffic
-          data.route.duration_min = Math.round(data.route.duration_min * 0.85)
-          data.route.profile = "driving-motorcycle"
-        }
+        console.log(`[${routeId}] SUCCESS Route fetched:`, {
+          ...data.route,
+          forRoute: `${fromActivityName} → ${activityName}`
+        })
         
+        console.log(`[${routeId}] SETTING routeData for ${fromActivityName} → ${activityName}`)
         setRouteData(data.route)
       } catch (err) {
-        console.error("Error fetching route:", err)
-        setError(err instanceof Error ? err.message : "Error al cargar la ruta")
+        console.error(`[${routeId}] ERROR fetching route:`, err)
+        const errorMessage = err instanceof Error ? err.message : "Error al cargar la ruta"
+        setError(errorMessage)
       } finally {
         setIsLoading(false)
       }
     }
 
-    if (fromAddress && toAddress) {
-      fetchRoute()
-    }
-  }, [fromAddress, fromCity, toAddress, toCity, selectedMode])
+    fetchRoute()
+  }, [fromAddress, fromCity, toAddress, toCity, selectedMode, routeId, fromActivityName, activityName])
 
   const handleOpenMaps = (modeToUse?: TransportMode) => {
     const origin = `${fromAddress}, ${fromCity}`.trim()
@@ -96,15 +140,10 @@ export function OpenStreetMapLink({
 
     // Map to OpenStreetMap routing engines
     let osmEngine = 'fossgis_osrm_foot'
-    if (routeMode === 'driving-car' || routeMode === 'driving-motorcycle') {
+    if (routeMode === 'driving-car') {
       osmEngine = 'fossgis_osrm_car'
     } else if (routeMode === 'cycling-regular') {
       osmEngine = 'fossgis_osrm_bike'
-    } else if (routeMode === 'public-transport') {
-      // For public transport, we'll use a general maps view since OSM doesn't have direct PT routing
-      const osmUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&travelmode=transit`
-      window.open(osmUrl, "_blank")
-      return
     }
 
     const osmUrl = `https://www.openstreetmap.org/directions?engine=${osmEngine}&route=${encodeURIComponent(origin)};${encodeURIComponent(destination)}`
@@ -117,12 +156,8 @@ export function OpenStreetMapLink({
         return "🚶 Caminando"
       case "driving-car":
         return "🚗 En auto"
-      case "driving-motorcycle":
-        return "🏍️ En moto"
       case "cycling-regular":
         return "🚴 En bici"
-      case "public-transport":
-        return "🚌 Transporte público"
       default:
         return "🗺️"
     }
@@ -134,12 +169,8 @@ export function OpenStreetMapLink({
         return "A pie"
       case "driving-car":
         return "En automóvil"
-      case "driving-motorcycle":
-        return "En motocicleta"
       case "cycling-regular":
         return "En bicicleta"
-      case "public-transport":
-        return "En colectivo, tren o subte"
       default:
         return ""
     }
@@ -148,7 +179,7 @@ export function OpenStreetMapLink({
   return (
     <div className="space-y-2">
       <Tabs value={selectedMode} onValueChange={(value) => setSelectedMode(value as TransportMode)} className="w-full">
-        <TabsList className="grid w-full grid-cols-5 h-auto">
+        <TabsList className="grid w-full grid-cols-3 h-auto">
           <TabsTrigger value="foot-walking" className="text-xs gap-1 px-1 py-2">
             <Footprints className="w-3 h-3" />
             <span className="hidden sm:inline">Pie</span>
@@ -157,17 +188,9 @@ export function OpenStreetMapLink({
             <Car className="w-3 h-3" />
             <span className="hidden sm:inline">Auto</span>
           </TabsTrigger>
-          <TabsTrigger value="driving-motorcycle" className="text-xs gap-1 px-1 py-2">
-            <Zap className="w-3 h-3" />
-            <span className="hidden sm:inline">Moto</span>
-          </TabsTrigger>
           <TabsTrigger value="cycling-regular" className="text-xs gap-1 px-1 py-2">
             <Bike className="w-3 h-3" />
             <span className="hidden sm:inline">Bici</span>
-          </TabsTrigger>
-          <TabsTrigger value="public-transport" className="text-xs gap-1 px-1 py-2">
-            <Bus className="w-3 h-3" />
-            <span className="hidden sm:inline">Público</span>
           </TabsTrigger>
         </TabsList>
 
@@ -181,11 +204,7 @@ export function OpenStreetMapLink({
             disabled={isLoading}
           >
             <Navigation className="w-4 h-4" />
-            <span>
-              {selectedMode === "public-transport" 
-                ? "Ver en Google Maps" 
-                : "Ver ruta en OpenStreetMap"}
-            </span>
+            <span>Ver ruta en OpenStreetMap</span>
             <ExternalLink className="w-3 h-3 ml-auto" />
           </Button>
 
@@ -212,11 +231,6 @@ export function OpenStreetMapLink({
                 <span className="text-muted-foreground">Duración estimada:</span>
                 <span className="font-medium">~{routeData.duration_min} min</span>
               </div>
-              {selectedMode === "public-transport" && (
-                <div className="text-xs text-muted-foreground italic mt-1 pt-1 border-t">
-                  * Incluye tiempo de espera y transbordos
-                </div>
-              )}
             </div>
           )}
         </TabsContent>
