@@ -101,7 +101,11 @@ export default function BusinessDashboard() {
 
       if (response.ok) {
         const data = await response.json()
-        setBusinesses(data)
+        // Remove duplicates by id (keep first occurrence)
+        const uniqueBusinesses = Array.from(
+          new Map(data.map((business: Business) => [business.id, business])).values()
+        ) as Business[]
+        setBusinesses(uniqueBusinesses)
       }
     } catch (error) {
       console.error("Error fetching businesses:", error)
@@ -429,89 +433,14 @@ export default function BusinessDashboard() {
           {capacityInfo.length > 0 && (
             <Card className="mt-8">
               <CardHeader>
-                <CardTitle>Mis Establecimientos</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Ocupación de Cupos
+                </CardTitle>
                 <CardDescription>
-                  {businesses.length === 0
-                    ? "Aún no has agregado ningún negocio"
-                    : `Tienes ${businesses.length} establecimiento${businesses.length !== 1 ? "s" : ""} registrado${businesses.length !== 1 ? "s" : ""}`}
+                  Información sobre la ocupación de cupos en tus establecimientos con límite de capacidad
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <div className="flex justify-center items-center py-12">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  </div>
-                ) : businesses.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Briefcase className="h-16 w-16 mx-auto text-muted-foreground/50 mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">No tienes negocios registrados</h3>
-                    <p className="text-muted-foreground mb-6">Comienza agregando tu primer establecimiento</p>
-                    <Button asChild className={styles.addBusinessButton}>
-                      <Link href="/business/new">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Agregar Negocio
-                      </Link>
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {businesses.map((business) => (
-                      <div key={business.id} className="relative flex flex-col h-full">
-                        {!business.is_active && (
-                          <div className="absolute top-2 right-2 px-3 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full font-medium">
-                            Inactivo
-                          </div>
-                        )}
-                        <ActivityCard
-                          id={business.id}
-                          name={business.name}
-                          categories={
-                            business.categories ||
-                            (Array.isArray(business.category) ? business.category : [business.category])
-                          }
-                          location={`${business.location.city}, ${business.location.state}`}
-                          rating={business.rating}
-                          reviewCount={business.review_count}
-                          priceLevel={business.price_level}
-                          images={business.images}
-                          description={business.description}
-                          tags={business.tags}
-                          badgeClassName={styles.categoryBadge}
-                          is_unique={business.is_unique}
-                        />
-                        <div className="flex gap-2 mt-3">
-                          <Button asChild variant="outline" size="sm" className={`${styles.viewButton} flex-1`}>
-                            <Link href={`/activity/${business.id}`}>
-                              <Eye className="h-4 w-4 mr-2" />
-                              Ver
-                            </Link>
-                          </Button>
-                          <Button asChild size="sm" className={`${styles.editButton} flex-1`}>
-                            <Link href={`/business/${business.id}/edit`}>
-                              <Edit className="h-4 w-4 mr-2" />
-                              Editar
-                            </Link>
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Capacity Usage Section */}
-            {capacityInfo.length > 0 && (
-              <Card className="mt-8">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5" />
-                    Ocupación de Cupos
-                  </CardTitle>
-                  <CardDescription>
-                    Información sobre la ocupación de cupos en tus establecimientos con límite de capacidad
-                  </CardDescription>
-                </CardHeader>
                 <CardContent>
                   {isLoadingCapacity ? (
                     <div className="flex justify-center items-center py-8">

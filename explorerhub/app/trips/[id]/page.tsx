@@ -199,14 +199,14 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
     })
   }
 
-  const handleUpdateSchedule = async (businessId: string, date: Date) => {
+  const handleUpdateSchedule = async (businessId: string, date: Date | null) => {
     if (!trip) return
     
     try {
       await authFetch(`http://localhost:8000/api/trips/${trip.id}/activities/${businessId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scheduled_date: date.toISOString() }),
+        body: JSON.stringify({ scheduled_date: date ? date.toISOString() : null }),
       })
       
       // Reload trip data
@@ -517,20 +517,6 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
 
             {/* Nearby Events - Always show using nearest city */}
             <NearbyEventsCard city={nearestCity} />
-
-            {/* Transport Recommendations - Show only when we have 2+ activities with locations */}
-            {trip.activities.length >= 2 && 
-             trip.activities[0].location?.city && 
-             trip.activities[0].location?.address &&
-             trip.activities[1].location?.city && 
-             trip.activities[1].location?.address && (
-              <TransportRecommendations
-                fromCity={trip.activities[0].location.city}
-                toCity={trip.activities[1].location.city}
-                fromAddress={trip.activities[0].location.address}
-                toAddress={trip.activities[1].location.address}
-              />
-            )}
             <Card>
               <CardContent className={styles.cardContent}>
                 <h3 className={styles.sectionTitle}>Resumen del Viaje</h3>
@@ -583,6 +569,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
         onClose={() => setShowActivitySearch(false)}
         onAddActivity={(business, scheduledDate) => handleActivityAdded(business)}
         tripId={trip?.id || ""}
+        tripStartDate={trip?.start_date ? trip.start_date.split('T')[0] : undefined}
       />
 
       {/* Collaborators Dialog */}

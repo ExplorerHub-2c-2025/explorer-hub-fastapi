@@ -51,7 +51,7 @@ async def create_business(
     next_id = await get_next_sequence_value("businesses", db)
     business_dict["id"] = next_id
     
-    # Add default fields
+    # Add default fields - ensure all required fields are set
     business_dict["rating"] = 0.0
     business_dict["review_count"] = 0
     business_dict["views"] = 0
@@ -62,18 +62,35 @@ async def create_business(
     business_dict["subscription_tier"] = None
     business_dict["subscription_ends_at"] = None
     
-    # Ensure allows_bookings has a default value
-    if "allows_bookings" not in business_dict:
+    # Ensure allows_bookings is always set (use provided value or default to True)
+    if "allows_bookings" not in business_dict or business_dict["allows_bookings"] is None:
         business_dict["allows_bookings"] = True
     
     if "is_unique" not in business_dict:
         business_dict["is_unique"] = False
     
+    # Ensure max_capacity is present
+    if "max_capacity" not in business_dict:
+        business_dict["max_capacity"] = None
+    
     await db.businesses.insert_one(business_dict)
     created_business = await db.businesses.find_one({"id": next_id})
     created_business = serialize_doc(created_business)
     
+    # Ensure all required fields are present for Pydantic validation
+    if "allows_bookings" not in created_business:
+        created_business["allows_bookings"] = True
+    if "created_at" not in created_business:
+        created_business["created_at"] = datetime.utcnow()
+    if "max_capacity" not in created_business:
+        created_business["max_capacity"] = None
+    if "is_unique" not in created_business:
+        created_business["is_unique"] = False
+    
     print(f"[v0] Business created with is_unique: {created_business.get('is_unique', False)}")
+    print(f"[DEBUG] Created business keys: {list(created_business.keys())}")
+    print(f"[DEBUG] allows_bookings: {created_business.get('allows_bookings')}")
+    print(f"[DEBUG] created_at: {created_business.get('created_at')}")
     
     return Business(**created_business)
 

@@ -29,9 +29,10 @@ interface ActivitySearchModalProps {
   onClose: () => void
   onAddActivity: (business: Business, scheduledDate?: string) => void
   tripId: string
+  tripStartDate?: string // Trip start date to use as default
 }
 
-export function ActivitySearchModal({ isOpen, onClose, onAddActivity, tripId }: ActivitySearchModalProps) {
+export function ActivitySearchModal({ isOpen, onClose, onAddActivity, tripId, tripStartDate }: ActivitySearchModalProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [businesses, setBusinesses] = useState<Business[]>([])
   const [filteredBusinesses, setFilteredBusinesses] = useState<Business[]>([])
@@ -87,10 +88,15 @@ export function ActivitySearchModal({ isOpen, onClose, onAddActivity, tripId }: 
   const handleAddActivity = async (business: Business) => {
     try {
       const token = localStorage.getItem("token")
-      // Build ISO datetime if a date was selected
-      const scheduled_date = scheduledDate
-        ? new Date(scheduledDate + "T12:00:00").toISOString()
-        : null
+      // Use selected date, or fallback to trip start date, or null
+      let scheduled_date = null
+      if (scheduledDate) {
+        scheduled_date = new Date(scheduledDate + "T12:00:00").toISOString()
+      } else if (tripStartDate) {
+        // Use trip start date as default (like the automatic generation does)
+        scheduled_date = new Date(tripStartDate + "T12:00:00").toISOString()
+      }
+      
       await fetch(`http://localhost:8000/api/trips/${tripId}/activities`, {
         method: "POST",
         headers: {
