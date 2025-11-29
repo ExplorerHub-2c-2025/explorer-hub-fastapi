@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
-import { Star, MapPin, Phone, Globe, DollarSign, Calendar, Heart, Loader2, ArrowLeft, Plus, MessageSquare, Trash2, Reply, AlertCircle, CheckCircle2, Tag } from "lucide-react"
+import { Star, MapPin, Phone, Globe, DollarSign, Calendar, Heart, Loader2, ArrowLeft, Plus, MessageSquare, Trash2, Reply, AlertCircle, CheckCircle2, Tag, Share2 } from "lucide-react"
 import { AuthRequiredDialog } from "@/components/auth-required-dialog"
 import { ReviewForm } from "@/components/review-form"
 import { PromotionCard } from "@/components/promotion-card"
@@ -499,6 +499,40 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
         setIsTogglingFavorite(false)
       }
     })
+  }
+
+  const handleShare = () => {
+    try {
+      const url = window.location.href || `${window.location.origin}/activity/${id}`
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url)
+          .then(() => {
+            showAlert('success', 'Compartir', 'Enlace copiado al portapapeles')
+          })
+          .catch(() => {
+            fallbackCopy(url)
+            showAlert('success', 'Compartir', 'Enlace copiado al portapapeles')
+          })
+      } else {
+        fallbackCopy(url)
+        showAlert('success', 'Compartir', 'Enlace copiado al portapapeles')
+      }
+    } catch {
+      showAlert('error', 'Error', 'No se pudo copiar el enlace')
+    }
+  }
+
+  const fallbackCopy = (text: string) => {
+    try {
+      const tempInput = document.createElement('input')
+      tempInput.value = text
+      document.body.appendChild(tempInput)
+      tempInput.select()
+      document.execCommand('copy')
+      document.body.removeChild(tempInput)
+    } catch (e) {
+      console.error('Fallback copy failed:', e)
+    }
   }
 
   const handleBook = () => {
@@ -1786,6 +1820,15 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
                           {isFavorite ? "Guardado en Favoritos" : "Guardar como Favorito"}
                         </>
                       )}
+                    </Button>
+                    <Button 
+                      onClick={handleShare}
+                      variant="outline"
+                      className={styles.buttonFull}
+                      size="lg"
+                    >
+                      <Share2 className={styles.buttonIcon} />
+                      Compartir
                     </Button>
                   </div>
                 </CardContent>
