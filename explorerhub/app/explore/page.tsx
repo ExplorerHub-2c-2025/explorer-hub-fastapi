@@ -354,6 +354,9 @@ export default function ExplorePage() {
 
   const filteredActivities = useMemo(() => {
     let filtered = activities.filter((activity) => activity.is_active)
+    
+    // Debug: Log is_unique values
+    console.log("Activities with is_unique:", activities.filter(a => a.is_unique).map(a => ({ id: a.id, name: a.name, is_unique: a.is_unique })))
 
     if (searchQuery) {
       const searchTerms = searchQuery
