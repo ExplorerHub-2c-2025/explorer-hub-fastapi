@@ -76,15 +76,10 @@
 
 /* Attractions Grid - Horizontal Scroll */
 .attractionsGrid {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1.25rem;
-  overflow-x: auto;
-  overflow-y: hidden;
   padding: 1rem 0 2rem 0;
-  scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
-  scrollbar-color: #a08058 #e9e4df;
   margin-left: auto;
   margin-right: auto;
   max-width: 1400px;
