@@ -12,7 +12,7 @@ import { Star, MapPin, Phone, Globe, DollarSign, Calendar, Heart, Loader2, Arrow
 import { AuthRequiredDialog } from "@/components/auth-required-dialog"
 import { ReviewForm } from "@/components/review-form"
 import { PromotionCard } from "@/components/promotion-card"
-import { useAuthRequired } from "@/lib/hook/use-auth-required"
+import { useAuthRequired } from "@/lib/hooks/use-auth-required"
 import styles from "./page.module.css"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -1385,8 +1385,6 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
     }
   }
 
-  console.log("Render - showAuthDialog:", showAuthDialog)
-
   if (isLoading) {
     return (
       <div className={styles.pageContainer}>
@@ -1768,7 +1766,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
                       size="lg"
                     >
                       <Plus className={styles.buttonIcon} />
-                      Guardar en Viaje
+                      Agregar a Viaje
                     </Button>
                     <Button 
                       onClick={handleToggleFavorite} 
@@ -1822,34 +1820,28 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
               </Card>
 
               {/* Promotions Section */}
-              <Card>
-                <CardContent className={styles.contactSection}>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <Tag className="h-5 w-5 text-primary flex-shrink-0" />
-                      <h3 className={styles.contactTitle}>
-                        Promociones ({promotions.length})
-                      </h3>
+              {promotions.length > 0 && (
+                <Card>
+                  <CardContent className={styles.contactSection}>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <Tag className="h-5 w-5 text-primary flex-shrink-0" />
+                        <h3 className={styles.contactTitle}>
+                          Promociones ({promotions.length})
+                        </h3>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {promotions.length >= 3 && (
+                          <Button 
+                            onClick={() => setOpenAllPromotionsDialog(true)} 
+                            variant="outline"
+                            size="sm"
+                          >
+                            Ver todas
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {promotions.length >= 3 && (
-                        <Button 
-                          onClick={() => setOpenAllPromotionsDialog(true)} 
-                          variant="outline"
-                          size="sm"
-                        >
-                          Ver todas
-                        </Button>
-                      )}
-                      {isOwner && (
-                        <Button onClick={() => setOpenPromotionDialog(true)} size="sm">
-                          <Plus className="h-4 w-4 mr-1" />
-                          Crear
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                  {promotions.length > 0 ? (
                     <div className="space-y-3">
                       {promotions.slice(0, 2).map((promotion) => (
                         <PromotionCard
@@ -1874,16 +1866,9 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
                         />
                       ))}
                     </div>
-                  ) : (
-                    <div className="text-center py-4 text-sm text-muted-foreground">
-                      {isOwner 
-                        ? "No hay promociones. ¡Crea una para atraer clientes!"
-                        : "Sin promociones activas."
-                      }
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
         </div>
