@@ -18,6 +18,10 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import dynamic from "next/dynamic"
+
+// Dynamic import for Map component to avoid SSR issues
+const ActivityMap = dynamic(() => import("./ActivityMapComponent"), { ssr: false })
 
 interface Business {
   id: number
@@ -1858,6 +1862,19 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
                         </a>
                       </div>
                     )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Map Section */}
+              <Card>
+                <CardContent className={styles.contactSection}>
+                  <h3 className={styles.contactTitle}>Ubicación</h3>
+                  <div style={{ marginTop: '16px' }}>
+                    <ActivityMap
+                      businessName={activity.name}
+                      location={activity.location}
+                    />
                   </div>
                 </CardContent>
               </Card>
