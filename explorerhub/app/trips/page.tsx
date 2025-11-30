@@ -16,6 +16,7 @@ import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface Trip {
   id: string
@@ -33,6 +34,8 @@ export default function TripsPage() {
   const [isAuthorized, setIsAuthorized] = useState(false)
   const [trips, setTrips] = useState<Trip[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [availableCities, setAvailableCities] = useState<string[]>([])
+  const [loadingCities, setLoadingCities] = useState(false)
   const [alertDialog, setAlertDialog] = useState<{
     open: boolean
     type: 'success' | 'error' | 'confirm' | 'info'
@@ -67,7 +70,24 @@ export default function TripsPage() {
     }
     setIsAuthorized(true)
     loadTrips()
+    loadCities()
   }, [router])
+
+  const loadCities = async () => {
+    try {
+      setLoadingCities(true)
+      const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"
+      const data = await fetch(`${baseUrl}/api/businesses/cities`)
+      if (data.ok) {
+        const cities = await data.json()
+        setAvailableCities(cities)
+      }
+    } catch (error) {
+      console.error("Error loading cities:", error)
+    } finally {
+      setLoadingCities(false)
+    }
+  }
 
   const loadTrips = async () => {
     try {
@@ -371,73 +391,125 @@ export default function TripsPage() {
 
       {/* Generator Dialog */}
       <Dialog open={generatorOpen} onOpenChange={setGeneratorOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Generar viaje automático</DialogTitle>
             <DialogDescription>Completa los datos para crear un itinerario</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 px-1">
             <div className="space-y-2">
               <Label>Título del viaje</Label>
               <Input value={genTitle} onChange={e => setGenTitle(e.target.value)} placeholder="Ej: Europa en 10 días" />
             </div>
-            <div className="space-y-2">
-              <Label>Preferencia de presupuesto</Label>
-              <select
-                className="w-full border rounded h-10 px-3"
-                value={genBudget}
-                onChange={e => setGenBudget(e.target.value as any)}
-              >
-                <option value="bajo">Económico</option>
-                <option value="medio">Estándar</option>
-                <option value="alto">Premium</option>
-              </select>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Preferencia de presupuesto</Label>
+                <Select value={genBudget} onValueChange={(val) => setGenBudget(val as any)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona presupuesto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="bajo">Económico</SelectItem>
+                    <SelectItem value="medio">Estándar</SelectItem>
+                    <SelectItem value="alto">Premium</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Actividades por día</Label>
+                <Select value={String(genActivitiesPerDay)} onValueChange={(val) => setGenActivitiesPerDay(Number(val) as 1|2)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona cantidad" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">1 actividad</SelectItem>
+                    <SelectItem value="2">2 actividades</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Actividades por día</Label>
-              <select
-                className="w-full border rounded h-10 px-3"
-                value={genActivitiesPerDay}
-                onChange={e => setGenActivitiesPerDay(Number(e.target.value) as 1|2)}
-              >
-                <option value="1">1 actividad</option>
-                <option value="2">2 actividades</option>
-              </select>
-            </div>
+
             <div className="space-y-3">
-              <Label>Ciudades</Label>
-              {genCities.map((c, idx) => (
-                <div key={idx} className="flex gap-2 items-end">
-                  <div className="md:col-span-2">
-                    <Label className="text-xs">Ciudad</Label>
-                    <Input value={c.city} onChange={e => updateCity(idx, 'city', e.target.value)} placeholder="Ciudad" />
+              <div className="flex items-center justify-between">
+                <Label>Ciudades e itinerario</Label>
+                <Button variant="outline" size="sm" onClick={addCity}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Agregar ciudad
+                </Button>
+              </div>
+              
+              <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+                {genCities.map((c, idx) => (
+                  <div key={idx} className="border rounded-lg p-3 space-y-3 bg-gray-50">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-700">Ciudad {idx + 1}</span>
+                      {genCities.length > 1 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeCity(idx)}
+                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label className="text-xs">Ciudad</Label>
+                      <Select 
+                        value={c.city} 
+                        onValueChange={(val) => updateCity(idx, 'city', val)}
+                        disabled={loadingCities}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={loadingCities ? "Cargando..." : "Selecciona ciudad"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableCities.map((city) => (
+                            <SelectItem key={city} value={city}>
+                              {city}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label className="text-xs">Fecha inicio</Label>
+                        <Input 
+                          type="date" 
+                          value={c.start_date} 
+                          onChange={e => updateCity(idx, 'start_date', e.target.value)}
+                          className="w-full"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs">Fecha fin</Label>
+                        <Input 
+                          type="date" 
+                          value={c.end_date} 
+                          onChange={e => updateCity(idx, 'end_date', e.target.value)}
+                          className="w-full"
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <Label className="text-xs">Inicio</Label>
-                    <Input type="date" value={c.start_date} onChange={e => updateCity(idx, 'start_date', e.target.value)} />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Fin</Label>
-                    <Input type="date" value={c.end_date} onChange={e => updateCity(idx, 'end_date', e.target.value)} />
-                  </div>
-                  <Button
-                    variant="destructive"
-                    title="Eliminar ciudad"
-                    onClick={() => removeCity(idx)}
-                    disabled={genCities.length === 1}
-                    className={genCities.length === 1 ? 'opacity-50 cursor-not-allowed' : ''}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
-          <div className="md:col-span-1 flex md:justify-end">
-            <Button variant="outline" className="w-auto" onClick={addCity}>Agregar ciudad</Button>
-          </div>
-          <DialogFooter>
-            <Button variant="secondary" onClick={submitGenerate}>Generar viaje</Button>
+          
+          <DialogFooter className="mt-6">
+            <Button variant="outline" onClick={() => setGeneratorOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={submitGenerate}>
+              Generar viaje
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useRef, useCallback } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
@@ -63,6 +63,11 @@ export default function ExplorePage() {
   const [userTrips, setUserTrips] = useState<any[]>([])
   const [showTripSelector, setShowTripSelector] = useState<number | null>(null)
   const [showFilters, setShowFilters] = useState(false)
+  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(true)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const observerTarget = useRef<HTMLDivElement>(null)
+  const PAGE_SIZE = 20
 
   useEffect(() => {
     const userData = localStorage.getItem("user")
@@ -104,7 +109,9 @@ export default function ExplorePage() {
   const fetchBusinesses = async () => {
     try {
       setIsLoading(true)
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/api/businesses`)
+      // Primera página: skip = 0
+      const url = `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/api/businesses?skip=0&limit=${PAGE_SIZE}`
+      const response = await fetch(url)
 
       if (!response.ok) {
         throw new Error("Error al cargar los establecimientos")
@@ -112,6 +119,8 @@ export default function ExplorePage() {
 
       const data = await response.json()
       setActivities(data)
+      setPage(1)
+      setHasMore(data.length === PAGE_SIZE)
 
       // Load favorite counts for all businesses
       await loadFavoriteCounts(data)
@@ -122,6 +131,39 @@ export default function ExplorePage() {
       setIsLoading(false)
     }
   }
+
+  const loadMoreActivities = useCallback(async () => {
+    if (isLoadingMore || !hasMore) return
+
+    try {
+      setIsLoadingMore(true)
+      const nextPage = page + 1
+      const skip = page * PAGE_SIZE // page empieza en 1
+      const url = `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/api/businesses?skip=${skip}&limit=${PAGE_SIZE}`
+      const response = await fetch(url)
+
+      if (!response.ok) {
+        throw new Error("Error al cargar más establecimientos")
+      }
+
+      const data: Business[] = await response.json()
+
+      if (data.length === 0) {
+        setHasMore(false)
+      } else {
+        setActivities(prev => [...prev, ...data])
+        await loadFavoriteCounts(data)
+        setPage(nextPage)
+        if (data.length < PAGE_SIZE) {
+          setHasMore(false)
+        }
+      }
+    } catch (err) {
+      console.error("Error loading more businesses:", err)
+    } finally {
+      setIsLoadingMore(false)
+    }
+  }, [page, isLoadingMore, hasMore, PAGE_SIZE])
 
   const loadFavorites = async () => {
     const token = localStorage.getItem("token")
@@ -428,6 +470,57 @@ export default function ExplorePage() {
     return Array.from(categorySet).sort()
   }, [activities])
 
+  // Infinite scroll observer
+  useEffect(() => {
+    if (viewMode !== 'grid') return
+
+    const target = observerTarget.current
+    if (!target) return
+
+    console.log('[InfiniteScroll] Mount observer. hasMore=', hasMore, 'isLoadingMore=', isLoadingMore, 'page=', page)
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0]
+        if (entry.isIntersecting) {
+          console.log('[InfiniteScroll] Sentinel intersecting. hasMore=', hasMore, 'isLoadingMore=', isLoadingMore, 'page=', page)
+          if (hasMore && !isLoadingMore) {
+            loadMoreActivities()
+          }
+        }
+      },
+      {
+        root: null,
+        rootMargin: '200px 0px 400px 0px', // pre-carga antes de tocar fondo y extra margen inferior
+        threshold: 0 // disparamos al primer píxel visible
+      }
+    )
+
+    observer.observe(target)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [hasMore, isLoadingMore, loadMoreActivities, viewMode, page])
+
+  // Fallback por scroll manual en caso de que el observer falle (algunas combinaciones de layout / CSS)
+  useEffect(() => {
+    if (viewMode !== 'grid') return
+    const onScroll = () => {
+      if (!hasMore || isLoadingMore) return
+      const scrollPosition = window.innerHeight + window.scrollY
+      const threshold = document.body.offsetHeight - 600 // a 600px del final
+      if (scrollPosition >= threshold) {
+        console.log('[InfiniteScroll][Fallback] Cerca del final, intentando cargar más. page=', page)
+        loadMoreActivities()
+      }
+    }
+    window.addEventListener('scroll', onScroll)
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [hasMore, isLoadingMore, loadMoreActivities, viewMode, page])
+
+  // Desactivamos backfill inicial para evitar doble request en carga
+
   return (
     <div className={styles.pageContainer}>
       <Header />
@@ -651,7 +744,17 @@ export default function ExplorePage() {
                       </div>
                     )
                   })}
+
+                  {/* Infinite Scroll Loader */}
+                  <div ref={observerTarget} className={styles.scrollSentinel}>
+                    {isLoadingMore && (
+                      <div className={styles.loadingMoreContainer}>
+                        <Loader2 className={styles.loadingSpinner} />
+                        <span>Cargando más actividades...</span>
+                      </div>
+                    )}
                   </div>
+                </div>
                 </div>
               </>
               )}

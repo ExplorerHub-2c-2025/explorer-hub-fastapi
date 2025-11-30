@@ -911,3 +911,28 @@
   font-size: 0.8rem;
   opacity: 0.7;
 }
+
+/* Infinite Scroll */
+.scrollSentinel {
+  grid-column: 1 / -1;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem 0;
+}
+
+.loadingMoreContainer {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #a08058;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.loadingMoreContainer .loadingSpinner {
+  height: 1.5rem;
+  width: 1.5rem;
+}
+
