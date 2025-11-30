@@ -81,26 +81,53 @@ export default function EditProfile() {
     setSuccess(false)
 
     try {
-      // Simulate API call - in production, this would update the backend
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      // Call backend API to update profile
+      const token = localStorage.getItem("token")
+      if (!token) {
+        throw new Error("No token found")
+      }
 
-      // Update local storage
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/profile/update`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            full_name: formData.name,
+            country: formData.country,
+            language: formData.language,
+            preferences: formData.travel_preferences,
+          }),
+        }
+      )
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || "Error al actualizar el perfil")
+      }
+
+      const updatedUser = await response.json()
+
+      // Update local storage with response from backend
       const userData = localStorage.getItem("user")
       if (userData) {
         const parsedUser = JSON.parse(userData)
-        const updatedUser = { 
+        const newUserData = { 
           ...parsedUser, 
-          full_name: formData.name,
-          name: formData.name,
-          email: formData.email,
-          country: formData.country,
-          birth_date: formData.date_of_birth,
-          date_of_birth: formData.date_of_birth,
-          language: formData.language,
-          preferences: formData.travel_preferences,
-          travel_preferences: formData.travel_preferences,
+          ...updatedUser,
+          full_name: updatedUser.full_name,
+          name: updatedUser.full_name,
+          country: updatedUser.country,
+          birth_date: updatedUser.birth_date,
+          date_of_birth: updatedUser.birth_date,
+          language: updatedUser.language,
+          preferences: updatedUser.preferences,
+          travel_preferences: updatedUser.preferences,
         }
-        localStorage.setItem("user", JSON.stringify(updatedUser))
+        localStorage.setItem("user", JSON.stringify(newUserData))
       }
 
       setSuccess(true)
@@ -112,7 +139,7 @@ export default function EditProfile() {
         }
       }, 1500)
     } catch (err) {
-      setError("Error al actualizar el perfil")
+      setError(err instanceof Error ? err.message : "Error al actualizar el perfil")
     } finally {
       setIsLoading(false)
     }
