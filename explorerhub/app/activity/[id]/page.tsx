@@ -311,6 +311,9 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
   // All promotions modal
   const [openAllPromotionsDialog, setOpenAllPromotionsDialog] = useState(false)
   
+  // Recommended activities
+  const [recommendedActivities, setRecommendedActivities] = useState<Business[]>([])
+  
   const [promotionForm, setPromotionForm] = useState({
     title: "",
     description: "",
@@ -372,6 +375,29 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
 
         const data = await response.json()
         setActivity(data)
+        
+        // Fetch recommended activities based on same city and category
+        const fetchRecommended = async () => {
+          try {
+            const params = new URLSearchParams()
+            params.set("city", data.location.city)
+            if (data.categories && data.categories.length > 0) {
+              params.append("category", data.categories[0])
+            }
+            params.set("skip", "0")
+            params.set("limit", "3")
+            
+            const recResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/businesses?${params.toString()}`)
+            if (recResponse.ok) {
+              const recData = await recResponse.json()
+              const filtered = recData.filter((b: Business) => b.id !== data.id).slice(0, 2)
+              setRecommendedActivities(filtered)
+            }
+          } catch (error) {
+            console.error("Error fetching recommended activities:", error)
+          }
+        }
+        fetchRecommended()
         
         // Check if current user is the owner
         const userData = localStorage.getItem("user")
@@ -1931,6 +1957,55 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
               )}
             </div>
           </div>
+
+          {/* Recommended Activities Section */}
+          {recommendedActivities.length > 0 && (
+            <div className={styles.section}>
+              <h2 className={styles.sectionTitle}>También puede interesarte...</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {recommendedActivities.map((recActivity) => (
+                  <Card 
+                    key={recActivity.id}
+                    className="cursor-pointer hover:shadow-lg transition-shadow py-0"
+                    onClick={() => router.push(`/activity/${recActivity.id}`)}
+                  >
+                    <CardContent className="p-0">
+                      <div className="relative h-48 mb-3 rounded-t-lg overflow-hidden">
+                        <img
+                          src={recActivity.images[0] || "/images/placeholder-business.jpg"}
+                          alt={recActivity.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="p-4">
+                        <h3 className="font-semibold text-lg mb-2">{recActivity.name}</h3>
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="flex items-center">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                              <Star
+                                key={i}
+                                className={`h-4 w-4 ${i < Math.floor(recActivity.rating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+                              />
+                            ))}
+                          </div>
+                          <span className="text-sm text-muted-foreground">
+                            {recActivity.rating.toFixed(1)} ({recActivity.review_count})
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                          {recActivity.description}
+                        </p>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <MapPin className="h-4 w-4" />
+                          <span>{recActivity.location.city}, {recActivity.location.state}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </main>
 
