@@ -80,6 +80,30 @@ export default function EditProfile() {
     setError("")
     setSuccess(false)
 
+    // Validate age (18+)
+    if (formData.date_of_birth) {
+      const birthDate = new Date(formData.date_of_birth)
+      const today = new Date()
+      let age = today.getFullYear() - birthDate.getFullYear()
+      const monthDiff = today.getMonth() - birthDate.getMonth()
+      
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--
+      }
+      
+      if (age < 18) {
+        setError("Debe ser mayor de 18 años")
+        setIsLoading(false)
+        return
+      }
+      
+      if (birthDate > today) {
+        setError("La fecha de nacimiento no puede estar en el futuro")
+        setIsLoading(false)
+        return
+      }
+    }
+
     try {
       // Call backend API to update profile
       const token = localStorage.getItem("token")
@@ -98,6 +122,7 @@ export default function EditProfile() {
           body: JSON.stringify({
             full_name: formData.name,
             country: formData.country,
+            birth_date: formData.date_of_birth,
             language: formData.language,
             preferences: formData.travel_preferences,
           }),
@@ -249,6 +274,9 @@ export default function EditProfile() {
                   required
                   disabled={isLoading}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Debes tener al menos 18 años
+                </p>
               </div>
 
               <div className="space-y-2">
