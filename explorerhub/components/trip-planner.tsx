@@ -2,12 +2,13 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import styles from "./trip-planner.module.css"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -29,6 +30,26 @@ export function TripPlanner({ onCreateTrip }: TripPlannerProps) {
   const [visibility, setVisibility] = useState<"private" | "followers" | "public">("private")
   const [isStartDateOpen, setIsStartDateOpen] = useState(false)
   const [isEndDateOpen, setIsEndDateOpen] = useState(false)
+  const [cities, setCities] = useState<string[]>([])
+  const [loadingCities, setLoadingCities] = useState(true)
+
+  useEffect(() => {
+    const fetchCities = async () => {
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"
+        const res = await fetch(`${baseUrl}/api/businesses/cities`)
+        if (res.ok) {
+          const data = await res.json()
+          setCities(data)
+        }
+      } catch (error) {
+        console.error("Error fetching cities:", error)
+      } finally {
+        setLoadingCities(false)
+      }
+    }
+    fetchCities()
+  }, [])
 
   const handleStartDateSelect = (date: Date | undefined) => {
     if (date && endDate && date > endDate) {
@@ -83,14 +104,19 @@ export function TripPlanner({ onCreateTrip }: TripPlannerProps) {
           </div>
 
           <div className={styles.fieldContainer}>
-            <Label htmlFor="destination" className={styles.labelMargin}>Destino *</Label>
-            <Input
-              id="destination"
-              value={destination}
-              onChange={(e) => setDestination(e.target.value)}
-              placeholder="Roma, Florencia, Venecia"
-              required
-            />
+            <Label htmlFor="destination" className={styles.labelMargin}>Ciudad de destino *</Label>
+            <Select value={destination} onValueChange={setDestination} disabled={loadingCities}>
+              <SelectTrigger id="destination">
+                <SelectValue placeholder={loadingCities ? "Cargando ciudades..." : "Selecciona una ciudad"} />
+              </SelectTrigger>
+              <SelectContent>
+                {cities.map((city) => (
+                  <SelectItem key={city} value={city}>
+                    {city}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className={styles.gridTwo}>

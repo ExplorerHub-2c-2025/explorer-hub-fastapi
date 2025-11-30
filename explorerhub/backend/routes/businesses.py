@@ -16,6 +16,15 @@ from services.geocoding_service import GeocodingService
 router = APIRouter(prefix="/api/businesses", tags=["businesses"])
 
 
+@router.get("/cities", response_model=List[str])
+async def get_cities(db = Depends(get_database)):
+    """Get list of unique cities from active businesses"""
+    cities = await db.businesses.distinct("location.city", {"is_active": True})
+    # Filter out None/empty values and sort
+    cities = [city for city in cities if city and city.strip()]
+    return sorted(cities)
+
+
 @router.post("/", response_model=Business, status_code=status.HTTP_201_CREATED)
 async def create_business(
     business: BusinessCreate,
