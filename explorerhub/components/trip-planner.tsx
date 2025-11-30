@@ -31,11 +31,17 @@ export function TripPlanner({ onCreateTrip }: TripPlannerProps) {
   const [isEndDateOpen, setIsEndDateOpen] = useState(false)
 
   const handleStartDateSelect = (date: Date | undefined) => {
+    if (date && endDate && date > endDate) {
+      setEndDate(undefined)
+    }
     setStartDate(date)
     setIsStartDateOpen(false)
   }
 
   const handleEndDateSelect = (date: Date | undefined) => {
+    if (date && startDate && date < startDate) {
+      return
+    }
     setEndDate(date)
     setIsEndDateOpen(false)
   }
@@ -52,6 +58,8 @@ export function TripPlanner({ onCreateTrip }: TripPlannerProps) {
       visibility,
     })
   }
+
+  const dateError = startDate && endDate && startDate > endDate
 
   return (
     <Card>
@@ -96,7 +104,13 @@ export function TripPlanner({ onCreateTrip }: TripPlannerProps) {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className={styles.popoverContent}>
-                  <Calendar mode="single" selected={startDate} onSelect={handleStartDateSelect} initialFocus />
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={handleStartDateSelect}
+                    disabled={endDate ? [{ after: endDate }] : undefined}
+                    initialFocus
+                  />
                 </PopoverContent>
               </Popover>
             </div>
@@ -111,7 +125,13 @@ export function TripPlanner({ onCreateTrip }: TripPlannerProps) {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className={styles.popoverContent}>
-                  <Calendar mode="single" selected={endDate} onSelect={handleEndDateSelect} initialFocus />
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={handleEndDateSelect}
+                    disabled={startDate ? [{ before: startDate }] : undefined}
+                    initialFocus
+                  />
                 </PopoverContent>
               </Popover>
             </div>
@@ -194,7 +214,17 @@ export function TripPlanner({ onCreateTrip }: TripPlannerProps) {
             </div>
           </div>
 
-          <Button type="submit" className={styles.fullWidthBtn} disabled={!name || !destination || !startDate || !endDate || (visibility !== "private" && !description.trim())}>
+          {dateError && (
+            <div className="text-sm text-red-600 -mt-2 mb-4">
+              La fecha de inicio no puede ser posterior a la fecha de fin.
+            </div>
+          )}
+
+          <Button
+            type="submit"
+            className={styles.fullWidthBtn}
+            disabled={!name || !destination || !startDate || !endDate || dateError || (visibility !== "private" && !description.trim())}
+          >
             Crear Viaje
           </Button>
         </form>

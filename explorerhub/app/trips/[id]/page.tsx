@@ -508,7 +508,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
               onAddActivity={handleAddActivity}
               onRemoveActivity={handleRemoveActivity}
               onUpdateSchedule={handleUpdateSchedule}
-              firstActivityMapLink={
+              /* firstActivityMapLink={
                 firstActivity ? (
                   <CurrentLocationMapLink
                     address={firstActivity.location?.address || ""}
@@ -516,7 +516,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                     activityName={firstActivity.business_name}
                   />
                 ) : undefined
-              }
+              } */
               onUpdateNotes={handleUpdateNotes}
               onAddImage={handleAddImage}
               onUpdateImageNotes={handleUpdateImageNotes}
@@ -530,7 +530,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
             <WeatherCard city={nearestCity} />
 
             {/* Nearby Events - Always show using nearest city */}
-            <NearbyEventsCard city={nearestCity} />
+            {/* <NearbyEventsCard city={nearestCity} /> */}
             <Card>
               <CardContent className={styles.cardContent}>
                 <h3 className={styles.sectionTitle}>Resumen del Viaje</h3>
