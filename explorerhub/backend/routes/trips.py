@@ -760,6 +760,9 @@ async def generate_trip(
 
     overall_start = min(c.start_date for c in req.cities)
     overall_end = max(c.end_date for c in req.cities)
+    
+    logger.info(f"[GENERATE] Date range calculated: start={overall_start}, end={overall_end}")
+    logger.info(f"[GENERATE] Individual cities: {[(c.city, c.start_date, c.end_date) for c in req.cities]}")
 
     destination = req.cities[0].city if len(req.cities) == 1 else "Multi-ciudad"
 
