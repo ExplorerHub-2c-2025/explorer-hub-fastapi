@@ -692,6 +692,16 @@ async def generate_trip(
     logger.info(f"[GENERATE] Starting with name={req.name}, budget={req.budget}, activities_per_day={req.activities_per_day}, cities={len(req.cities)}")
     if not req.cities:
         raise HTTPException(status_code=400, detail="Debe ingresar al menos una ciudad")
+    
+    # Validate dates
+    today = datetime.now().date()
+    for city_block in req.cities:
+        if city_block.start_date.date() < today:
+            raise HTTPException(status_code=400, detail="La fecha de inicio debe ser igual o posterior a hoy")
+        if city_block.end_date.date() < today:
+            raise HTTPException(status_code=400, detail="La fecha de fin debe ser igual o posterior a hoy")
+        if city_block.end_date.date() < city_block.start_date.date():
+            raise HTTPException(status_code=400, detail="La fecha de fin debe ser igual o posterior a la fecha de inicio")
 
     def budget_range(b: BudgetLevel):
         if b == BudgetLevel.bajo:

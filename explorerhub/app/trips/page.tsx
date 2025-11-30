@@ -160,7 +160,10 @@ export default function TripsPage() {
       // As a last resort, just reload list
       router.push('/trips')
     } catch (e) {
-      showAlert('error', 'No se pudo generar', 'Intenta nuevamente más tarde')
+      const errorString = String(e)
+      const match = errorString.match(/\{"detail":"([^"]+)"\}/)
+      const errorMessage = match ? match[1] : 'Intenta nuevamente más tarde'
+      showAlert('error', 'No se pudo generar', errorMessage)
     }
   }
 
