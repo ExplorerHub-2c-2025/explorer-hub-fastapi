@@ -247,239 +247,238 @@ export function ItineraryBuilder({
                   const globalIndex = sortedActivities.findIndex(a => a.business_id === activity.business_id)
                   const isPendingChange = pendingScheduleChanges[activity.business_id] !== undefined
                   return (
-            <Card 
-              key={activity.business_id}
-              draggable
-              onDragStart={() => handleDragStart(activity)}
-              className={`cursor-move ${isPendingChange ? 'border-2 border-yellow-500' : ''}`}
-            >
-              <CardContent className={`${styles.activityCard} relative`}>
-                <div className="absolute right-2 top-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onRemoveActivity(activity.business_id)}
-                    className="text-red-600 hover:text-red-700"
-                    title="Eliminar actividad"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-                {globalIndex === 0 && firstActivityMapLink && <div className="mb-3">{firstActivityMapLink}</div>}
-
-                <div className={styles.activityContent}>
-                  {/* Business Image on the left */}
-                  {activity.business_images && activity.business_images.length > 0 && (
-                    <div className="shrink-0 mr-4">
-                      <img
-                        src={activity.business_images[0]}
-                        alt={activity.business_name}
-                        className="w-32 h-32 object-cover rounded-lg"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none'
-                        }}
-                      />
-                    </div>
-                  )}
-
-                  <div className={styles.activityMain}>
-                    <div className={styles.activityHeader}>
-                      <h4 className={styles.activityTitle}>{activity.business_name}</h4>
-                      <Badge variant="secondary">
-                        {activity.categories && activity.categories.length > 0 ? activity.categories[0] : 'Sin categoría'}
-                      </Badge>
-                    </div>
-
-                    {/* Date Scheduler - Hidden, date shown in section header */}
-                    <div className={styles.timeRow} style={{ display: 'none' }}>
-                      <Clock className={styles.timeIcon} />
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="ghost" size="sm" className={styles.scheduleButton}>
-                            {activity.scheduled_date ? format(activity.scheduled_date, "PPP") : "Programar fecha"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                          <CalendarComponent
-                            mode="single"
-                            selected={activity.scheduled_date}
-                            onSelect={(date) => date && onUpdateSchedule(activity.business_id, date)}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-
-                    {/* Notes Section */}
-                    {editingNotes === activity.business_id ? (
-                      <div className="space-y-2 mt-2">
-                        <Textarea
-                          value={tempNotes}
-                          onChange={(e) => setTempNotes(e.target.value)}
-                          placeholder="Añade notas sobre esta actividad..."
-                          className={styles.notesTextarea}
-                        />
-                        <div className="flex gap-2">
-                          <Button size="sm" onClick={() => handleSaveNotes(activity.business_id)}>
-                            <Save className="h-3 w-3 mr-1" />
-                            Guardar
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={handleCancelEdit}>
-                            Cancelar
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        {activity.notes && <p className={styles.activityNotes}>{activity.notes}</p>}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditNotes(activity.business_id, activity.notes)}
-                          className={styles.editNotesButton}
-                        >
-                          <Edit2 className="h-3 w-3 mr-1" />
-                          {activity.notes ? "Editar notas" : "Añadir notas"}
-                        </Button>
-                      </>
-                    )}
-
-                    {activity.location?.city && (
-                      <div className="mt-3 space-y-2">
-                        <p className="text-sm text-muted-foreground">
-                          📍 {activity.location.address}, {activity.location.city}
-                        </p>
-
-                        {/* Route link from previous activity */}
-                        {globalIndex > 0 && sortedActivities[globalIndex - 1].location?.city && (
-                          <RouteLinkWrapper
-                            key={`route-${sortedActivities[globalIndex - 1].business_id}-to-${activity.business_id}`}
-                            fromAddress={sortedActivities[globalIndex - 1].location?.address || ""}
-                            fromCity={sortedActivities[globalIndex - 1].location?.city || ""}
-                            toAddress={activity.location.address || ""}
-                            toCity={activity.location.city || ""}
-                            activityName={activity.business_name}
-                            fromActivityName={sortedActivities[globalIndex - 1].business_name}
-                          />
-                        )}
-                      </div>
-                    )}
-
-                    {/* Images Section */}
-                    {onAddImage && (
-                      <div className="space-y-3 mt-4">
-                        <div className="flex gap-2">
-                          <Input
-                            type="url"
-                            placeholder="URL de la imagen..."
-                            value={imageInput[activity.business_id] || ""}
-                            onChange={(e) =>
-                              setImageInput((prev) => ({
-                                ...prev,
-                                [activity.business_id]: e.target.value,
-                              }))
-                            }
-                            className="flex-1"
-                          />
+                    <Card 
+                      key={activity.business_id}
+                      draggable
+                      onDragStart={() => handleDragStart(activity)}
+                      className={`cursor-move ${isPendingChange ? 'border-2 border-yellow-500' : ''}`}
+                    >
+                      <CardContent className={`${styles.activityCard} relative`}>
+                        <div className="absolute right-4 top-0">
                           <Button
+                            variant="ghost"
                             size="sm"
-                            onClick={() => handleAddImage(activity.business_id)}
-                            disabled={!imageInput[activity.business_id]?.trim()}
+                            onClick={() => onRemoveActivity(activity.business_id)}
+                            className="text-red-600 hover:text-red-700"
+                            title="Eliminar actividad"
                           >
-                            <Plus className="h-3 w-3 mr-1" />
-                            Añadir
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
+                        {globalIndex === 0 && firstActivityMapLink && <div className="mb-3">{firstActivityMapLink}</div>}
 
-                        {activity.images && activity.images.length > 0 && (
-                          <div className="space-y-2">
-                            {activity.images.map((image, imageIndex) => (
-                              <div
-                                key={imageIndex}
-                                className="border rounded-lg p-3 bg-gray-50"
-                              >
-                                <div className="flex flex-col gap-3">
-                                  <img
-                                    src={image.url}
-                                    alt={`Imagen ${imageIndex + 1}`}
-                                    className="w-full max-w-xs h-48 object-cover rounded mx-auto"
+                        <div className={styles.activityContent}>
+                          {/* Business Image on the left */}
+                          {activity.business_images && activity.business_images.length > 0 && (
+                            <div className="shrink-0 mr-4">
+                              <img
+                                src={activity.business_images[0]}
+                                alt={activity.business_name}
+                                className="w-32 h-32 object-cover rounded-lg"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none'
+                                }}
+                              />
+                            </div>
+                          )}
+
+                          <div className={styles.activityMain}>
+                            <div className={styles.activityHeader}>
+                              <h4 className={styles.activityTitle}>{activity.business_name}</h4>
+                              <Badge variant="secondary">
+                                {activity.categories && activity.categories.length > 0 ? activity.categories[0] : 'Sin categoría'}
+                              </Badge>
+                            </div>
+
+                            {/* Date Scheduler - Hidden, date shown in section header */}
+                            <div className={styles.timeRow} style={{ display: 'none' }}>
+                              <Clock className={styles.timeIcon} />
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button variant="ghost" size="sm" className={styles.scheduleButton}>
+                                    {activity.scheduled_date ? format(activity.scheduled_date, "PPP") : "Programar fecha"}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0">
+                                  <CalendarComponent
+                                    mode="single"
+                                    selected={activity.scheduled_date}
+                                    onSelect={(date) => date && onUpdateSchedule(activity.business_id, date)}
+                                    initialFocus
                                   />
-                                  <div className="flex-1">
-                                    {editingImageNotes?.businessId === activity.business_id &&
-                                    editingImageNotes.imageIndex === imageIndex ? (
-                                      <div className="space-y-2">
-                                        <Textarea
-                                          value={tempImageNotes}
-                                          onChange={(e) => setTempImageNotes(e.target.value)}
-                                          placeholder="Notas de la imagen..."
-                                          className="text-sm"
-                                          rows={2}
-                                        />
-                                        <div className="flex gap-2">
-                                          <Button
-                                            size="sm"
-                                            onClick={() =>
-                                              handleSaveImageNotes(activity.business_id, imageIndex)
-                                            }
-                                          >
-                                            <Save className="h-3 w-3 mr-1" />
-                                            Guardar
-                                          </Button>
-                                          <Button
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={handleCancelImageEdit}
-                                          >
-                                            Cancelar
-                                          </Button>
-                                        </div>
-                                      </div>
-                                    ) : (
-                                      <>
-                                        {image.notes && (
-                                          <p className="text-sm text-gray-700">{image.notes}</p>
-                                        )}
-                                        <div className="flex gap-2 mt-2">
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() =>
-                                              handleEditImageNotes(
-                                                activity.business_id,
-                                                imageIndex,
-                                                image.notes
-                                              )
-                                            }
-                                          >
-                                            <Edit2 className="h-3 w-3 mr-1" />
-                                            {image.notes ? "Editar" : "Añadir notas"}
-                                          </Button>
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() =>
-                                              handleRemoveImage(activity.business_id, imageIndex)
-                                            }
-                                            className="text-red-600 hover:text-red-700"
-                                          >
-                                            <Trash2 className="h-3 w-3 mr-1" />
-                                            Eliminar
-                                          </Button>
-                                        </div>
-                                      </>
-                                    )}
-                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+
+                            {/* Notes Section */}
+                            {editingNotes === activity.business_id ? (
+                              <div className="space-y-2 mt-2">
+                                <Textarea
+                                  value={tempNotes}
+                                  onChange={(e) => setTempNotes(e.target.value)}
+                                  placeholder="Añade notas sobre esta actividad..."
+                                  className={styles.notesTextarea}
+                                />
+                                <div className="flex gap-2">
+                                  <Button size="sm" onClick={() => handleSaveNotes(activity.business_id)}>
+                                    <Save className="h-3 w-3 mr-1" />
+                                    Guardar
+                                  </Button>
+                                  <Button size="sm" variant="outline" onClick={handleCancelEdit}>
+                                    Cancelar
+                                  </Button>
                                 </div>
                               </div>
-                            ))}
+                            ) : (
+                              <>
+                                {activity.notes && <p className={styles.activityNotes}>{activity.notes}</p>}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleEditNotes(activity.business_id, activity.notes)}
+                                  className={styles.editNotesButton}
+                                >
+                                  <Edit2 className="h-3 w-3 mr-1" />
+                                  {activity.notes ? "Editar notas" : "Añadir notas"}
+                                </Button>
+                              </>
+                            )}
+
+                            {/* {activity.location?.city && (
+                              <div className="mt-3 space-y-2">
+                                <p className="text-sm text-muted-foreground">
+                                  📍 {activity.location.address}, {activity.location.city}
+                                </p>
+
+                                {globalIndex > 0 && sortedActivities[globalIndex - 1].location?.city && (
+                                  <RouteLinkWrapper
+                                    key={`route-${sortedActivities[globalIndex - 1].business_id}-to-${activity.business_id}`}
+                                    fromAddress={sortedActivities[globalIndex - 1].location?.address || ""}
+                                    fromCity={sortedActivities[globalIndex - 1].location?.city || ""}
+                                    toAddress={activity.location.address || ""}
+                                    toCity={activity.location.city || ""}
+                                    activityName={activity.business_name}
+                                    fromActivityName={sortedActivities[globalIndex - 1].business_name}
+                                  />
+                                )}
+                              </div>
+                            )} */}
+
+                            {/* Images Section */}
+                            {onAddImage && (
+                              <div className="space-y-3 mt-4">
+                                <div className="flex gap-2">
+                                  <Input
+                                    type="url"
+                                    placeholder="URL de la imagen..."
+                                    value={imageInput[activity.business_id] || ""}
+                                    onChange={(e) =>
+                                      setImageInput((prev) => ({
+                                        ...prev,
+                                        [activity.business_id]: e.target.value,
+                                      }))
+                                    }
+                                    className="flex-1"
+                                  />
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleAddImage(activity.business_id)}
+                                    disabled={!imageInput[activity.business_id]?.trim()}
+                                  >
+                                    <Plus className="h-3 w-3 mr-1" />
+                                    Añadir
+                                  </Button>
+                                </div>
+
+                                {activity.images && activity.images.length > 0 && (
+                                  <div className="space-y-2">
+                                    {activity.images.map((image, imageIndex) => (
+                                      <div
+                                        key={imageIndex}
+                                        className="border rounded-lg p-3 bg-gray-50"
+                                      >
+                                        <div className="flex flex-col gap-3">
+                                          <img
+                                            src={image.url}
+                                            alt={`Imagen ${imageIndex + 1}`}
+                                            className="w-full max-w-xs h-48 object-cover rounded mx-auto"
+                                          />
+                                          <div className="flex-1">
+                                            {editingImageNotes?.businessId === activity.business_id &&
+                                            editingImageNotes.imageIndex === imageIndex ? (
+                                              <div className="space-y-2">
+                                                <Textarea
+                                                  value={tempImageNotes}
+                                                  onChange={(e) => setTempImageNotes(e.target.value)}
+                                                  placeholder="Notas de la imagen..."
+                                                  className="text-sm"
+                                                  rows={2}
+                                                />
+                                                <div className="flex gap-2">
+                                                  <Button
+                                                    size="sm"
+                                                    onClick={() =>
+                                                      handleSaveImageNotes(activity.business_id, imageIndex)
+                                                    }
+                                                  >
+                                                    <Save className="h-3 w-3 mr-1" />
+                                                    Guardar
+                                                  </Button>
+                                                  <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={handleCancelImageEdit}
+                                                  >
+                                                    Cancelar
+                                                  </Button>
+                                                </div>
+                                              </div>
+                                            ) : (
+                                              <>
+                                                {image.notes && (
+                                                  <p className="text-sm text-gray-700">{image.notes}</p>
+                                                )}
+                                                <div className="flex gap-2 mt-2">
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() =>
+                                                      handleEditImageNotes(
+                                                        activity.business_id,
+                                                        imageIndex,
+                                                        image.notes
+                                                      )
+                                                    }
+                                                  >
+                                                    <Edit2 className="h-3 w-3 mr-1" />
+                                                    {image.notes ? "Editar" : "Añadir notas"}
+                                                  </Button>
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() =>
+                                                      handleRemoveImage(activity.business_id, imageIndex)
+                                                    }
+                                                    className="text-red-600 hover:text-red-700"
+                                                  >
+                                                    <Trash2 className="h-3 w-3 mr-1" />
+                                                    Eliminar
+                                                  </Button>
+                                                </div>
+                                              </>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                        </div>
+                      </CardContent>
+                    </Card>
                   )
                 })}
               </div>
