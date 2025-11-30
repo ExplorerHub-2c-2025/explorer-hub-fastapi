@@ -456,6 +456,27 @@ async def add_activity_to_trip(
     if trip["user_id"] != user_id and user_id not in collaborators:
         raise HTTPException(status_code=403, detail="Not authorized to modify this trip")
     
+    # Validate activity date is within trip dates
+    trip_start = trip["start_date"]
+    trip_end = trip["end_date"]
+    
+    if isinstance(trip_start, str):
+        trip_start = datetime.fromisoformat(trip_start.replace('Z', '+00:00'))
+    if isinstance(trip_end, str):
+        trip_end = datetime.fromisoformat(trip_end.replace('Z', '+00:00'))
+    
+    # Only validate if scheduled_date is provided
+    if activity.scheduled_date:
+        activity_date = activity.scheduled_date.date() if hasattr(activity.scheduled_date, 'date') else activity.scheduled_date
+        trip_start_date = trip_start.date() if hasattr(trip_start, 'date') else trip_start
+        trip_end_date = trip_end.date() if hasattr(trip_end, 'date') else trip_end
+        
+        if activity_date < trip_start_date or activity_date > trip_end_date:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"La fecha de la actividad debe estar entre {trip_start_date.strftime('%d/%m/%Y')} y {trip_end_date.strftime('%d/%m/%Y')}"
+            )
+    
     # Verify business exists
     business = await db.businesses.find_one({"id": activity.business_id})
     if not business:
@@ -531,6 +552,30 @@ async def update_activity_in_trip(
     collaborators = trip.get("collaborators", [])
     if trip["user_id"] != user_id and user_id not in collaborators:
         raise HTTPException(status_code=403, detail="Not authorized to modify this trip")
+    
+    # Validate scheduled_date if provided
+    if "scheduled_date" in activity_update:
+        trip_start = trip["start_date"]
+        trip_end = trip["end_date"]
+        
+        if isinstance(trip_start, str):
+            trip_start = datetime.fromisoformat(trip_start.replace('Z', '+00:00'))
+        if isinstance(trip_end, str):
+            trip_end = datetime.fromisoformat(trip_end.replace('Z', '+00:00'))
+        
+        scheduled_date = activity_update["scheduled_date"]
+        if isinstance(scheduled_date, str):
+            scheduled_date = datetime.fromisoformat(scheduled_date.replace('Z', '+00:00'))
+        
+        scheduled_date_only = scheduled_date.date() if hasattr(scheduled_date, 'date') else scheduled_date
+        trip_start_date = trip_start.date() if hasattr(trip_start, 'date') else trip_start
+        trip_end_date = trip_end.date() if hasattr(trip_end, 'date') else trip_end
+        
+        if scheduled_date_only < trip_start_date or scheduled_date_only > trip_end_date:
+            raise HTTPException(
+                status_code=400,
+                detail=f"La fecha de la actividad debe estar entre {trip_start_date.strftime('%d/%m/%Y')} y {trip_end_date.strftime('%d/%m/%Y')}"
+            )
     
     # Build update query for the specific activity
     update_query = {}
