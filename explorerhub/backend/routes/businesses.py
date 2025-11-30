@@ -144,8 +144,10 @@ async def get_businesses(
     # Ordenar priorizando negocios suscritos por nivel, luego por rating
     # Enterprise > Premium > Basic > Sin suscripción
     # Dentro de cada nivel, ordenar por rating más alto
-    cursor = db.businesses.find(query).skip(skip).limit(limit)
-    businesses = await cursor.to_list(length=None)  # Obtener todos para ordenar en Python
+    # Recuperamos TODOS los negocios que cumplen el filtro para poder ordenarlos
+    # y luego aplicar paginación consistente tras el ordenamiento.
+    cursor = db.businesses.find(query)
+    businesses = await cursor.to_list(length=None)  # Ordenaremos en memoria y luego haremos slice
     
     # Validar que la suscripción esté activa y asignar prioridad
     current_time = dt.utcnow()
@@ -180,7 +182,7 @@ async def get_businesses(
     # Ordenar por prioridad de suscripción (descendente) y luego por rating (descendente)
     businesses.sort(key=lambda x: (x.get("_sort_priority", 0), x.get("rating", 0)), reverse=True)
     
-    # Aplicar paginación después del ordenamiento
+    # Aplicar paginación SOLO una vez (skip/limit se aplican aquí tras ordenar)
     businesses = businesses[skip:skip + limit] if limit else businesses[skip:]
     
     businesses = serialize_docs(businesses)
