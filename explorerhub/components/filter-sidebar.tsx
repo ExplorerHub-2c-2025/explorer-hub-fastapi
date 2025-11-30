@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Slider } from "@/components/ui/slider"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
@@ -16,6 +16,10 @@ export function FilterSidebar({ onFilterChange }: FilterSidebarProps) {
   const [priceRange, setPriceRange] = useState([1, 4])
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [minRating, setMinRating] = useState(0)
+  const onChangeRef = useRef<typeof onFilterChange | undefined>(onFilterChange)
+  useEffect(() => {
+    onChangeRef.current = onFilterChange
+  }, [onFilterChange])
 
   const categories = [
     "Restaurante",
@@ -33,14 +37,13 @@ export function FilterSidebar({ onFilterChange }: FilterSidebarProps) {
   ]
 
   useEffect(() => {
-    if (onFilterChange) {
-      onFilterChange({
-        priceRange,
-        categories: selectedCategories,
-        minRating,
-      })
-    }
-  }, [priceRange, selectedCategories, minRating, onFilterChange])
+    // Emit changes only when local filter values change; avoid depending on callback identity
+    onChangeRef.current?.({
+      priceRange,
+      categories: selectedCategories,
+      minRating,
+    })
+  }, [priceRange, selectedCategories, minRating])
 
   const handleCategoryToggle = (category: string) => {
     setSelectedCategories((prev) =>

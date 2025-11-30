@@ -77,12 +77,10 @@
 /* Attractions Grid - Horizontal Scroll */
 .attractionsGrid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1.25rem;
   padding: 1rem 0 2rem 0;
-  margin-left: auto;
-  margin-right: auto;
-  max-width: 1400px;
+  width: 100%;
 }
 
 .attractionsGrid::-webkit-scrollbar {
@@ -113,8 +111,17 @@
   display: flex;
   flex-direction: column;
   min-width: 320px;
-  max-width: 320px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   flex-shrink: 0;
+}
+
+.gridWithSidebar {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 16px;
+  align-items: start;
+  max-width: 1400px;
+  margin: auto;
 }
 
 .attractionCard:hover {

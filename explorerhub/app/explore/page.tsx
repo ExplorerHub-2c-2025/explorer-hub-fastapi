@@ -22,6 +22,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox"
 import dynamic from "next/dynamic"
 import styles from "./page.module.css"
+import { FilterSidebar } from "@/components/filter-sidebar"
 
 // Dynamic import for Map component to avoid SSR issues
 const Map = dynamic(() => import("./MapComponent"), { ssr: false })
@@ -469,7 +470,20 @@ export default function ExplorePage() {
             <>
               {/* Grid View */}
               {viewMode === "grid" && (
-                <div className={styles.attractionsGrid}>
+                <div className={styles.gridWithSidebar}>
+                  <div>
+                    <FilterSidebar
+                      onFilterChange={(f) => {
+                        setFilters((prev) => ({
+                          ...prev,
+                          priceRange: f.priceRange ?? prev.priceRange,
+                          categories: Array.isArray(f.categories) ? f.categories : prev.categories,
+                          minRating: typeof f.minRating === 'number' ? f.minRating : prev.minRating,
+                        }))
+                      }}
+                    />
+                  </div>
+                  <div className={styles.attractionsGrid}>
                   {filteredActivities.map((activity, index) => {
                     const currentImageIndex = imageIndexes[activity.id] || 0
                     const hasMultipleImages = activity.images.length > 1
@@ -608,6 +622,7 @@ export default function ExplorePage() {
                       </div>
                     )
                   })}
+                  </div>
                 </div>
               )}
 
