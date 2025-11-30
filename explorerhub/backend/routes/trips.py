@@ -70,6 +70,29 @@ async def create_trip(
     if isinstance(trip_dict["end_date"], str):
         trip_dict["end_date"] = datetime.fromisoformat(trip_dict["end_date"])
     
+    # Validate dates (compare only dates, not datetime)
+    today = datetime.now().date()
+    start_date = trip_dict["start_date"].date() if hasattr(trip_dict["start_date"], 'date') else trip_dict["start_date"]
+    end_date = trip_dict["end_date"].date() if hasattr(trip_dict["end_date"], 'date') else trip_dict["end_date"]
+    
+    if start_date < today:
+        raise HTTPException(
+            status_code=400,
+            detail="La fecha de inicio debe ser igual o posterior a hoy"
+        )
+    
+    if end_date < today:
+        raise HTTPException(
+            status_code=400,
+            detail="La fecha de fin debe ser igual o posterior a hoy"
+        )
+    
+    if end_date < start_date:
+        raise HTTPException(
+            status_code=400,
+            detail="La fecha de fin debe ser posterior o igual a la fecha de inicio"
+        )
+    
     trip_dict["user_id"] = str(current_user.id)
     trip_dict["activities"] = []
     trip_dict["collaborators"] = []
@@ -362,6 +385,29 @@ async def update_trip(
         update_data["start_date"] = datetime.fromisoformat(update_data["start_date"])
     if isinstance(update_data["end_date"], str):
         update_data["end_date"] = datetime.fromisoformat(update_data["end_date"])
+    
+    # Validate dates (compare only dates, not datetime)
+    today = datetime.now().date()
+    start_date = update_data["start_date"].date() if hasattr(update_data["start_date"], 'date') else update_data["start_date"]
+    end_date = update_data["end_date"].date() if hasattr(update_data["end_date"], 'date') else update_data["end_date"]
+    
+    if start_date < today:
+        raise HTTPException(
+            status_code=400,
+            detail="La fecha de inicio debe ser igual o posterior a hoy"
+        )
+    
+    if end_date < today:
+        raise HTTPException(
+            status_code=400,
+            detail="La fecha de fin debe ser igual o posterior a hoy"
+        )
+    
+    if end_date < start_date:
+        raise HTTPException(
+            status_code=400,
+            detail="La fecha de fin debe ser posterior o igual a la fecha de inicio"
+        )
     
     update_data["updated_at"] = datetime.utcnow()
     
