@@ -100,6 +100,22 @@ export default function TripsPage() {
   }
 
   const updateCity = (idx: number, key: 'city'|'start_date'|'end_date', value: string) => {
+    // Validate date format when updating date fields
+    if ((key === 'start_date' || key === 'end_date') && value) {
+      const parts = value.split('-')
+      if (parts.length === 3) {
+        const year = parseInt(parts[0])
+        const month = parseInt(parts[1])
+        const day = parseInt(parts[2])
+        
+        // Check if date is valid
+        const testDate = new Date(year, month - 1, day)
+        if (testDate.getFullYear() !== year || testDate.getMonth() !== month - 1 || testDate.getDate() !== day) {
+          showAlert('error', 'Fecha inválida', 'Fecha inválida')
+          return
+        }
+      }
+    }
     setGenCities(prev => prev.map((c, i) => i === idx ? { ...c, [key]: value } : c))
   }
 
@@ -108,10 +124,58 @@ export default function TripsPage() {
       showAlert('error', 'Falta el título', 'Ingresa un título para el viaje')
       return
     }
-    const norm = genCities.filter(c => c.city && c.start_date && c.end_date)
+
+    // Check each city for missing fields
+    for (let i = 0; i < genCities.length; i++) {
+      const city = genCities[i]
+      if (!city.city?.trim()) {
+        showAlert('error', 'Falta información', `Ingresa el nombre de la ciudad ${i + 1}`)
+        return
+      }
+      if (!city.start_date) {
+        showAlert('error', 'Fecha Invalida', `Ingresa una fecha de inicio válida para ${city.city}`)
+        return
+      }
+      if (!city.end_date) {
+        showAlert('error', 'Fecha Invalida', `Ingresa una fecha de fin válida para ${city.city}`)
+        return
+      }
+    }
+
+    const norm = genCities.filter(c => c.city?.trim() && c.start_date && c.end_date)
     if (norm.length === 0) {
       showAlert('error', 'Faltan ciudades', 'Ingresa al menos una ciudad con fechas')
       return
+    }
+    
+    // Validate that all dates are valid
+    for (const city of norm) {
+      const startDate = new Date(city.start_date)
+      const endDate = new Date(city.end_date)
+      
+      if (isNaN(startDate.getTime())) {
+        showAlert('error', 'Fecha inválida', 'Fecha inválida')
+        return
+      }
+      if (isNaN(endDate.getTime())) {
+        showAlert('error', 'Fecha inválida', 'Fecha inválida')
+        return
+      }
+      
+      // Check if the date string matches what was parsed (catches cases like 2025-11-31)
+      const startDateStr = city.start_date
+      const endDateStr = city.end_date
+      const reformattedStart = startDate.toISOString().split('T')[0]
+      const reformattedEnd = endDate.toISOString().split('T')[0]
+      
+      if (startDateStr !== reformattedStart) {
+        showAlert('error', 'Fecha inválida', 'Fecha inválida')
+        return
+      }
+      if (endDateStr !== reformattedEnd) {
+        showAlert('error', 'Fecha inválida', 'Fecha inválida')
+        return
+      }
     }
     const overallStart = new Date(Math.min(...norm.map(c => new Date(c.start_date).getTime())))
     const overallEnd = new Date(Math.max(...norm.map(c => new Date(c.end_date).getTime())))
@@ -160,7 +224,10 @@ export default function TripsPage() {
       // As a last resort, just reload list
       router.push('/trips')
     } catch (e) {
-      showAlert('error', 'No se pudo generar', 'Intenta nuevamente más tarde')
+      const errorString = String(e)
+      const match = errorString.match(/\{"detail":"([^"]+)"\}/)
+      const errorMessage = match ? match[1] : 'Intenta nuevamente más tarde'
+      showAlert('error', 'No se pudo generar', errorMessage)
     }
   }
 
@@ -174,15 +241,21 @@ export default function TripsPage() {
       message: '¿Estás seguro de que quieres eliminar este viaje? Esta acción no se puede deshacer.',
       onConfirm: async () => {
         try {
+          // Close dialog first
+          setAlertDialog({ open: false, type: 'success', title: '', message: '' })
+          
           await authFetch(`http://localhost:8000/api/trips/${tripId}`, {
             method: "DELETE",
           })
           
           // Reload trips list
           loadTrips()
-          showAlert('success', 'Viaje eliminado', 'El viaje ha sido eliminado exitosamente')
+          
+          // Show success message after a small delay
+          setTimeout(() => {
+            showAlert('success', 'Viaje eliminado', 'El viaje ha sido eliminado exitosamente')
+          }, 100)
         } catch (error) {
-          console.error("Error deleting trip:", error)
           showAlert('error', 'Error', 'No se pudo eliminar el viaje')
         }
       }
