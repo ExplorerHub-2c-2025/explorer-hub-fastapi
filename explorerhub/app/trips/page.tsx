@@ -177,15 +177,21 @@ export default function TripsPage() {
       message: '¿Estás seguro de que quieres eliminar este viaje? Esta acción no se puede deshacer.',
       onConfirm: async () => {
         try {
+          // Close dialog first
+          setAlertDialog({ open: false, type: 'success', title: '', message: '' })
+          
           await authFetch(`http://localhost:8000/api/trips/${tripId}`, {
             method: "DELETE",
           })
           
           // Reload trips list
           loadTrips()
-          showAlert('success', 'Viaje eliminado', 'El viaje ha sido eliminado exitosamente')
+          
+          // Show success message after a small delay
+          setTimeout(() => {
+            showAlert('success', 'Viaje eliminado', 'El viaje ha sido eliminado exitosamente')
+          }, 100)
         } catch (error) {
-          console.error("Error deleting trip:", error)
           showAlert('error', 'Error', 'No se pudo eliminar el viaje')
         }
       }
