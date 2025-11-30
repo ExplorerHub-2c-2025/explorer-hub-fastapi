@@ -10,9 +10,10 @@ import styles from "./filter-sidebar.module.css"
 
 interface FilterSidebarProps {
   onFilterChange?: (filters: any) => void
+  availableCategories?: string[]
 }
 
-export function FilterSidebar({ onFilterChange }: FilterSidebarProps) {
+export function FilterSidebar({ onFilterChange, availableCategories = [] }: FilterSidebarProps) {
   const [priceRange, setPriceRange] = useState([1, 4])
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [minRating, setMinRating] = useState(0)
@@ -20,21 +21,6 @@ export function FilterSidebar({ onFilterChange }: FilterSidebarProps) {
   useEffect(() => {
     onChangeRef.current = onFilterChange
   }, [onFilterChange])
-
-  const categories = [
-    "Restaurante",
-    "Actividad",
-    "Atracción",
-    "Naturaleza",
-    "Cultural",
-    "Entretenimiento",
-    "Compras",
-    "Vida Nocturna",
-    "Alojamiento",
-    "Bienestar",
-    "Histórico",
-    "Familiar",
-  ]
 
   useEffect(() => {
     // Emit changes only when local filter values change; avoid depending on callback identity
@@ -62,7 +48,7 @@ export function FilterSidebar({ onFilterChange }: FilterSidebarProps) {
       <div className={styles.categorySection}>
         <h3 className={styles.heading}>Categorías</h3>
         <div className={styles.spaceY3}>
-          {categories.map((category) => (
+          {availableCategories.map((category) => (
             <div key={category} className={styles.row}>
               <Checkbox
                 id={category}

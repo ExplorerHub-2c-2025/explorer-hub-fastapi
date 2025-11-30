@@ -17,6 +17,7 @@ import {
   Plus,
   MessageCircle,
   ChevronDown,
+  Filter,
 } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -61,6 +62,7 @@ export default function ExplorePage() {
   const [favoriteCounts, setFavoriteCounts] = useState<Record<number, number>>({})
   const [userTrips, setUserTrips] = useState<any[]>([])
   const [showTripSelector, setShowTripSelector] = useState<number | null>(null)
+  const [showFilters, setShowFilters] = useState(false)
 
   useEffect(() => {
     const userData = localStorage.getItem("user")
@@ -416,6 +418,16 @@ export default function ExplorePage() {
     return filtered
   }, [activities, searchQuery, filters, sortBy])
 
+  const gridAvailableCategories = useMemo(() => {
+    const categorySet = new Set<string>()
+    activities
+      .filter((activity) => activity.is_active)
+      .forEach((activity) => {
+        activity.categories.forEach((cat) => categorySet.add(cat))
+      })
+    return Array.from(categorySet).sort()
+  }, [activities])
+
   return (
     <div className={styles.pageContainer}>
       <Header />
@@ -470,20 +482,37 @@ export default function ExplorePage() {
             <>
               {/* Grid View */}
               {viewMode === "grid" && (
-                <div className={styles.gridWithSidebar}>
-                  <div>
-                    <FilterSidebar
-                      onFilterChange={(f) => {
-                        setFilters((prev) => ({
-                          ...prev,
-                          priceRange: f.priceRange ?? prev.priceRange,
-                          categories: Array.isArray(f.categories) ? f.categories : prev.categories,
-                          minRating: typeof f.minRating === 'number' ? f.minRating : prev.minRating,
-                        }))
-                      }}
-                    />
-                  </div>
-                  <div className={styles.attractionsGrid}>
+                <>
+                  {/* Filter Toggle Button - visible only on < 1024px */}
+                  <Button
+                    variant="outline"
+                    className={styles.filterToggleButton}
+                    onClick={() => setShowFilters(!showFilters)}
+                  >
+                    <Filter className={styles.filterIcon} />
+                    Filtros
+                  </Button>
+
+                  <div className={styles.gridWithSidebar}>
+                    <div 
+                      className={`${styles.filterSidebarWrapper} ${showFilters ? styles.filterSidebarVisible : ''}`}
+                      onClick={() => setShowFilters(false)}
+                    >
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <FilterSidebar
+                          availableCategories={gridAvailableCategories}
+                          onFilterChange={(f) => {
+                            setFilters((prev) => ({
+                              ...prev,
+                              priceRange: f.priceRange ?? prev.priceRange,
+                              categories: Array.isArray(f.categories) ? f.categories : prev.categories,
+                              minRating: typeof f.minRating === 'number' ? f.minRating : prev.minRating,
+                            }))
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div className={styles.attractionsGrid}>
                   {filteredActivities.map((activity, index) => {
                     const currentImageIndex = imageIndexes[activity.id] || 0
                     const hasMultipleImages = activity.images.length > 1
@@ -624,6 +653,7 @@ export default function ExplorePage() {
                   })}
                   </div>
                 </div>
+              </>
               )}
 
               {/* Map View */}
