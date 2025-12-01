@@ -21,6 +21,9 @@ import {
 } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import dynamic from "next/dynamic"
 import styles from "./page.module.css"
 import { FilterSidebar } from "@/components/filter-sidebar"
@@ -62,6 +65,10 @@ export default function ExplorePage() {
   const [favoriteCounts, setFavoriteCounts] = useState<Record<number, number>>({})
   const [userTrips, setUserTrips] = useState<any[]>([])
   const [showTripSelector, setShowTripSelector] = useState<number | null>(null)
+  const [showDateDialog, setShowDateDialog] = useState(false)
+  const [selectedTrip, setSelectedTrip] = useState<any>(null)
+  const [selectedBusinessId, setSelectedBusinessId] = useState<number | null>(null)
+  const [selectedDate, setSelectedDate] = useState<string>("")
   const [showFilters, setShowFilters] = useState(false)
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
@@ -283,13 +290,20 @@ export default function ExplorePage() {
     }
   }
 
-  const addToTrip = async (businessId: number, tripId: string) => {
+  const addToTrip = async (businessId: number, tripId: string, scheduledDate: string) => {
     const token = localStorage.getItem("token")
     if (!token) return
+
+    if (!scheduledDate) {
+      alert("Por favor selecciona una fecha para la actividad")
+      return
+    }
 
     try {
       const business = activities.find((a) => a.id === businessId)
       if (!business) return
+
+      const scheduled_date = new Date(scheduledDate + "T12:00:00").toISOString()
 
       const response = await fetch(`http://localhost:8000/api/trips/${tripId}/activities`, {
         method: "POST",
@@ -300,14 +314,18 @@ export default function ExplorePage() {
         body: JSON.stringify({
           business_id: String(businessId),
           business_name: business.name,
-          scheduled_date: null,
+          scheduled_date,
           notes: null,
         }),
       })
 
       if (response.ok) {
         alert("¡Actividad agregada al itinerario!")
+        setShowDateDialog(false)
         setShowTripSelector(null)
+        setSelectedTrip(null)
+        setSelectedBusinessId(null)
+        setSelectedDate("")
       } else {
         alert("Error al agregar la actividad")
       }
@@ -326,12 +344,27 @@ export default function ExplorePage() {
     }
 
     // Load user trips if not loaded
-    if (userTrips.length === 0) {
+    let trips = userTrips
+    if (trips.length === 0) {
       await loadUserTrips()
+      // Re-fetch trips directly to ensure we have the latest data
+      try {
+        const response = await fetch("http://localhost:8000/api/trips/", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        if (response.ok) {
+          trips = await response.json()
+          setUserTrips(trips)
+        }
+      } catch (error) {
+        console.error("Error loading trips:", error)
+      }
     }
 
     // If user has no trips, redirect to create one
-    if (userTrips.length === 0) {
+    if (trips.length === 0) {
       if (confirm("No tienes viajes. ¿Quieres crear uno?")) {
         router.push("/trips/new")
       }
@@ -916,10 +949,19 @@ export default function ExplorePage() {
                 <button
                   key={trip.id}
                   className="w-full p-3 text-left border rounded-lg hover:bg-gray-50 transition-colors"
-                  onClick={() => addToTrip(showTripSelector, trip.id)}
+                  onClick={() => {
+                    setSelectedTrip(trip)
+                    setSelectedBusinessId(showTripSelector)
+                    setSelectedDate(trip.start_date.split('T')[0])
+                    setShowTripSelector(null)
+                    setShowDateDialog(true)
+                  }}
                 >
                   <div className="font-medium">{trip.name}</div>
                   <div className="text-sm text-gray-500">{trip.destination}</div>
+                  <div className="text-xs text-gray-400 mt-1">
+                    {new Date(trip.start_date).toLocaleDateString('es-ES')} - {new Date(trip.end_date).toLocaleDateString('es-ES')}
+                  </div>
                 </button>
               ))}
             </div>
@@ -940,6 +982,82 @@ export default function ExplorePage() {
           </div>
         </div>
       )}
+
+      {/* Date Selection Dialog */}
+      <Dialog open={showDateDialog} onOpenChange={setShowDateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Seleccionar fecha</DialogTitle>
+            <DialogDescription>
+              Elige la fecha en la que realizarás esta actividad durante tu viaje
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {selectedTrip && (
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-sm font-medium">{selectedTrip.name}</p>
+                <p className="text-xs text-muted-foreground">{selectedTrip.destination}</p>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="activity-date">Fecha de la actividad</Label>
+              <Input
+                id="activity-date"
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                min={selectedTrip?.start_date?.split('T')[0]}
+                max={selectedTrip?.end_date?.split('T')[0]}
+                required
+              />
+              {selectedTrip && (
+                <p className="text-xs text-muted-foreground">
+                  Selecciona una fecha entre {new Date(selectedTrip.start_date).toLocaleDateString('es-ES')} y {new Date(selectedTrip.end_date).toLocaleDateString('es-ES')}
+                </p>
+              )}
+            </div>
+            {selectedBusinessId && activities.find(a => a.id === selectedBusinessId) && (
+              <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                <img
+                  src={activities.find(a => a.id === selectedBusinessId)?.images?.[0] || "/images/placeholder-business.jpg"}
+                  alt={activities.find(a => a.id === selectedBusinessId)?.name}
+                  className="h-12 w-12 rounded object-cover flex-shrink-0"
+                />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{activities.find(a => a.id === selectedBusinessId)?.name}</p>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <MapPin className="h-3 w-3" />
+                    {activities.find(a => a.id === selectedBusinessId)?.location.city}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowDateDialog(false)
+                setSelectedTrip(null)
+                setSelectedBusinessId(null)
+                setSelectedDate("")
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => {
+                if (selectedBusinessId && selectedTrip && selectedDate) {
+                  addToTrip(selectedBusinessId, selectedTrip.id, selectedDate)
+                }
+              }}
+              disabled={!selectedDate}
+            >
+              Agregar al itinerario
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Footer />
     </div>
