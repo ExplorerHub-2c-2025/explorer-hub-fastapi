@@ -143,7 +143,7 @@ export function SavedPlacesCard({
               return (
                 <li key={fav.id} className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
-                    <img src={image} alt={fav.business_name} className="h-10 w-10 rounded object-cover flex-shrink-0" />
+                    <img src={image} alt={fav.business_name} className="h-10 w-10 rounded object-cover shrink-0" />
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">{fav.business_name}</p>
                       <p className="text-xs text-muted-foreground flex items-center gap-1">
@@ -152,7 +152,7 @@ export function SavedPlacesCard({
                       </p>
                     </div>
                   </div>
-                  <div className="flex-shrink-0">
+                  <div className="shrink-0">
                     {status === "added" ? (
                       <Button size="sm" variant="secondary" disabled>
                         <Check className="h-4 w-4 mr-1" /> Agregado
@@ -203,7 +203,7 @@ export function SavedPlacesCard({
                 <img
                   src={selectedFavorite.business_images?.[0] || "/images/placeholder-business.jpg"}
                   alt={selectedFavorite.business_name}
-                  className="h-12 w-12 rounded object-cover flex-shrink-0"
+                  className="h-12 w-12 rounded object-cover shrink-0"
                 />
                 <div className="min-w-0">
                   <p className="text-sm font-medium">{selectedFavorite.business_name}</p>
