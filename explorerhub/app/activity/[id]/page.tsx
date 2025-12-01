@@ -296,6 +296,11 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
   const [tripScheduledDate, setTripScheduledDate] = useState("")
   const [isLoadingTrips, setIsLoadingTrips] = useState(false)
   const [isSavingToTrip, setIsSavingToTrip] = useState(false)
+  // New add-to-trip flow (like /explore)
+  const [showTripSelector, setShowTripSelector] = useState<boolean>(false)
+  const [showDateDialog, setShowDateDialog] = useState<boolean>(false)
+  const [selectedTrip, setSelectedTrip] = useState<any>(null)
+  const [selectedDate, setSelectedDate] = useState<string>("")
   
   // Favorites
   const [isFavorite, setIsFavorite] = useState(false)
@@ -811,38 +816,107 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
     setPriceCalculation(null)
   }
 
+  // Load user's trips (shared with add-to-trip flow)
+  const loadUserTrips = async (): Promise<any[]> => {
+    const token = localStorage.getItem("token")
+    if (!token) return []
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/trips/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (response.ok) {
+        const trips = await response.json()
+        setUserTrips(trips)
+        return trips
+      }
+    } catch (e) {
+      console.error('Error loading trips:', e)
+    }
+    return []
+  }
+
   const handleSaveToTrip = () => {
     console.log("handleSaveToTrip clicked")
     requireAuth(async () => {
-      // Fetch user's trips
+      const token = localStorage.getItem("token")
+      if (!token) {
+        setShowAuthDialog(true)
+        return
+      }
+
       setIsLoadingTrips(true)
-      setOpenSaveToTripDialog(true)
+      // Load trips then re-fetch to ensure freshness (mirrors /explore)
+      let trips = await loadUserTrips()
       try {
-        const token = localStorage.getItem("token")
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/trips/`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        )
-        
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/trips/`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
         if (response.ok) {
-          const trips = await response.json()
+          trips = await response.json()
           setUserTrips(trips)
-        } else {
-          showAlert('error', 'Error', 'No se pudieron cargar tus viajes')
-          setUserTrips([])
         }
-      } catch (err) {
-        console.error("Error fetching trips:", err)
-        showAlert('error', 'Error', 'Error al cargar los viajes')
-        setUserTrips([])
+      } catch (e) {
+        console.error('Error reloading trips:', e)
       } finally {
         setIsLoadingTrips(false)
       }
+
+      if (!trips || trips.length === 0) {
+        showConfirm(
+          'Sin viajes',
+          'No tienes viajes. ¿Quieres crear uno ahora?',
+          () => router.push('/trips/new')
+        )
+        return
+      }
+
+      setShowTripSelector(true)
     })
+  }
+
+  const addToTrip = async (businessId: number, tripId: string, scheduledDate: string) => {
+    const token = localStorage.getItem("token")
+    if (!token) {
+      setShowAuthDialog(true)
+      return
+    }
+
+    if (!scheduledDate) {
+      showAlert('error', 'Fecha requerida', 'Por favor selecciona una fecha para la actividad')
+      return
+    }
+
+    try {
+      if (!activity) return
+      const scheduled_date = new Date(scheduledDate + 'T12:00:00').toISOString()
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/trips/${tripId}/activities`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          business_id: String(businessId),
+          business_name: activity.name,
+          scheduled_date,
+          notes: null,
+        }),
+      })
+
+      if (response.ok) {
+        showAlert('success', '¡Agregado!', 'Actividad agregada al itinerario')
+        setShowDateDialog(false)
+        setShowTripSelector(false)
+        setSelectedTrip(null)
+        setSelectedDate("")
+      } else {
+        const err = await response.json().catch(() => ({}))
+        showAlert('error', 'Error', err.detail || 'No se pudo agregar la actividad')
+      }
+    } catch (error) {
+      console.error('Error adding to trip:', error)
+      showAlert('error', 'Error', 'Error al agregar la actividad')
+    }
   }
 
   const handleConfirmSaveToTrip = async () => {
@@ -2744,6 +2818,129 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
               </Button>
             </DialogFooter>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Trip Selector Overlay (nuevo flujo) */}
+      {showTripSelector && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          onClick={() => setShowTripSelector(false)}
+        >
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-xl font-bold mb-4">Selecciona un viaje</h3>
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {userTrips.map((trip) => (
+                <button
+                  key={trip.id}
+                  className="w-full p-3 text-left border rounded-lg hover:bg-gray-50 transition-colors"
+                  onClick={() => {
+                    setSelectedTrip(trip)
+                    setSelectedDate(trip.start_date.split('T')[0])
+                    setShowTripSelector(false)
+                    setShowDateDialog(true)
+                  }}
+                >
+                  <div className="font-medium">{trip.name}</div>
+                  <div className="text-sm text-gray-500">{trip.destination}</div>
+                  <div className="text-xs text-gray-400 mt-1">
+                    {new Date(trip.start_date).toLocaleDateString('es-ES')} - {new Date(trip.end_date).toLocaleDateString('es-ES')}
+                  </div>
+                </button>
+              ))}
+            </div>
+            <div className="mt-4 flex gap-2">
+              <Button variant="outline" className="flex-1 bg-transparent" onClick={() => setShowTripSelector(false)}>
+                Cancelar
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={() => {
+                  setShowTripSelector(false)
+                  router.push('/trips/new')
+                }}
+              >
+                Crear Nuevo Viaje
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Date Selection Dialog (nuevo flujo) */}
+      <Dialog open={showDateDialog} onOpenChange={setShowDateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Seleccionar fecha</DialogTitle>
+            <DialogDescription>
+              Elige la fecha en la que realizarás esta actividad durante tu viaje
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {selectedTrip && (
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-sm font-medium">{selectedTrip.name}</p>
+                <p className="text-xs text-muted-foreground">{selectedTrip.destination}</p>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="activity-date">Fecha de la actividad</Label>
+              <Input
+                id="activity-date"
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                min={selectedTrip?.start_date?.split('T')[0]}
+                max={selectedTrip?.end_date?.split('T')[0]}
+                required
+              />
+              {selectedTrip && (
+                <p className="text-xs text-muted-foreground">
+                  Selecciona una fecha entre {new Date(selectedTrip.start_date).toLocaleDateString('es-ES')} y {new Date(selectedTrip.end_date).toLocaleDateString('es-ES')}
+                </p>
+              )}
+            </div>
+            {activity && (
+              <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                <img
+                  src={activity.images?.[0] || "/images/placeholder-business.jpg"}
+                  alt={activity.name}
+                  className="h-12 w-12 rounded object-cover shrink-0"
+                />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{activity.name}</p>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <MapPin className="h-3 w-3" />
+                    {activity.location.city}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowDateDialog(false)
+                setSelectedTrip(null)
+                setSelectedDate("")
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => {
+                if (activity && selectedTrip && selectedDate) {
+                  addToTrip(activity.id, selectedTrip.id, selectedDate)
+                } else {
+                  showAlert('error', 'Fecha requerida', 'Selecciona una fecha dentro del rango del viaje')
+                }
+              }}
+              disabled={!selectedDate}
+            >
+              Agregar al itinerario
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
