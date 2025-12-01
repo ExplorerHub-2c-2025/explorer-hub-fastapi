@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Loader2, MapPin, Navigation } from "lucide-react"
@@ -37,6 +37,7 @@ export function DirectionsMapModal({
   const [routeCoords, setRouteCoords] = useState<Array<[number, number]>>([])
   const [routeError, setRouteError] = useState<string | null>(null)
   const [routeLoading, setRouteLoading] = useState(false)
+  const mapRef = useRef<any>(null)
 
   useEffect(() => {
     if (isOpen) {
@@ -107,8 +108,34 @@ export function DirectionsMapModal({
     return `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${origin};${dest}`
   }
 
+  const getOSMDirectionsUrlFor = (mode: "car" | "bike" | "foot") => {
+    if (!userLocation) return ""
+    const origin = `${userLocation.lat},${userLocation.lng}`
+    const dest = destination.lat && destination.lng
+      ? `${destination.lat},${destination.lng}`
+      : encodeURIComponent(`${destination.address}, ${destination.city}`)
+    const engine = mode === "car" ? "fossgis_osrm_car" : mode === "bike" ? "fossgis_osrm_bike" : "fossgis_osrm_foot"
+    return `https://www.openstreetmap.org/directions?engine=${engine}&route=${origin};${dest}`
+  }
+
   // Fallback simple line (solo si no hay ruta real)
   const fallbackLine = userLocation && destination.lat && destination.lng && routeCoords.length === 0 && !routeLoading ? [ [userLocation.lat, userLocation.lng], [destination.lat, destination.lng] ] : undefined
+
+  // Fit bounds to route or points
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+    const coordsToFit = routeCoords.length > 0
+      ? routeCoords
+      : (fallbackLine || null)
+    if (coordsToFit && coordsToFit.length >= 2) {
+      try {
+        map.fitBounds(coordsToFit, { padding: [24, 24] })
+      } catch (e) {
+        // ignore if fitBounds fails
+      }
+    }
+  }, [routeCoords, fallbackLine])
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -161,7 +188,7 @@ export function DirectionsMapModal({
               <div className="relative w-full rounded-lg overflow-hidden border bg-white">
                 <div className="h-[20rem] md:h-[24rem] w-full">
                   {MapContainer && (
-                    (require("react").createElement as any)(MapContainer, { center: [userLocation.lat, userLocation.lng], zoom: 13, style: { height: "100%", width: "100%" } },
+                    (require("react").createElement as any)(MapContainer, { center: [userLocation.lat, userLocation.lng], zoom: 13, style: { height: "100%", width: "100%" }, whenCreated: (m: any) => { mapRef.current = m } },
                       (require("react").createElement as any)(TileLayer, { url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" }),
                       (require("react").createElement as any)(Marker, { position: [userLocation.lat, userLocation.lng] }),
                       (destination.lat && destination.lng) ? (require("react").createElement as any)(Marker, { position: [destination.lat, destination.lng] }) : null,
@@ -180,6 +207,21 @@ export function DirectionsMapModal({
                     </div>
                   )}
                 </div>
+              <div className="bg-muted/60 rounded-lg p-3 space-y-2">
+                <p className="text-sm font-medium">Opciones de transporte</p>
+                <p className="text-xs text-muted-foreground">La ruta mostrada usa conducción (OSRM). Puedes abrir indicaciones en OpenStreetMap según el modo:</p>
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" variant="secondary" onClick={() => window.open(getOSMDirectionsUrlFor("car"), "_blank")}>
+                    🚗 Auto
+                  </Button>
+                  <Button size="sm" variant="secondary" onClick={() => window.open(getOSMDirectionsUrlFor("bike"), "_blank")}>
+                    🚲 Bici
+                  </Button>
+                  <Button size="sm" variant="secondary" onClick={() => window.open(getOSMDirectionsUrlFor("foot"), "_blank")}>
+                    🚶 A pie
+                  </Button>
+                </div>
+              </div>
               </div>
               <div className="flex flex-col md:flex-row gap-2 md:gap-3 mt-4">
                 <Button
