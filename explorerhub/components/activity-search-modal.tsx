@@ -110,7 +110,14 @@ export function ActivitySearchModal({ isOpen, onClose, onAddActivity, tripId, tr
 
     try {
       const token = localStorage.getItem("token")
-      const scheduled_date = new Date(scheduledDate + "T12:00:00").toISOString()
+      // Use selected date, or fallback to trip start date, or null
+      let scheduled_date = null
+      if (scheduledDate) {
+        scheduled_date = new Date(scheduledDate + "T12:00:00").toISOString()
+      } else if (tripStartDate) {
+        // Use trip start date as default (like the automatic generation does)
+        scheduled_date = new Date(tripStartDate + "T12:00:00").toISOString()
+      }
       
       await fetch(`http://localhost:8000/api/trips/${tripId}/activities`, {
         method: "POST",
@@ -125,6 +132,11 @@ export function ActivitySearchModal({ isOpen, onClose, onAddActivity, tripId, tr
           notes: null,
         }),
       })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || 'Error al agregar la actividad')
+      }
 
       onAddActivity(business, scheduledDate)
       // Show success message instead of alert
@@ -146,10 +158,13 @@ export function ActivitySearchModal({ isOpen, onClose, onAddActivity, tripId, tr
         document.body.removeChild(successMessage)
       }, 3000)
     } catch (error) {
-      console.error("Error adding activity:", error)
+      const errorString = String(error)
+      const match = errorString.match(/Error:\s*(.+)/)
+      const errorText = match ? match[1] : 'Error al agregar la actividad'
+      
       // Show error message instead of alert
       const errorMessage = document.createElement('div')
-      errorMessage.textContent = 'Error al agregar la actividad'
+      errorMessage.textContent = errorText
       errorMessage.style.cssText = `
         position: fixed;
         top: 20px;
@@ -173,7 +188,7 @@ export function ActivitySearchModal({ isOpen, onClose, onAddActivity, tripId, tr
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
       <div
-        className="bg-white border border-gray-200 rounded-lg shadow-lg w-full max-w-3xl max-h-[80vh] flex flex-col mx-4"
+        className="bg-white border border-gray-200 rounded-lg shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col mx-4"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

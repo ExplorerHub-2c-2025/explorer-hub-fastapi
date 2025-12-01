@@ -171,8 +171,10 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
       // Reload trip data
       loadTrip()
     } catch (error) {
-      console.error("Error removing activity:", error)
-      showAlert('error', 'Error', 'Error al eliminar la actividad')
+      const errorString = String(error)
+      const match = errorString.match(/\{"detail":"([^"]+)"\}/)
+      const errorMessage = match ? match[1] : 'Error al eliminar la actividad'
+      showAlert('error', 'Error', errorMessage)
     }
   }
 
@@ -193,8 +195,10 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
           showAlert('success', 'Viaje eliminado', 'El viaje ha sido eliminado exitosamente')
           router.push("/trips")
         } catch (error) {
-          console.error("Error deleting trip:", error)
-          showAlert('error', 'Error', 'No se pudo eliminar el viaje')
+          const errorString = String(error)
+          const match = errorString.match(/\{"detail":"([^"]+)"\}/)
+          const errorMessage = match ? match[1] : 'No se pudo eliminar el viaje'
+          showAlert('error', 'Error', errorMessage)
         }
       }
     })
@@ -213,8 +217,10 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
       // Reload trip data
       loadTrip()
     } catch (error) {
-      console.error("Error updating schedule:", error)
-      showAlert('error', 'Error', 'Error al actualizar la fecha programada')
+      const errorString = String(error)
+      const match = errorString.match(/\{"detail":"([^"]+)"\}/)
+      const errorMessage = match ? match[1] : 'Error al actualizar la fecha programada'
+      showAlert('error', 'Error', errorMessage)
     }
   }
 
@@ -233,8 +239,10 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
       // Reload trip data
       loadTrip()
     } catch (error) {
-      console.error("Error updating notes:", error)
-      showAlert('error', 'Error', 'Error al actualizar las notas')
+      const errorString = String(error)
+      const match = errorString.match(/\{"detail":"([^"]+)"\}/)
+      const errorMessage = match ? match[1] : 'Error al actualizar las notas'
+      showAlert('error', 'Error', errorMessage)
     }
   }
 
@@ -258,8 +266,10 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
       // Reload trip data
       loadTrip()
     } catch (error) {
-      console.error("Error adding image:", error)
-      showAlert('error', 'Error', 'Error al añadir la imagen')
+      const errorString = String(error)
+      const match = errorString.match(/\{"detail":"([^"]+)"\}/)
+      const errorMessage = match ? match[1] : 'Error al añadir la imagen'
+      showAlert('error', 'Error', errorMessage)
     }
   }
 
@@ -283,8 +293,10 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
       // Reload trip data
       loadTrip()
     } catch (error) {
-      console.error("Error updating image notes:", error)
-      showAlert('error', 'Error', 'Error al actualizar las notas de la imagen')
+      const errorString = String(error)
+      const match = errorString.match(/\{"detail":"([^"]+)"\}/)
+      const errorMessage = match ? match[1] : 'Error al actualizar las notas de la imagen'
+      showAlert('error', 'Error', errorMessage)
     }
   }
 
@@ -306,8 +318,10 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
       // Reload trip data
       loadTrip()
     } catch (error) {
-      console.error("Error removing image:", error)
-      showAlert('error', 'Error', 'Error al eliminar la imagen')
+      const errorString = String(error)
+      const match = errorString.match(/\{"detail":"([^"]+)"\}/)
+      const errorMessage = match ? match[1] : 'Error al eliminar la imagen'
+      showAlert('error', 'Error', errorMessage)
     }
   }
 
