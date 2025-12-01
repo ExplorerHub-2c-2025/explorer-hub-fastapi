@@ -29,16 +29,17 @@ interface ActivitySearchModalProps {
   onClose: () => void
   onAddActivity: (business: Business, scheduledDate?: string) => void
   tripId: string
-  tripStartDate?: string // Trip start date to use as default
+  tripStartDate: string // Trip start date
+  tripEndDate: string // Trip end date
 }
 
-export function ActivitySearchModal({ isOpen, onClose, onAddActivity, tripId, tripStartDate }: ActivitySearchModalProps) {
+export function ActivitySearchModal({ isOpen, onClose, onAddActivity, tripId, tripStartDate, tripEndDate }: ActivitySearchModalProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [businesses, setBusinesses] = useState<Business[]>([])
   const [filteredBusinesses, setFilteredBusinesses] = useState<Business[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [hasSearched, setHasSearched] = useState(false)
-  const [scheduledDate, setScheduledDate] = useState<string>("")
+  const [scheduledDate, setScheduledDate] = useState<string>(tripStartDate || "")
 
   useEffect(() => {
     if (isOpen) {
@@ -86,6 +87,27 @@ export function ActivitySearchModal({ isOpen, onClose, onAddActivity, tripId, tr
   }
 
   const handleAddActivity = async (business: Business) => {
+    if (!scheduledDate) {
+      const errorMessage = document.createElement('div')
+      errorMessage.textContent = 'Por favor selecciona una fecha para la actividad'
+      errorMessage.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #ef4444;
+        color: white;
+        padding: 12px 16px;
+        border-radius: 8px;
+        z-index: 1000;
+        font-weight: 500;
+      `
+      document.body.appendChild(errorMessage)
+      setTimeout(() => {
+        document.body.removeChild(errorMessage)
+      }, 3000)
+      return
+    }
+
     try {
       const token = localStorage.getItem("token")
       // Use selected date, or fallback to trip start date, or null
@@ -97,7 +119,7 @@ export function ActivitySearchModal({ isOpen, onClose, onAddActivity, tripId, tr
         scheduled_date = new Date(tripStartDate + "T12:00:00").toISOString()
       }
       
-      const response = await fetch(`http://localhost:8000/api/trips/${tripId}/activities`, {
+      await fetch(`http://localhost:8000/api/trips/${tripId}/activities`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -110,11 +132,6 @@ export function ActivitySearchModal({ isOpen, onClose, onAddActivity, tripId, tr
           notes: null,
         }),
       })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.detail || 'Error al agregar la actividad')
-      }
 
       onAddActivity(business, scheduledDate)
       // Show success message instead of alert
@@ -164,7 +181,7 @@ export function ActivitySearchModal({ isOpen, onClose, onAddActivity, tripId, tr
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-white/20 backdrop-blur-md flex items-center justify-center z-50" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
       <div
         className="bg-white border border-gray-200 rounded-lg shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col mx-4"
         onClick={(e) => e.stopPropagation()}
@@ -203,12 +220,18 @@ export function ActivitySearchModal({ isOpen, onClose, onAddActivity, tripId, tr
             </Button>
           </div>
           <div className="mt-3">
-            <label className="block text-sm text-gray-600 mb-1">Fecha para programar la actividad (opcional)</label>
+            <label className="block text-sm font-medium text-gray-900 mb-1">Fecha de la actividad *</label>
             <Input
               type="date"
               value={scheduledDate}
               onChange={(e) => setScheduledDate(e.target.value)}
+              min={tripStartDate}
+              max={tripEndDate}
+              required
             />
+            <p className="text-xs text-gray-500 mt-1">
+              Selecciona una fecha entre {new Date(tripStartDate).toLocaleDateString('es-ES')} y {new Date(tripEndDate).toLocaleDateString('es-ES')}
+            </p>
           </div>
         </div>
 

@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Calendar, Clock, X, Plus, Edit2, Save, Image, Trash2 } from "lucide-react"
+import { Calendar, Clock, X, Plus, Edit2, Save, Image, Trash2, MapPin } from "lucide-react"
+import { DirectionsMapModal } from "@/components/directions-map-modal"
 import { format } from "date-fns"
 import { RouteLinkWrapper } from "@/components/route-link-wrapper"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
@@ -59,6 +60,8 @@ export function ItineraryBuilder({
   const [imageInput, setImageInput] = useState<{[key: string]: string}>({})
   const [pendingScheduleChanges, setPendingScheduleChanges] = useState<{[businessId: string]: Date}>({})
   const [draggedActivity, setDraggedActivity] = useState<Activity | null>(null)
+  const [directionsModalOpen, setDirectionsModalOpen] = useState(false)
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null)
 
   const handleEditNotes = (businessId: string, currentNotes?: string) => {
     setEditingNotes(businessId)
@@ -108,6 +111,11 @@ export function ItineraryBuilder({
     if (onRemoveImage) {
       onRemoveImage(businessId, imageIndex)
     }
+  }
+
+  const handleOpenDirections = (activity: Activity) => {
+    setSelectedActivity(activity)
+    setDirectionsModalOpen(true)
   }
 
   const handleDragStart = (activity: Activity) => {
@@ -344,25 +352,22 @@ export function ItineraryBuilder({
                               </>
                             )}
 
-                            {/* {activity.location?.city && (
+                            {activity.location?.city && (
                               <div className="mt-3 space-y-2">
-                                <p className="text-sm text-muted-foreground">
-                                  📍 {activity.location.address}, {activity.location.city}
-                                </p>
-
-                                {globalIndex > 0 && sortedActivities[globalIndex - 1].location?.city && (
-                                  <RouteLinkWrapper
-                                    key={`route-${sortedActivities[globalIndex - 1].business_id}-to-${activity.business_id}`}
-                                    fromAddress={sortedActivities[globalIndex - 1].location?.address || ""}
-                                    fromCity={sortedActivities[globalIndex - 1].location?.city || ""}
-                                    toAddress={activity.location.address || ""}
-                                    toCity={activity.location.city || ""}
-                                    activityName={activity.business_name}
-                                    fromActivityName={sortedActivities[globalIndex - 1].business_name}
-                                  />
-                                )}
+                                <div className="flex items-center gap-2">
+                                  <p className="text-sm text-muted-foreground">
+                                    📍 {activity.location.address}, {activity.location.city}
+                                  </p>
+                                  <button
+                                    onClick={() => handleOpenDirections(activity)}
+                                    className="text-xs text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
+                                  >
+                                    <MapPin className="h-3 w-3" />
+                                    ¿Cómo llegar?
+                                  </button>
+                                </div>
                               </div>
-                            )} */}
+                            )}
 
                             {/* Images Section */}
                             {onAddImage && (
@@ -485,6 +490,24 @@ export function ItineraryBuilder({
             )
           })}
         </div>
+      )}
+
+      {/* Directions Map Modal */}
+      {selectedActivity && selectedActivity.location && (
+        <DirectionsMapModal
+          isOpen={directionsModalOpen}
+          onClose={() => {
+            setDirectionsModalOpen(false)
+            setSelectedActivity(null)
+          }}
+          destination={{
+            address: selectedActivity.location.address || "",
+            city: selectedActivity.location.city || "",
+            lat: (selectedActivity.location as any)?.lat,
+            lng: (selectedActivity.location as any)?.lng,
+          }}
+          destinationName={selectedActivity.business_name}
+        />
       )}
     </div>
   )
