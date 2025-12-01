@@ -38,7 +38,7 @@ button.destructiveButton:hover {
 
 @media (min-width: 1024px) {
   .contentGrid {
-    grid-template-columns: 2fr 1fr;
+    grid-template-columns: 2.5fr 1fr;
   }
 }
 

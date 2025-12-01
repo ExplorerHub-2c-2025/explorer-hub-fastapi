@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import styles from "./page.module.css"
 import { WeatherCard } from "@/components/weather-card"
+import { SavedPlacesCard } from "@/components/saved-places-card"
 import { NearbyEventsCard } from "@/components/nearby-events-card"
 import { TransportRecommendations } from "@/components/transport-recommendations"
 import { CurrentLocationMapLink } from "@/components/current-location-map-link"
@@ -515,6 +516,15 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
             {/* Weather Card - Always show using trip destination */}
             <WeatherCard city={nearestCity} />
 
+            {/* Saved places from favorites matching city */}
+            <SavedPlacesCard 
+              tripCity={nearestCity} 
+              tripId={trip.id} 
+              tripStartDate={trip.start_date.split('T')[0]}
+              tripEndDate={trip.end_date.split('T')[0]}
+              onAdded={loadTrip} 
+            />
+
             {/* Nearby Events - Always show using nearest city */}
             {/* <NearbyEventsCard city={nearestCity} /> */}
             <Card>
@@ -569,7 +579,8 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
         onClose={() => setShowActivitySearch(false)}
         onAddActivity={(business, scheduledDate) => handleActivityAdded(business)}
         tripId={trip?.id || ""}
-        tripStartDate={trip?.start_date ? trip.start_date.split('T')[0] : undefined}
+        tripStartDate={trip?.start_date ? trip.start_date.split('T')[0] : ""}
+        tripEndDate={trip?.end_date ? trip.end_date.split('T')[0] : ""}
       />
 
       {/* Collaborators Dialog */}
