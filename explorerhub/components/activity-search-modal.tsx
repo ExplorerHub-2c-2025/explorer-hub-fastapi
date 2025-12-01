@@ -133,11 +133,6 @@ export function ActivitySearchModal({ isOpen, onClose, onAddActivity, tripId, tr
         }),
       })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.detail || 'Error al agregar la actividad')
-      }
-
       onAddActivity(business, scheduledDate)
       // Show success message instead of alert
       const successMessage = document.createElement('div')
