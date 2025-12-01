@@ -369,20 +369,22 @@
 .uniqueBadge {
   display: inline-block;
   padding: 0.25rem 0.75rem;
-  background: linear-gradient(135deg, #8b6f47 0%, #6b5838 100%);
-  color: white;
-  border: 2px solid #000;
-  border-radius: 4px;
-  font-size: 0.7rem;
+  background-color: #f59e0b; /* Amber 500 - vivid but on-brand */
+  color: #1f2937; /* Gray 800 for good contrast */
+  border-radius: 9999px;
+  font-size: 0.75rem;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  flex-shrink: 0;
-  margin-left: auto;          /* empuja el badge al borde derecho */
-  align-self: center;
+  margin-left: 8px;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.15);
 }
+
+/* Dark mode adjustment */
+.dark .uniqueBadge {
+  background-color: #fbbf24; /* Amber 400 for dark mode pop */
+  color: #0b1220; /* Near-black for contrast */
+  box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.15);
+}
+
 
 .uniqueBadge:hover {
   transform: translateY(-1px);
