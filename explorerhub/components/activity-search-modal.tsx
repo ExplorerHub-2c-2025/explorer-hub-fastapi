@@ -171,7 +171,7 @@ export function ActivitySearchModal({ isOpen, onClose, onAddActivity, tripId, tr
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
       <div
         className="bg-white border border-gray-200 rounded-lg shadow-lg w-full max-w-3xl max-h-[80vh] flex flex-col mx-4"
         onClick={(e) => e.stopPropagation()}
