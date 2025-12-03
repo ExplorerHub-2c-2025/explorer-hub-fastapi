@@ -103,7 +103,7 @@ export default function PromotionsManagementPage() {
       }
       
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/api/businesses/owner/my-businesses`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL || "https://localhost:8000"}/api/businesses/owner/my-businesses`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -139,7 +139,7 @@ export default function PromotionsManagementPage() {
   const fetchPromotions = async (businessId: number) => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/api/promotions?business_id=${businessId}&active_only=false`
+        `${process.env.NEXT_PUBLIC_BACKEND_URL || "https://localhost:8000"}/api/promotions?business_id=${businessId}&active_only=false`
       )
 
       if (response.ok) {
@@ -184,7 +184,7 @@ export default function PromotionsManagementPage() {
       }
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/api/promotions?business_id=${selectedBusinessId}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL || "https://localhost:8000"}/api/promotions?business_id=${selectedBusinessId}`,
         {
           method: "POST",
           headers: {
@@ -239,7 +239,7 @@ export default function PromotionsManagementPage() {
     try {
       const token = localStorage.getItem("token")
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/api/promotions/${promotionId}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL || "https://localhost:8000"}/api/promotions/${promotionId}`,
         {
           method: "DELETE",
           headers: {
@@ -322,7 +322,7 @@ export default function PromotionsManagementPage() {
       }
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/api/promotions/${editingPromotionId}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL || "https://localhost:8000"}/api/promotions/${editingPromotionId}`,
         {
           method: "PUT",
           headers: {

@@ -69,7 +69,7 @@ export function ActivitySearchModal({ isOpen, onClose, onAddActivity, tripId, tr
     setIsLoading(true)
     setHasSearched(true)
     try {
-      const data = await fetch("http://localhost:8000/api/businesses").then((res) => res.json())
+      const data = await fetch("https://localhost:8000/api/businesses").then((res) => res.json())
       setBusinesses(data)
       
       // Filter results based on search query
@@ -119,7 +119,7 @@ export function ActivitySearchModal({ isOpen, onClose, onAddActivity, tripId, tr
         scheduled_date = new Date(tripStartDate + "T12:00:00").toISOString()
       }
       
-      await fetch(`http://localhost:8000/api/trips/${tripId}/activities`, {
+      await fetch(`https://localhost:8000/api/trips/${tripId}/activities`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,

@@ -88,7 +88,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
       }
 
       // Cargar información del usuario
-      const userResponse = await fetch(`http://localhost:8000/api/users/${resolvedParams.id}`, {
+      const userResponse = await fetch(`https://localhost:8000/api/users/${resolvedParams.id}`, {
         headers,
       })
       
@@ -101,7 +101,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
       setIsFollowing(userData.is_following || false)
 
       // Cargar estadísticas
-      const statsResponse = await fetch(`http://localhost:8000/api/users/${resolvedParams.id}/stats`, {
+      const statsResponse = await fetch(`https://localhost:8000/api/users/${resolvedParams.id}/stats`, {
         headers,
       })
       if (statsResponse.ok) {
@@ -110,7 +110,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
       }
 
       // Cargar viajes públicos del usuario
-      const tripsResponse = await fetch(`http://localhost:8000/api/users/${resolvedParams.id}/trips`, {
+      const tripsResponse = await fetch(`https://localhost:8000/api/users/${resolvedParams.id}/trips`, {
         headers,
       })
       if (tripsResponse.ok) {
@@ -134,7 +134,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
         headers.Authorization = `Bearer ${token}`
       }
 
-      const response = await fetch(`http://localhost:8000/api/users/${resolvedParams.id}/followers`, {
+      const response = await fetch(`https://localhost:8000/api/users/${resolvedParams.id}/followers`, {
         headers,
       })
       
@@ -158,7 +158,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
         headers.Authorization = `Bearer ${token}`
       }
 
-      const response = await fetch(`http://localhost:8000/api/users/${resolvedParams.id}/following`, {
+      const response = await fetch(`https://localhost:8000/api/users/${resolvedParams.id}/following`, {
         headers,
       })
       
@@ -183,7 +183,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
 
     try {
       const method = isFollowing ? "DELETE" : "POST"
-      const response = await fetch(`http://localhost:8000/api/users/${resolvedParams.id}/follow`, {
+      const response = await fetch(`https://localhost:8000/api/users/${resolvedParams.id}/follow`, {
         method,
         headers: { Authorization: `Bearer ${token}` },
       })
@@ -211,7 +211,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
 
     try {
       const method = currentlyFollowing ? "DELETE" : "POST"
-      const response = await fetch(`http://localhost:8000/api/users/${userId}/follow`, {
+      const response = await fetch(`https://localhost:8000/api/users/${userId}/follow`, {
         method,
         headers: { Authorization: `Bearer ${token}` },
       })

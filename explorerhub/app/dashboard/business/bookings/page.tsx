@@ -74,7 +74,7 @@ export default function BusinessBookings() {
         return;
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/businesses/owner/my-businesses`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'https://localhost:8000'}/api/businesses/owner/my-businesses`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

@@ -6,7 +6,7 @@ echo ""
 
 # Check if backend is running
 echo "1. Backend Server Status:"
-if curl -s http://localhost:8000/health > /dev/null 2>&1; then
+if curl -s https://localhost:8000/health > /dev/null 2>&1; then
     echo "   ✅ Backend is running on port 8000"
 else
     echo "   ❌ Backend is NOT running"
@@ -17,7 +17,7 @@ fi
 # Check if weather endpoint works
 echo ""
 echo "2. Weather API Test:"
-WEATHER_RESPONSE=$(curl -s "http://localhost:8000/api/weather/weather/Buenos%20Aires?country_code=AR")
+WEATHER_RESPONSE=$(curl -s "https://localhost:8000/api/weather/weather/Buenos%20Aires?country_code=AR")
 if echo "$WEATHER_RESPONSE" | grep -q "temperature"; then
     TEMP=$(echo "$WEATHER_RESPONSE" | grep -o '"temperature":[0-9]*' | grep -o '[0-9]*')
     CITY=$(echo "$WEATHER_RESPONSE" | grep -o '"city":"[^"]*"' | cut -d'"' -f4)
@@ -30,7 +30,7 @@ fi
 # Check if directions endpoint works  
 echo ""
 echo "3. Directions API Test:"
-DIR_RESPONSE=$(curl -s "http://localhost:8000/api/directions/directions?start_lat=-34.603722&start_lon=-58.381592&end_lat=-34.615852&end_lon=-58.368402&profile=foot-walking")
+DIR_RESPONSE=$(curl -s "https://localhost:8000/api/directions/directions?start_lat=-34.603722&start_lon=-58.381592&end_lat=-34.615852&end_lon=-58.368402&profile=foot-walking")
 if echo "$DIR_RESPONSE" | grep -q "distance"; then
     echo "   ✅ Directions API working!"
 else

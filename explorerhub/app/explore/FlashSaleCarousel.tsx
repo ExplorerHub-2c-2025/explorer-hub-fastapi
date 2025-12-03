@@ -68,7 +68,7 @@ export function FlashSaleCarousel() {
       
       // Obtener todas las promociones flash activas
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/api/promotions/flash-sales`
+        `${process.env.NEXT_PUBLIC_BACKEND_URL || "https://localhost:8000"}/api/promotions/flash-sales`
       )
 
       if (!response.ok) {

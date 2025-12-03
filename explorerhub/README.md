@@ -72,19 +72,25 @@ source venv/bin/activate  # On Windows: venv\\Scripts\\activate
 pip install -r requirements.txt
 \`\`\`
 
-4. Create a \`.env\` file (see \`.env.example\`):
-\`\`\`env
+4. Create a `.env` file:
+```env
 MONGODB_URL=mongodb://localhost:27017
 DATABASE_NAME=ExplorerHub
 JWT_SECRET_KEY=your-secret-key-here
-\`\`\`
+MERCADOPAGO_PUBLIC_KEY=APP_USR-7b6ec507-5e13-474b-b533-b26ef6a33a27
+MERCADOPAGO_ACCESS_TOKEN=APP_USR-2869396951625997-120121-d5cc173fb6fa03ceb6249290e0ab12f9-2942643473
+MERCADOPAGO_WEBHOOK_URL=https://localhost:8000/api/mercadopago/webhook
+MERCADOPAGO_SUCCESS_URL=http://localhost:3000/checkout/success
+MERCADOPAGO_FAILURE_URL=http://localhost:3000/checkout/failure
+MERCADOPAGO_PENDING_URL=http://localhost:3000/checkout/pending
+```
 
 5. Run the development server:
 \`\`\`bash
 uvicorn main:app --reload --port 8000
 \`\`\`
 
-6. API documentation available at [http://localhost:8000/docs](http://localhost:8000/docs)
+6. API documentation available at [https://localhost:8000/docs](https://localhost:8000/docs)
 
 ## Project Structure
 
@@ -178,6 +184,12 @@ No environment variables required for basic functionality.
 - `JWT_ALGORITHM` - JWT algorithm (default: HS256)
 - `ACCESS_TOKEN_EXPIRE_MINUTES` - Token expiration (default: 30)
 - `CORS_ORIGINS` - Allowed CORS origins
+- `MERCADOPAGO_PUBLIC_KEY` - Public key for Checkout Pro integrations
+- `MERCADOPAGO_ACCESS_TOKEN` - Private access token (test or production)
+- `MERCADOPAGO_WEBHOOK_URL` - Public URL receiving payment notifications
+- `MERCADOPAGO_SUCCESS_URL` - Frontend page for approved payments
+- `MERCADOPAGO_FAILURE_URL` - Frontend page for rejected payments
+- `MERCADOPAGO_PENDING_URL` - Frontend page for pending payments
 
 ## Deployment
 

@@ -33,7 +33,7 @@ export function ReviewCard({ review }: ReviewCardProps) {
         <div className={styles.userInfo}>
           <img
             src={review.profile_picture 
-              ? `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}${review.profile_picture}`
+              ? `${process.env.NEXT_PUBLIC_BACKEND_URL || 'https://localhost:8000'}${review.profile_picture}`
               : '/images/blank-profile-picture.png'
             }
             alt={review.username || review.user_name}

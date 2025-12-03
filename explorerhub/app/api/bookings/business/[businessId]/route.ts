@@ -16,7 +16,7 @@ export async function GET(
 
     const { businessId } = await params;
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/api/bookings/business/${businessId}`,
+      `${process.env.NEXT_PUBLIC_BACKEND_URL || "https://localhost:8000"}/api/bookings/business/${businessId}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,

@@ -61,7 +61,7 @@ export default function SignUpPage() {
     setIsCheckingUsername(true)
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/auth/check-username/${username}`
+        `${process.env.NEXT_PUBLIC_BACKEND_URL || 'https://localhost:8000'}/api/auth/check-username/${username}`
       )
       const data = await res.json()
       setUsernameAvailable(data.available)

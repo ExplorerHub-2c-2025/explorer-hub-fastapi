@@ -28,9 +28,18 @@ class Settings(BaseSettings):
     # External APIs
     openweather_api_key: Optional[str] = None
     openroute_api_key: Optional[str] = None
+
+    # Mercado Pago
+    mercadopago_public_key: Optional[str] = None
+    mercadopago_access_token: Optional[str] = None
+    mercadopago_webhook_url: str = "https://localhost:8000/api/mercadopago/webhook"
+    mercadopago_success_url: str = "https://localhost:3000/dashboard/business?payment_success=true"
+    mercadopago_failure_url: str = "https://localhost:3000/dashboard/business?payment_failure=true"
+    mercadopago_pending_url: str = "https://localhost:3000/dashboard/business?payment_pending=true"
     
     class Config:
         env_file = ".env"
 
 
 settings = Settings()
+

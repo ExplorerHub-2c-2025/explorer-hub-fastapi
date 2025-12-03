@@ -63,7 +63,7 @@ export function WeatherCard({ city }: WeatherCardProps) {
         
         // Call our backend API that uses OpenWeatherMap
         const response = await fetch(
-          `http://localhost:8000/api/weather/weather/${encodeURIComponent(city)}?country_code=AR`,
+          `https://localhost:8000/api/weather/weather/${encodeURIComponent(city)}?country_code=AR`,
         )
 
         if (!response.ok) {

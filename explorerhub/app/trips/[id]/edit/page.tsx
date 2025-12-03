@@ -54,7 +54,7 @@ export default function EditTripPage({ params }: { params: Promise<{ id: string 
 
   const loadTrip = async () => {
     try {
-      const data = await authFetch(`http://localhost:8000/api/trips/${resolvedParams.id}`)
+      const data = await authFetch(`https://localhost:8000/api/trips/${resolvedParams.id}`)
       
       setName(data.name)
       setDestination(data.destination)
@@ -77,7 +77,7 @@ export default function EditTripPage({ params }: { params: Promise<{ id: string 
     setIsSaving(true)
 
     try {
-      await authFetch(`http://localhost:8000/api/trips/${resolvedParams.id}`, {
+      await authFetch(`https://localhost:8000/api/trips/${resolvedParams.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

@@ -56,7 +56,7 @@ export default function TripViewPage({ params }: { params: Promise<{ id: string 
 
   const loadTrip = async () => {
     try {
-      const data = await authFetch(`http://localhost:8000/api/trips/${resolvedParams.id}/public`)
+      const data = await authFetch(`https://localhost:8000/api/trips/${resolvedParams.id}/public`)
       setTrip(data)
     } catch (error) {
       console.error("Error loading trip:", error)
@@ -72,7 +72,7 @@ export default function TripViewPage({ params }: { params: Promise<{ id: string 
 
     try {
       // Get user's liked trips from the backend
-      const response = await fetch("http://localhost:8000/api/trips/my-liked-trips", {
+      const response = await fetch("https://localhost:8000/api/trips/my-liked-trips", {
         headers: { Authorization: `Bearer ${token}` },
       })
       
@@ -98,7 +98,7 @@ export default function TripViewPage({ params }: { params: Promise<{ id: string 
       const isLiked = likedTrips.has(tripId)
       const method = isLiked ? "DELETE" : "POST"
 
-      const response = await fetch(`http://localhost:8000/api/trips/${tripId}/like`, {
+      const response = await fetch(`https://localhost:8000/api/trips/${tripId}/like`, {
         method,
         headers: { Authorization: `Bearer ${token}` },
       })
@@ -106,7 +106,7 @@ export default function TripViewPage({ params }: { params: Promise<{ id: string 
       if (response.status === 400 && !isLiked) {
         // If POST returns "Already liked", it means the trip is liked but not in local state
         // Switch to DELETE to unlike it
-        const deleteResponse = await fetch(`http://localhost:8000/api/trips/${tripId}/like`, {
+        const deleteResponse = await fetch(`https://localhost:8000/api/trips/${tripId}/like`, {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
         })
@@ -163,7 +163,7 @@ export default function TripViewPage({ params }: { params: Promise<{ id: string 
     }
 
     try {
-      await fetch(`http://localhost:8000/api/trips/${tripId}/comments`, {
+      await fetch(`https://localhost:8000/api/trips/${tripId}/comments`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

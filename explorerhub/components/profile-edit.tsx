@@ -34,7 +34,7 @@ export function ProfileEdit({ user, onUpdate }: ProfileEditProps) {
     setIsCheckingUsername(true)
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/auth/check-username/${newUsername}`
+        `${process.env.NEXT_PUBLIC_BACKEND_URL || 'https://localhost:8000'}/api/auth/check-username/${newUsername}`
       )
       const data = await response.json()
       setUsernameAvailable(data.available)
@@ -80,7 +80,7 @@ export function ProfileEdit({ user, onUpdate }: ProfileEditProps) {
     try {
       const token = localStorage.getItem("token")
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/profile/upload-picture`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL || 'https://localhost:8000'}/api/profile/upload-picture`,
         {
           method: "POST",
           headers: {

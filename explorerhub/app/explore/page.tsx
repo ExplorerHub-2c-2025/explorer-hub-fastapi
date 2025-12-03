@@ -116,9 +116,7 @@ export default function ExplorePage() {
   const fetchBusinesses = async () => {
     try {
       setIsLoading(true)
-      // Primera página: skip = 0
-      const url = `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/api/businesses?skip=0&limit=${PAGE_SIZE}`
-      const response = await fetch(url)
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || "https://localhost:8000"}/api/businesses?skip=0&limit=${PAGE_SIZE}`)
 
       if (!response.ok) {
         throw new Error("Error al cargar los establecimientos")
@@ -275,7 +273,7 @@ export default function ExplorePage() {
     if (!token) return
 
     try {
-      const response = await fetch("http://localhost:8000/api/trips/", {
+      const response = await fetch("https://localhost:8000/api/trips/", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -303,9 +301,7 @@ export default function ExplorePage() {
       const business = activities.find((a) => a.id === businessId)
       if (!business) return
 
-      const scheduled_date = new Date(scheduledDate + "T12:00:00").toISOString()
-
-      const response = await fetch(`http://localhost:8000/api/trips/${tripId}/activities`, {
+      const response = await fetch(`https://localhost:8000/api/trips/${tripId}/activities`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
