@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function GET(request: NextRequest) {
   try {
     // Forward to backend API
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'https://localhost:8000'
     const token = request.headers.get('authorization')
 
     if (!token) {

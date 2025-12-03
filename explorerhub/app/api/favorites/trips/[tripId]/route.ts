@@ -2,17 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { tripId: string } }
+  { params }: { params: Promise<{ tripId: string }> }
 ) {
   try {
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+    const { tripId } = await params
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'https://localhost:8000'
     const token = request.headers.get('authorization')
 
     if (!token) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
-    const response = await fetch(`${backendUrl}/api/favorites/trips/${params.tripId}`, {
+    const response = await fetch(`${backendUrl}/api/favorites/trips/${tripId}`, {
       method: 'POST',
       headers: {
         'Authorization': token,
@@ -37,17 +38,18 @@ export async function POST(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { tripId: string } }
+  { params }: { params: Promise<{ tripId: string }> }
 ) {
   try {
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+    const { tripId } = await params
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'https://localhost:8000'
     const token = request.headers.get('authorization')
 
     if (!token) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
-    const response = await fetch(`${backendUrl}/api/favorites/trips/${params.tripId}`, {
+    const response = await fetch(`${backendUrl}/api/favorites/trips/${tripId}`, {
       method: 'DELETE',
       headers: {
         'Authorization': token,

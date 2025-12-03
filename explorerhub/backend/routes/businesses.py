@@ -12,6 +12,7 @@ from routes.notifications import notify_booking_created
 from flash_sale_checker import check_promotion_after_use
 from pricing_calculator import calculate_price_with_categories, apply_promotion_discount
 from services.geocoding_service import GeocodingService
+from services.subscription_service import apply_subscription_update
 
 router = APIRouter(prefix="/api/businesses", tags=["businesses"])
 
@@ -808,8 +809,6 @@ async def update_business_subscription(
     - tier: "basic", "premium", o "enterprise"
     - duration_days: número de días de suscripción (ej: 30, 90, 365)
     """
-    from datetime import datetime as dt, timedelta
-    
     # Verificar que el negocio existe
     business = await db.businesses.find_one({"id": business_id})
     if not business:
@@ -826,56 +825,15 @@ async def update_business_subscription(
     tier = subscription_data.get("tier")
     duration_days = subscription_data.get("duration_days")
     
-    if tier not in ["basic", "premium", "enterprise"]:
-        raise HTTPException(
-            status_code=400,
-            detail="Tier debe ser 'basic', 'premium' o 'enterprise'"
-        )
-    
-    if not duration_days or duration_days <= 0:
-        raise HTTPException(
-            status_code=400,
-            detail="duration_days debe ser un número positivo"
-        )
-    
-    # Calcular fecha de vencimiento
-    current_time = dt.utcnow()
-    
-    # Si ya tiene suscripción activa, extender desde la fecha actual de expiración
-    if business.get("is_subscribed") and business.get("subscription_ends_at"):
-        if business["subscription_ends_at"] > current_time:
-            subscription_ends_at = business["subscription_ends_at"] + timedelta(days=duration_days)
-        else:
-            subscription_ends_at = current_time + timedelta(days=duration_days)
-    else:
-        subscription_ends_at = current_time + timedelta(days=duration_days)
-    
-    # Actualizar la suscripción
-    await db.businesses.update_one(
-        {"id": business_id},
-        {
-            "$set": {
-                "is_subscribed": True,
-                "subscription_tier": tier,
-                "subscription_ends_at": subscription_ends_at,
-                "updated_at": current_time
-            }
-        }
+    updated_business = await apply_subscription_update(
+        db,
+        business_id=business_id,
+        tier=tier,
+        duration_days=duration_days,
+        business=business,
     )
     
-    # Obtener el negocio actualizado
-    updated_business = await db.businesses.find_one({"id": business_id})
-    updated_business = serialize_doc(updated_business)
-    
-    # Asegurar valores por defecto
-    updated_business.setdefault("rating", 0.0)
-    updated_business.setdefault("views", 0)
-    updated_business.setdefault("review_count", 0)
-    updated_business.setdefault("created_at", datetime.utcnow())
-    updated_business.setdefault("is_active", True)
-    updated_business.setdefault("allows_bookings", True)
-    
-    return Business(**updated_business)
+    return updated_business
 
 
 @router.delete("/{business_id}/subscription", response_model=Business)

@@ -71,7 +71,7 @@ export default function TripsPage() {
 
   const loadTrips = async () => {
     try {
-      const data = await authFetch("http://localhost:8000/api/trips/")
+      const data = await authFetch("https://localhost:8000/api/trips/")
       setTrips(data)
     } catch (error) {
       console.error("Error loading trips:", error)
@@ -126,7 +126,7 @@ export default function TripsPage() {
       }))
     }
     try {
-      const trip = await authFetch('http://localhost:8000/api/trips/generate', {
+      const trip = await authFetch('https://localhost:8000/api/trips/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -141,7 +141,7 @@ export default function TripsPage() {
         return
       }
       // Fallback: fetch trips and try to locate the one we just created
-      const list = await authFetch('http://localhost:8000/api/trips/')
+      const list = await authFetch('https://localhost:8000/api/trips/')
       if (Array.isArray(list) && list.length > 0) {
         const found = list.find((t: any) => {
           try {
@@ -174,7 +174,7 @@ export default function TripsPage() {
       message: '¿Estás seguro de que quieres eliminar este viaje? Esta acción no se puede deshacer.',
       onConfirm: async () => {
         try {
-          await authFetch(`http://localhost:8000/api/trips/${tripId}`, {
+          await authFetch(`https://localhost:8000/api/trips/${tripId}`, {
             method: "DELETE",
           })
           

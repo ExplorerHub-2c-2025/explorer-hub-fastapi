@@ -360,7 +360,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
     const fetchBusiness = async () => {
       try {
         setIsLoading(true)
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/businesses/${resolvedParams.id}`)
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'https://localhost:8000'}/api/businesses/${resolvedParams.id}`)
         
         if (!response.ok) {
           throw new Error("Negocio no encontrado")
@@ -386,12 +386,12 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
         }
 
         // Fetch reviews - ruta correcta
-        const reviewsResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/reviews/business/${resolvedParams.id}`)
-        console.log("Fetching reviews from:", `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/reviews/business/${resolvedParams.id}`)
+        const reviewsResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'https://localhost:8000'}/api/reviews/business/${resolvedParams.id}`)
+        console.log("Fetching reviews from:", `${process.env.NEXT_PUBLIC_BACKEND_URL || 'https://localhost:8000'}/api/reviews/business/${resolvedParams.id}`)
 
         // Fetch promotions
-        const promotionsResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/promotions?business_id=${resolvedParams.id}&active_only=true`)
-        console.log("Fetching promotions from:", `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/promotions?business_id=${resolvedParams.id}&active_only=true`)
+        const promotionsResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'https://localhost:8000'}/api/promotions?business_id=${resolvedParams.id}&active_only=true`)
+        console.log("Fetching promotions from:", `${process.env.NEXT_PUBLIC_BACKEND_URL || 'https://localhost:8000'}/api/promotions?business_id=${resolvedParams.id}&active_only=true`)
         
         if (reviewsResponse.ok) {
           const reviewsData = await reviewsResponse.json()
@@ -534,7 +534,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
       const token = localStorage.getItem("token")
       
       // Fetch automatic promotions
-      const automaticResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/promotions/automatic/${id}`)
+      const automaticResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'https://localhost:8000'}/api/promotions/automatic/${id}`)
       let automaticPromos: any[] = []
       if (automaticResponse.ok) {
         automaticPromos = await automaticResponse.json()
@@ -546,7 +546,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
       // Fetch code-based promotions (user's claimed promotions)
       let codePromos: any[] = []
       if (token) {
-        const codeResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/promotions/available/${id}`, {
+        const codeResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'https://localhost:8000'}/api/promotions/available/${id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -661,7 +661,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
       
       console.log("Calculating price with:", requestBody)
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/businesses/${id}/calculate-price`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'https://localhost:8000'}/api/businesses/${id}/calculate-price`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -756,7 +756,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
       try {
         const token = localStorage.getItem("token")
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/trips/`,
+          `${process.env.NEXT_PUBLIC_BACKEND_URL || 'https://localhost:8000'}/api/trips/`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -793,7 +793,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
     try {
       const token = localStorage.getItem("token")
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/trips/${selectedTripId}/activities`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL || 'https://localhost:8000'}/api/trips/${selectedTripId}/activities`,
         {
           method: "POST",
           headers: {
@@ -848,7 +848,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
         }
 
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/promotions/${promotionId}/claim`,
+          `${process.env.NEXT_PUBLIC_BACKEND_URL || 'https://localhost:8000'}/api/promotions/${promotionId}/claim`,
           {
             method: "POST",
             headers: {
@@ -920,7 +920,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
       }
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/api/promotions?business_id=${activity.id}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL || "https://localhost:8000"}/api/promotions?business_id=${activity.id}`,
         {
           method: "POST",
           headers: {
@@ -988,9 +988,9 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
       
       console.log("Enviando reseña:", payload)
       console.log("Token:", token ? "presente" : "ausente")
-      console.log("URL:", `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/reviews`)
+      console.log("URL:", `${process.env.NEXT_PUBLIC_BACKEND_URL || 'https://localhost:8000'}/api/reviews`)
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/reviews`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'https://localhost:8000'}/api/reviews`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1049,7 +1049,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
               return
             }
             
-            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/reviews/${reviewId}`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'https://localhost:8000'}/api/reviews/${reviewId}`, {
               method: "DELETE",
               headers: {
                 Authorization: `Bearer ${token}`,
@@ -1105,7 +1105,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
         return
       }
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/reviews/${reviewId}/replies`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'https://localhost:8000'}/api/reviews/${reviewId}/replies`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1157,7 +1157,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
               return
             }
             
-            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/reviews/${reviewId}/replies/${replyId}`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'https://localhost:8000'}/api/reviews/${reviewId}/replies/${replyId}`, {
               method: "DELETE",
               headers: {
                 Authorization: `Bearer ${token}`,
@@ -1213,7 +1213,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
         return
       }
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/reviews/${reviewId}/replies/${replyId}/replies`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'https://localhost:8000'}/api/reviews/${reviewId}/replies/${replyId}/replies`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

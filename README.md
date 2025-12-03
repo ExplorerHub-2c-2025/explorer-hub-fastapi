@@ -45,7 +45,7 @@ pip install -r requirements.txt
 uvicorn main:app --reload --port 8000
 ```
 
-El backend estará disponible en: `http://localhost:8000`
+El backend estará disponible en: `https://localhost:8000`
 
 ### 2. Frontend (Next.js)
 
@@ -80,7 +80,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES=30
 Ya existe el archivo `explorerhub/.env.local`:
 
 ```env
-NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
+NEXT_PUBLIC_BACKEND_URL=https://localhost:8000
 ```
 
 ## Base de Datos MongoDB
@@ -151,7 +151,7 @@ python scripts/create_indexes.py
 ### Verificar Conexión Backend
 
 ```bash
-curl http://localhost:8000/docs
+curl https://localhost:8000/docs
 ```
 
 Esto abrirá la documentación interactiva de FastAPI (Swagger UI).

@@ -80,7 +80,7 @@ export function TransportRecommendations({
         const routePromises = modes.map(async (mode) => {
           try {
             const response = await fetch(
-              `http://localhost:8000/api/directions/directions/route-summary?` +
+              `https://localhost:8000/api/directions/directions/route-summary?` +
               `from_address=${encodeURIComponent(fromAddressFull)}&` +
               `to_address=${encodeURIComponent(toAddressFull)}&` +
               `profile=${mode.profile}`

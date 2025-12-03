@@ -37,7 +37,7 @@ export default function NewTripPage() {
   const handleCreateTrip = async (data: any) => {
     setIsCreating(true)
     try {
-      const response = await authFetch("http://localhost:8000/api/trips/", {
+      const response = await authFetch("https://localhost:8000/api/trips/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

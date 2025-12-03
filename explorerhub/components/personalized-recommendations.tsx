@@ -31,7 +31,7 @@ export function PersonalizedRecommendations({ onClose }: PersonalizedRecommendat
     const fetchTags = async () => {
       console.log("[v0] Starting to fetch tags from backend")
       try {
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://localhost:8000'
         console.log("[v0] Backend URL:", backendUrl)
         
         const response = await fetch(`${backendUrl}/api/businesses`)

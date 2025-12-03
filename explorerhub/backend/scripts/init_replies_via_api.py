@@ -8,7 +8,7 @@ import json
 # Esta es una forma simple de migrar las reseñas existentes
 # agregándoles el campo replies si no lo tienen
 
-BACKEND_URL = "http://localhost:8000"
+BACKEND_URL = "https://localhost:8000"
 
 def init_replies():
     print("Inicializando sistema de respuestas...")

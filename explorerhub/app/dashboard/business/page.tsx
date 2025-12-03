@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useEffect, useMemo, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
@@ -49,6 +49,7 @@ interface Business {
 
 export default function BusinessDashboard() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [user, setUser] = useState<any>(null)
   const [businesses, setBusinesses] = useState<Business[]>([])
   const [capacityInfo, setCapacityInfo] = useState<any[]>([])
@@ -71,6 +72,43 @@ export default function BusinessDashboard() {
     message: ''
   })
 
+  const durationInMonths = useMemo(() => {
+    const mapping: Record<string, number> = {
+      "30": 1,
+      "90": 3,
+      "180": 6,
+      "365": 12,
+    }
+    const mapped = mapping[selectedDuration]
+    if (mapped) {
+      return mapped
+    }
+    const parsed = Number(selectedDuration)
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      return 1
+    }
+    return Math.max(1, Math.ceil(parsed / 30))
+  }, [selectedDuration])
+
+  const monthlyAmount = useMemo(() => {
+    const base = 1500
+    const multipliers: Record<string, number> = {
+      basic: 5,
+      premium: 10,
+      enterprise: 15,
+    }
+    return (multipliers[selectedTier] ?? multipliers.basic) * base
+  }, [selectedTier])
+
+  const totalAmount = monthlyAmount * durationInMonths
+
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat("es-AR", {
+      style: "currency",
+      currency: "ARS",
+      minimumFractionDigits: 2,
+    }).format(value)
+
   useEffect(() => {
     const userData = localStorage.getItem("user")
     if (!userData) {
@@ -85,13 +123,40 @@ export default function BusinessDashboard() {
     setUser(parsedUser)
     fetchMyBusinesses()
     fetchCapacityInfo()
-  }, [router])
+
+    // Check for payment status parameters
+    const paymentSuccess = searchParams.get('payment_success')
+    const paymentFailure = searchParams.get('payment_failure')
+    const paymentPending = searchParams.get('payment_pending')
+    const paymentId = searchParams.get('payment_id')
+    const preferenceId = searchParams.get('preference_id')
+    
+    if (paymentSuccess === 'true' && (paymentId || preferenceId)) {
+      // Procesar el pago exitoso y aplicar la suscripción
+      handleSuccessfulPayment(paymentId, preferenceId)
+    } else if (paymentSuccess === 'true') {
+      // Show success modal sin payment_id (fallback)
+      showAlert('success', 'Pago exitoso', 'Recibimos tu pago correctamente. El negocio ya se encuentra promocionado.')
+      // Clean up the URL
+      router.replace('/dashboard/business', { scroll: false })
+    } else if (paymentFailure === 'true') {
+      // Show failure modal
+      showAlert('error', 'Pago cancelado o rechazado', 'Se canceló o falló el pago. Intente nuevamente.')
+      // Clean up the URL
+      router.replace('/dashboard/business', { scroll: false })
+    } else if (paymentPending === 'true') {
+      // Show pending modal
+      showAlert('info', 'Pago pendiente', 'Tu pago está siendo procesado. Te notificaremos cuando se complete.')
+      // Clean up the URL
+      router.replace('/dashboard/business', { scroll: false })
+    }
+  }, [router, searchParams])
 
   const fetchMyBusinesses = async () => {
     try {
       const token = localStorage.getItem("token")
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/api/businesses/owner/my-businesses`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL || "https://localhost:8000"}/api/businesses/owner/my-businesses`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -119,7 +184,7 @@ export default function BusinessDashboard() {
       setIsLoadingCapacity(true)
       const token = localStorage.getItem("token")
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/api/businesses/owner/capacity-usage`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL || "https://localhost:8000"}/api/businesses/owner/capacity-usage`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -146,6 +211,45 @@ export default function BusinessDashboard() {
     setAlertDialog({ ...alertDialog, open: false })
   }
 
+  const handleSuccessfulPayment = async (paymentId: string | null, preferenceId: string | null) => {
+    try {
+      const token = localStorage.getItem("token")
+      
+      // Llamar al endpoint del backend para procesar el pago manualmente
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL || "https://localhost:8000"}/api/mercadopago/process-payment`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            payment_id: paymentId,
+            preference_id: preferenceId,
+          }),
+        }
+      )
+
+      if (response.ok) {
+        const data = await response.json()
+        showAlert('success', 'Pago exitoso', 'Recibimos tu pago correctamente. El negocio ya se encuentra promocionado.')
+        // Refrescar la lista de negocios para mostrar la suscripción actualizada
+        await fetchMyBusinesses()
+      } else {
+        const error = await response.json()
+        console.error("Error procesando pago:", error)
+        showAlert('error', 'Error al procesar', 'El pago fue exitoso pero hubo un error al activar la suscripción. Contacta a soporte.')
+      }
+    } catch (error) {
+      console.error("Error procesando pago exitoso:", error)
+      showAlert('error', 'Error', 'Hubo un problema al procesar tu pago. Contacta a soporte.')
+    } finally {
+      // Clean up the URL
+      router.replace('/dashboard/business', { scroll: false })
+    }
+  }
+
   const handleSubscribe = async () => {
     if (!selectedBusinessId) {
       showAlert('error', 'Error', 'Por favor selecciona un negocio')
@@ -156,7 +260,7 @@ export default function BusinessDashboard() {
     try {
       const token = localStorage.getItem("token")
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/api/businesses/${selectedBusinessId}/subscription`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL || "https://localhost:8000"}/api/mercadopago/preferences/subscription`,
         {
           method: "POST",
           headers: {
@@ -164,6 +268,7 @@ export default function BusinessDashboard() {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
+            business_id: Number(selectedBusinessId),
             tier: selectedTier,
             duration_days: parseInt(selectedDuration),
           }),
@@ -171,17 +276,20 @@ export default function BusinessDashboard() {
       )
 
       if (response.ok) {
-        showAlert('success', '¡Suscripción activada!', 'Tu negocio ahora tendrá prioridad en las búsquedas')
-        setIsSubscriptionDialogOpen(false)
-        setSelectedBusinessId("")
-        fetchMyBusinesses()
+        const data = await response.json()
+        if (data?.init_point) {
+          // Redirigir en la misma pestaña
+          window.location.href = data.init_point
+        } else {
+          showAlert('error', 'Error', 'No se recibió la URL de pago de Mercado Pago.')
+        }
       } else {
         const error = await response.json()
-        showAlert('error', 'Error', error.detail || 'No se pudo activar la suscripción')
+        showAlert('error', 'Error', error.detail || 'No se pudo iniciar el pago con Mercado Pago')
       }
     } catch (error) {
-      console.error("Error al activar suscripción:", error)
-      showAlert('error', 'Error', 'Error al activar la suscripción. Intenta nuevamente.')
+      console.error("Error al iniciar pago:", error)
+      showAlert('error', 'Error', 'No pudimos conectar con Mercado Pago. Intenta nuevamente.')
     } finally {
       setIsProcessing(false)
     }
@@ -248,9 +356,15 @@ export default function BusinessDashboard() {
                               <SelectItem key={business.id} value={business.id.toString()}>
                                 <div className="flex items-center justify-between w-full">
                                   <span>{business.name}</span>
-                                  {business.is_subscribed && (
+                                  {business.is_subscribed && business.subscription_tier && (
                                     <Badge className="ml-2 bg-amber-100 text-amber-800 text-xs">
-                                      Premium
+                                      {business.subscription_tier === "basic"
+                                        ? "Básico"
+                                        : business.subscription_tier === "premium"
+                                          ? "Premium"
+                                          : business.subscription_tier === "enterprise"
+                                            ? "Enterprise"
+                                            : business.subscription_tier}
                                     </Badge>
                                   )}
                                 </div>
@@ -321,6 +435,19 @@ export default function BusinessDashboard() {
                           <li>✓ Incrementa reservas y vistas</li>
                         </ul>
                       </div>
+
+                      <div className="p-4 border rounded-lg bg-muted/30 space-y-1">
+                        <p className="text-sm font-semibold">Resumen de pago</p>
+                        <p className="text-2xl font-bold text-primary">{formatCurrency(totalAmount)}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {durationInMonths} mes{durationInMonths !== 1 ? "es" : ""} del plan{" "}
+                          {selectedTier === "basic"
+                            ? "Básico"
+                            : selectedTier === "premium"
+                              ? "Premium"
+                              : "Enterprise"} a {formatCurrency(monthlyAmount)} por mes
+                        </p>
+                      </div>
                     </div>
 
                     <div className="flex gap-2">
@@ -339,7 +466,11 @@ export default function BusinessDashboard() {
                         onClick={handleSubscribe} 
                         disabled={isProcessing || !selectedBusinessId}
                       >
-                        {isProcessing ? "Procesando..." : selectedBusiness?.is_subscribed ? "Renovar" : "Activar"}
+                        {isProcessing
+                          ? "Conectando..."
+                          : selectedBusiness?.is_subscribed
+                            ? "Renovar con Mercado Pago"
+                            : "Pagar con Mercado Pago"}
                       </Button>
                     </div>
                   </DialogContent>
@@ -392,7 +523,13 @@ export default function BusinessDashboard() {
                       {business.is_subscribed && (
                         <div className="absolute top-2 left-2 px-3 py-1 text-xs bg-amber-100 text-amber-800 rounded-full font-medium z-10 flex items-center gap-1">
                           <Crown className="h-3 w-3" />
-                          Premium
+                          {business.subscription_tier === "basic"
+                            ? "Básico"
+                            : business.subscription_tier === "premium"
+                              ? "Premium"
+                              : business.subscription_tier === "enterprise"
+                                ? "Enterprise"
+                                : "Premium"}
                         </div>
                       )}
                       <ActivityCard

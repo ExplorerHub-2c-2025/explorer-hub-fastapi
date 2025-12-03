@@ -99,7 +99,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
 
   const loadTrip = async () => {
     try {
-      const data = await authFetch(`http://localhost:8000/api/trips/${resolvedParams.id}`)
+      const data = await authFetch(`https://localhost:8000/api/trips/${resolvedParams.id}`)
       
       // Check if current user is the owner
       const userData = localStorage.getItem("user")
@@ -163,7 +163,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
     if (!trip) return
     
     try {
-      await authFetch(`http://localhost:8000/api/trips/${trip.id}/activities/${businessId}`, {
+      await authFetch(`https://localhost:8000/api/trips/${trip.id}/activities/${businessId}`, {
         method: "DELETE",
       })
       
@@ -185,7 +185,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
       message: '¿Estás seguro de que quieres eliminar este viaje? Esta acción no se puede deshacer.',
       onConfirm: async () => {
         try {
-          await authFetch(`http://localhost:8000/api/trips/${trip.id}`, {
+          await authFetch(`https://localhost:8000/api/trips/${trip.id}`, {
             method: "DELETE",
           })
           
@@ -203,7 +203,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
     if (!trip) return
     
     try {
-      await authFetch(`http://localhost:8000/api/trips/${trip.id}/activities/${businessId}`, {
+      await authFetch(`https://localhost:8000/api/trips/${trip.id}/activities/${businessId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ scheduled_date: date ? date.toISOString() : null }),
@@ -223,7 +223,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
     if (!trip) return
     
     try {
-      await authFetch(`http://localhost:8000/api/trips/${trip.id}/activities/${businessId}`, {
+      await authFetch(`https://localhost:8000/api/trips/${trip.id}/activities/${businessId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ notes }),
@@ -248,7 +248,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
       const currentImages = currentActivity.images || []
       const updatedImages = [...currentImages, { url: imageUrl, notes: "" }]
       
-      await authFetch(`http://localhost:8000/api/trips/${trip.id}/activities/${businessId}`, {
+      await authFetch(`https://localhost:8000/api/trips/${trip.id}/activities/${businessId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ images: updatedImages }),
@@ -273,7 +273,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
         idx === imageIndex ? { ...img, notes } : img
       )
       
-      await authFetch(`http://localhost:8000/api/trips/${trip.id}/activities/${businessId}`, {
+      await authFetch(`https://localhost:8000/api/trips/${trip.id}/activities/${businessId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ images: updatedImages }),
@@ -296,7 +296,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
       
       const updatedImages = currentActivity.images.filter((_, idx) => idx !== imageIndex)
       
-      await authFetch(`http://localhost:8000/api/trips/${trip.id}/activities/${businessId}`, {
+      await authFetch(`https://localhost:8000/api/trips/${trip.id}/activities/${businessId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ images: updatedImages }),
@@ -319,7 +319,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
   const loadCollaborators = async () => {
     if (!trip) return
     try {
-      const data = await authFetch(`http://localhost:8000/api/trips/${trip.id}/collaborators`)
+      const data = await authFetch(`https://localhost:8000/api/trips/${trip.id}/collaborators`)
       setCollaborators(data)
     } catch (error) {
       console.error("Error loading collaborators:", error)
@@ -334,7 +334,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
     
     setIsSearching(true)
     try {
-      const data = await authFetch(`http://localhost:8000/api/users/search?q=${encodeURIComponent(query)}`)
+      const data = await authFetch(`https://localhost:8000/api/users/search?q=${encodeURIComponent(query)}`)
       setSearchResults(data)
     } catch (error) {
       console.error("Error searching users:", error)
@@ -348,7 +348,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
     if (!trip) return
     
     try {
-      await authFetch(`http://localhost:8000/api/trips/${trip.id}/collaborators`, {
+      await authFetch(`https://localhost:8000/api/trips/${trip.id}/collaborators`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: userId }),
@@ -374,7 +374,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
       message: '¿Estás seguro de que quieres eliminar este colaborador?',
       onConfirm: async () => {
         try {
-          await authFetch(`http://localhost:8000/api/trips/${trip.id}/collaborators/${userId}`, {
+          await authFetch(`https://localhost:8000/api/trips/${trip.id}/collaborators/${userId}`, {
             method: "DELETE",
           })
           

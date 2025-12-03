@@ -73,7 +73,7 @@ export default function CommunityPage() {
     if (!token) return
 
     try {
-      const response = await fetch("http://localhost:8000/api/trips/my-liked-trips", {
+      const response = await fetch("https://localhost:8000/api/trips/my-liked-trips", {
         headers: { Authorization: `Bearer ${token}` },
       })
       
@@ -89,7 +89,7 @@ export default function CommunityPage() {
   const loadPublicTrips = async () => {
     setIsLoading(true)
     try {
-      const response = await fetch("http://localhost:8000/api/trips/public")
+      const response = await fetch("https://localhost:8000/api/trips/public")
       const data = await response.json()
       
       // Ensure data is an array
@@ -117,7 +117,7 @@ export default function CommunityPage() {
 
     setIsLoading(true)
     try {
-      const response = await fetch("http://localhost:8000/api/users/following/feed", {
+      const response = await fetch("https://localhost:8000/api/users/following/feed", {
         headers: { Authorization: `Bearer ${token}` },
       })
       const data = await response.json()
@@ -150,7 +150,7 @@ export default function CommunityPage() {
         headers.Authorization = `Bearer ${token}`
       }
 
-      const response = await fetch(`http://localhost:8000/api/users/search?q=${encodeURIComponent(query)}`, {
+      const response = await fetch(`https://localhost:8000/api/users/search?q=${encodeURIComponent(query)}`, {
         headers,
       })
       const data = await response.json()
@@ -189,7 +189,7 @@ export default function CommunityPage() {
 
     try {
       const method = isFollowing ? "DELETE" : "POST"
-      const response = await fetch(`http://localhost:8000/api/users/${userId}/follow`, {
+      const response = await fetch(`https://localhost:8000/api/users/${userId}/follow`, {
         method,
         headers: { Authorization: `Bearer ${token}` },
       })
@@ -221,7 +221,7 @@ export default function CommunityPage() {
       const isLiked = likedTrips.has(tripId)
       
       if (isLiked) {
-        await fetch(`http://localhost:8000/api/trips/${tripId}/like`, {
+        await fetch(`https://localhost:8000/api/trips/${tripId}/like`, {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
         })
@@ -229,7 +229,7 @@ export default function CommunityPage() {
         newLiked.delete(tripId)
         setLikedTrips(newLiked)
       } else {
-        await fetch(`http://localhost:8000/api/trips/${tripId}/like`, {
+        await fetch(`https://localhost:8000/api/trips/${tripId}/like`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
         })
@@ -260,7 +260,7 @@ export default function CommunityPage() {
     if (!newComment.trim()) return
 
     try {
-      const response = await fetch(`http://localhost:8000/api/trips/${tripId}/comments`, {
+      const response = await fetch(`https://localhost:8000/api/trips/${tripId}/comments`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

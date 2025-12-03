@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Crown, Calendar, AlertCircle, CheckCircle2 } from "lucide-react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import {
   Dialog,
   DialogContent,
@@ -38,6 +38,43 @@ export function SubscriptionCard({
   const [selectedDuration, setSelectedDuration] = useState("30")
   const [isLoading, setIsLoading] = useState(false)
 
+  const durationInMonths = useMemo(() => {
+    const mapping: Record<string, number> = {
+      "30": 1,
+      "90": 3,
+      "180": 6,
+      "365": 12,
+    }
+    const mapped = mapping[selectedDuration]
+    if (mapped) {
+      return mapped
+    }
+    const parsed = Number(selectedDuration)
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      return 1
+    }
+    return Math.max(1, Math.ceil(parsed / 30))
+  }, [selectedDuration])
+
+  const monthlyAmount = useMemo(() => {
+    const base = 1500
+    const multipliers: Record<string, number> = {
+      basic: 5,
+      premium: 10,
+      enterprise: 15,
+    }
+    return (multipliers[selectedTier] ?? multipliers.basic) * base
+  }, [selectedTier])
+
+  const totalAmount = monthlyAmount * durationInMonths
+
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat("es-AR", {
+      style: "currency",
+      currency: "ARS",
+      minimumFractionDigits: 2,
+    }).format(value)
+
   const getDaysRemaining = () => {
     if (!subscriptionEndsAt) return 0
     const now = new Date()
@@ -54,7 +91,7 @@ export function SubscriptionCard({
     try {
       const token = localStorage.getItem("token")
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/api/businesses/${businessId}/subscription`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL || "https://localhost:8000"}/api/mercadopago/preferences/subscription`,
         {
           method: "POST",
           headers: {
@@ -62,6 +99,7 @@ export function SubscriptionCard({
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
+            business_id: businessId,
             tier: selectedTier,
             duration_days: parseInt(selectedDuration),
           }),
@@ -69,16 +107,20 @@ export function SubscriptionCard({
       )
 
       if (response.ok) {
-        alert("¡Suscripción activada exitosamente!")
-        setIsDialogOpen(false)
-        onSubscriptionUpdate?.()
+        const data = await response.json()
+        if (data?.init_point) {
+          // Redirigir en la misma pestaña a Mercado Pago
+          window.location.href = data.init_point
+        } else {
+          alert("No se recibió la URL de pago de Mercado Pago.")
+        }
       } else {
         const error = await response.json()
         alert(`Error: ${error.detail || "No se pudo activar la suscripción"}`)
       }
     } catch (error) {
       console.error("Error al activar suscripción:", error)
-      alert("Error al activar la suscripción")
+      alert("Error al iniciar el pago con Mercado Pago")
     } finally {
       setIsLoading(false)
     }
@@ -91,7 +133,7 @@ export function SubscriptionCard({
     try {
       const token = localStorage.getItem("token")
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/api/businesses/${businessId}/subscription`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL || "https://localhost:8000"}/api/businesses/${businessId}/subscription`,
         {
           method: "DELETE",
           headers: {
@@ -194,12 +236,12 @@ export function SubscriptionCard({
             <DialogTrigger asChild>
               <Button className="flex-1" disabled={isLoading}>
                 <Crown className="h-4 w-4 mr-2" />
-                {isActive ? "Renovar" : "Activar"} Suscripción
+                {isActive ? "Renovar con Mercado Pago" : "Pagar con Mercado Pago"}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Activar Suscripción Premium</DialogTitle>
+                <DialogTitle>Completar suscripción con Mercado Pago</DialogTitle>
                 <DialogDescription>
                   Mejora la visibilidad de tu negocio apareciendo primero en las búsquedas
                 </DialogDescription>
@@ -243,6 +285,15 @@ export function SubscriptionCard({
                     <li>✓ Prioridad sobre competidores</li>
                   </ul>
                 </div>
+
+                <div className="p-4 border rounded-lg bg-muted/30 space-y-1">
+                  <p className="text-sm font-semibold">Resumen de pago</p>
+                  <p className="text-2xl font-bold text-primary">{formatCurrency(totalAmount)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {durationInMonths} mes{durationInMonths !== 1 ? "es" : ""} del plan{" "}
+                    {getTierLabel(selectedTier)} a {formatCurrency(monthlyAmount)} por mes
+                  </p>
+                </div>
               </div>
 
               <div className="flex gap-2">
@@ -250,7 +301,7 @@ export function SubscriptionCard({
                   Cancelar
                 </Button>
                 <Button className="flex-1" onClick={handleSubscribe} disabled={isLoading}>
-                  {isLoading ? "Procesando..." : "Confirmar"}
+                  {isLoading ? "Conectando..." : "Pagar con Mercado Pago"}
                 </Button>
               </div>
             </DialogContent>
